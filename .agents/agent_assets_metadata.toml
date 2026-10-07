@@ -1,0 +1,9 @@
+uploads = []
+generated = []
+
+[[outputs]]
+id = "7Nnme033iDK-Hi8HMN73U"
+uri = "file://artifacts/bonusplay-film/public/audio/bg_music.mp3"
+type = "audio"
+title = "BONUSPLAY instrumental music"
+description = "Generated music: Original driving electronic instrumental scoring a playful Norwegian rewards-app motion film. Warm plucked synths, bouncy electronic bass, crisp soft drums, 120 BPM, optimistic confi…"

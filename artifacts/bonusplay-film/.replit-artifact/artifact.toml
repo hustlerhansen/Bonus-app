@@ -1,0 +1,29 @@
+videoAspectRatio = "9:16"
+kind = "video"
+previewPath = "/bonusplay-film/"
+title = "BONUSPLAY — Spill. Tjen. Opplev."
+description = "A 30-second vertical animated BONUSPLAY promo with Norwegian captions, original navy/blue/purple/gold branding, mini-games, daily streaks and clearly labelled demo rewards."
+version = "1.0.0"
+id = "artifacts/bonusplay-film"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/bonusplay-film/" ]
+localPort = 23933
+
+[services.development]
+run = "pnpm --filter @workspace/bonusplay-film run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/bonusplay-film", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/bonusplay-film/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "23933"
+BASE_PATH = "/bonusplay-film/"
