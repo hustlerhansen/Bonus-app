@@ -6,6 +6,11 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export interface HealthStatus {
-  status: string;
+export interface Offer {
+  id: string;
+  title: string;
+  description: string;
+  points: number;
+  xp: number;
+  completed: boolean;
 }

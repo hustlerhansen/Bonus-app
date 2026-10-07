@@ -6,6 +6,11 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export interface HealthStatus {
-  status: string;
+export interface Survey {
+  id: string;
+  title: string;
+  minutes: number;
+  points: number;
+  xp: number;
+  completed: boolean;
 }

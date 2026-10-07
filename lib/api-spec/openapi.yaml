@@ -3,13 +3,15 @@ info:
   # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: API for the BONUSPLAY demo rewards platform
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: bonusplay
+    description: BONUSPLAY demo account, game and rewards operations
 paths:
   /healthz:
     get:
@@ -24,6 +26,259 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+  /bonusplay/demo-session:
+    post:
+      operationId: startDemoSession
+      tags: [bonusplay]
+      summary: Start a signed demo user or admin session
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DemoSessionInput"
+      responses:
+        "200":
+          description: Demo session started
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DemoSession"
+        "400":
+          description: Invalid demo role
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /bonusplay/logout:
+    post:
+      operationId: endDemoSession
+      tags: [bonusplay]
+      summary: End the current demo session
+      responses:
+        "200":
+          description: Session ended
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OkResponse"
+  /bonusplay/state:
+    get:
+      operationId: getBonusplayState
+      tags: [bonusplay]
+      summary: Get the current user's full app state
+      responses:
+        "200":
+          description: Current app state
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BonusplayState"
+        "401":
+          description: Demo session required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /bonusplay/claims:
+    post:
+      operationId: claimActivity
+      tags: [bonusplay]
+      summary: Claim a server-approved demo activity reward
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ClaimActivityInput"
+      responses:
+        "200":
+          description: Activity reward accepted or already claimed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ClaimResult"
+        "400":
+          description: Invalid activity or session identifier
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Demo session required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: Activity already claimed or daily limit reached
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /bonusplay/daily-reward:
+    post:
+      operationId: claimDailyReward
+      tags: [bonusplay]
+      summary: Claim today's streak reward
+      responses:
+        "200":
+          description: Daily reward claimed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ClaimResult"
+        "401":
+          description: Demo session required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: Today's reward was already claimed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /bonusplay/redemptions:
+    post:
+      operationId: createRedemption
+      tags: [bonusplay]
+      summary: Order a demo reward using points
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RedemptionInput"
+      responses:
+        "201":
+          description: Demo reward order created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ClaimResult"
+        "400":
+          description: Invalid reward
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Demo session required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: Insufficient balance or duplicate request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /bonusplay/reset:
+    post:
+      operationId: resetDemo
+      tags: [bonusplay]
+      summary: Restore the original demo account state
+      responses:
+        "200":
+          description: Demo account restored
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BonusplayState"
+        "401":
+          description: Demo session required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /bonusplay/features/{key}:
+    patch:
+      operationId: updateFeatureFlag
+      tags: [bonusplay]
+      summary: Enable or disable a demo feature (admin only)
+      parameters:
+        - name: key
+          in: path
+          required: true
+          schema:
+            type: string
+            enum: [ADS, SURVEYS, OFFERS, GAMES, EVENTS, LEADERBOARDS, REFERRALS, REDEMPTIONS, CHESTS]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FeatureFlagInput"
+      responses:
+        "200":
+          description: Feature flag updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FeatureFlag"
+        "401":
+          description: Demo admin session required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /bonusplay/missions/{id}:
+    patch:
+      operationId: updateMission
+      tags: [bonusplay]
+      summary: Edit a demo mission (admin only)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MissionUpdate"
+      responses:
+        "200":
+          description: Mission updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Mission"
+        "401":
+          description: Demo admin session required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Mission not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /bonusplay/admin:
+    get:
+      operationId: getAdminDashboard
+      tags: [bonusplay]
+      summary: Get demo admin metrics (admin only)
+      responses:
+        "200":
+          description: Admin dashboard
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminDashboard"
+        "401":
+          description: Demo admin session required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
 components:
   schemas:
     HealthStatus:
@@ -33,4 +288,357 @@ components:
           type: string
       required:
         - status
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+      required: [error]
+    OkResponse:
+      type: object
+      properties:
+        ok:
+          type: boolean
+      required: [ok]
+    DemoSessionInput:
+      type: object
+      properties:
+        role:
+          type: string
+          enum: [user, admin]
+      required: [role]
+    DemoSession:
+      type: object
+      properties:
+        role:
+          type: string
+          enum: [user, admin]
+        displayName:
+          type: string
+      required: [role, displayName]
+    UserProfile:
+      type: object
+      properties:
+        id:
+          type: string
+        displayName:
+          type: string
+        role:
+          type: string
+          enum: [user, admin]
+        points:
+          type: integer
+        gems:
+          type: integer
+        xp:
+          type: integer
+        level:
+          type: integer
+        streak:
+          type: integer
+        achievementsUnlocked:
+          type: integer
+        totalPointsEarned:
+          type: integer
+        gamesPlayed:
+          type: integer
+        surveysCompleted:
+          type: integer
+        activeReferrals:
+          type: integer
+      required: [id, displayName, role, points, gems, xp, level, streak, achievementsUnlocked, totalPointsEarned, gamesPlayed, surveysCompleted, activeReferrals]
+    Mission:
+      type: object
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        description:
+          type: string
+        type:
+          type: string
+          enum: [WATCH_AD, PLAY_GAME, SURVEY, OFFER, DAILY_CHALLENGE, REFERRAL, STREAK]
+        points:
+          type: integer
+        xp:
+          type: integer
+        enabled:
+          type: boolean
+        completed:
+          type: boolean
+      required: [id, title, description, type, points, xp, enabled, completed]
+    Survey:
+      type: object
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        minutes:
+          type: integer
+        points:
+          type: integer
+        xp:
+          type: integer
+        completed:
+          type: boolean
+      required: [id, title, minutes, points, xp, completed]
+    Offer:
+      type: object
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        description:
+          type: string
+        points:
+          type: integer
+        xp:
+          type: integer
+        completed:
+          type: boolean
+      required: [id, title, description, points, xp, completed]
+    WalletTransaction:
+      type: object
+      properties:
+        id:
+          type: string
+        amount:
+          type: integer
+        currency:
+          type: string
+          enum: [points, gems]
+        title:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+      required: [id, amount, currency, title, createdAt]
+    Reward:
+      type: object
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        subtitle:
+          type: string
+        cost:
+          type: integer
+        nokAmount:
+          type: integer
+        category:
+          type: string
+        available:
+          type: boolean
+      required: [id, title, subtitle, cost, nokAmount, category, available]
+    Redemption:
+      type: object
+      properties:
+        id:
+          type: string
+        rewardTitle:
+          type: string
+        nokAmount:
+          type: integer
+        points:
+          type: integer
+        status:
+          type: string
+          enum: [PENDING, MANUAL_REVIEW]
+        createdAt:
+          type: string
+          format: date-time
+      required: [id, rewardTitle, nokAmount, points, status, createdAt]
+    LeaderboardEntry:
+      type: object
+      properties:
+        rank:
+          type: integer
+        name:
+          type: string
+        points:
+          type: integer
+        isCurrentUser:
+          type: boolean
+      required: [rank, name, points, isCurrentUser]
+    Achievement:
+      type: object
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        description:
+          type: string
+        progress:
+          type: integer
+        target:
+          type: integer
+        unlocked:
+          type: boolean
+      required: [id, title, description, progress, target, unlocked]
+    Notification:
+      type: object
+      properties:
+        id:
+          type: string
+        message:
+          type: string
+        read:
+          type: boolean
+      required: [id, message, read]
+    EventProgress:
+      type: object
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        gems:
+          type: integer
+        target:
+          type: integer
+        secondsRemaining:
+          type: integer
+      required: [id, title, gems, target, secondsRemaining]
+    FeatureFlag:
+      type: object
+      properties:
+        key:
+          type: string
+        enabled:
+          type: boolean
+      required: [key, enabled]
+    BonusplayState:
+      type: object
+      properties:
+        user:
+          $ref: "#/components/schemas/UserProfile"
+        missions:
+          type: array
+          items:
+            $ref: "#/components/schemas/Mission"
+        surveys:
+          type: array
+          items:
+            $ref: "#/components/schemas/Survey"
+        offers:
+          type: array
+          items:
+            $ref: "#/components/schemas/Offer"
+        transactions:
+          type: array
+          items:
+            $ref: "#/components/schemas/WalletTransaction"
+        rewards:
+          type: array
+          items:
+            $ref: "#/components/schemas/Reward"
+        redemptions:
+          type: array
+          items:
+            $ref: "#/components/schemas/Redemption"
+        leaderboard:
+          type: array
+          items:
+            $ref: "#/components/schemas/LeaderboardEntry"
+        achievements:
+          type: array
+          items:
+            $ref: "#/components/schemas/Achievement"
+        notifications:
+          type: array
+          items:
+            $ref: "#/components/schemas/Notification"
+        event:
+          $ref: "#/components/schemas/EventProgress"
+        featureFlags:
+          type: array
+          items:
+            $ref: "#/components/schemas/FeatureFlag"
+        lastDailyClaim:
+          type: ["string", "null"]
+      required: [user, missions, surveys, offers, transactions, rewards, redemptions, leaderboard, achievements, notifications, event, featureFlags, lastDailyClaim]
+    ClaimActivityInput:
+      type: object
+      properties:
+        activityId:
+          type: string
+          minLength: 1
+          maxLength: 80
+        idempotencyKey:
+          type: string
+          minLength: 8
+          maxLength: 100
+      required: [activityId, idempotencyKey]
+    ClaimResult:
+      type: object
+      properties:
+        state:
+          $ref: "#/components/schemas/BonusplayState"
+        pointsEarned:
+          type: integer
+        xpEarned:
+          type: integer
+        gemsEarned:
+          type: integer
+        message:
+          type: string
+      required: [state, pointsEarned, xpEarned, gemsEarned, message]
+    RedemptionInput:
+      type: object
+      properties:
+        rewardId:
+          type: string
+        idempotencyKey:
+          type: string
+          minLength: 8
+          maxLength: 100
+      required: [rewardId, idempotencyKey]
+    FeatureFlagInput:
+      type: object
+      properties:
+        enabled:
+          type: boolean
+      required: [enabled]
+    MissionUpdate:
+      type: object
+      properties:
+        enabled:
+          type: boolean
+        points:
+          type: integer
+          minimum: 0
+          maximum: 10000
+        xp:
+          type: integer
+          minimum: 0
+          maximum: 10000
+    AdminMetric:
+      type: object
+      properties:
+        label:
+          type: string
+        value:
+          type: string
+      required: [label, value]
+    AdminDashboard:
+      type: object
+      properties:
+        metrics:
+          type: array
+          items:
+            $ref: "#/components/schemas/AdminMetric"
+        featureFlags:
+          type: array
+          items:
+            $ref: "#/components/schemas/FeatureFlag"
+        missions:
+          type: array
+          items:
+            $ref: "#/components/schemas/Mission"
+      required: [metrics, featureFlags, missions]
 

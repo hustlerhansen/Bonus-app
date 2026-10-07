@@ -6,6 +6,10 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export interface HealthStatus {
-  status: string;
+export interface EventProgress {
+  id: string;
+  title: string;
+  gems: number;
+  target: number;
+  secondsRemaining: number;
 }

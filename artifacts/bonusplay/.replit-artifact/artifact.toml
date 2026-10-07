@@ -1,0 +1,28 @@
+kind = "web"
+previewPath = "/"
+title = "BONUSPLAY"
+description = "A Norwegian Bokmål rewards and gaming PWA for adults to complete demo missions, play mini-games, earn points and XP, and redeem simulated rewards."
+version = "1.0.0"
+id = "artifacts/bonusplay"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 22277
+
+[services.development]
+run = "pnpm --filter @workspace/bonusplay run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/bonusplay", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/bonusplay/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "22277"
+BASE_PATH = "/"

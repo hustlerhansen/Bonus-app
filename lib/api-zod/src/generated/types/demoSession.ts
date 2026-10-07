@@ -5,7 +5,9 @@
  * API for the BONUSPLAY demo rewards platform
  * OpenAPI spec version: 0.1.0
  */
+import type { DemoSessionRole } from './demoSessionRole';
 
-export interface HealthStatus {
-  status: string;
+export interface DemoSession {
+  role: DemoSessionRole;
+  displayName: string;
 }

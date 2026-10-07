@@ -6,6 +6,11 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export interface HealthStatus {
-  status: string;
+export interface RedemptionInput {
+  rewardId: string;
+  /**
+     * @minLength 8
+     * @maxLength 100
+     */
+  idempotencyKey: string;
 }
