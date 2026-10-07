@@ -55,3 +55,6 @@
 .video-controls>button svg{width:24px;height:24px}.control-divider{width:1px;height:25px;background:#fff3}
 .control-segments{display:flex;flex:1;gap:4px}.control-segments button{position:relative;flex:1;border:0;min-width:8px;height:12px;border-radius:10px;background:#fff4;overflow:hidden;cursor:pointer}.control-segments span{position:absolute;left:0;top:0;height:100%;background:#ffd24d}
 .control-counter{font-size:12px;font-variant-numeric:tabular-nums;white-space:nowrap}.control-time{font-size:11px;font-variant-numeric:tabular-nums;white-space:nowrap}
+.audio-prompt{align-self:center;display:flex;flex-direction:column;align-items:center;gap:6px;padding:12px;margin-bottom:10px;border-radius:14px;background:#070b1ce8;color:white;font:14px var(--font-body)}
+.audio-prompt button{display:flex;align-items:center;gap:8px;padding:10px 18px;border:0;border-radius:10px;background:#ffd24d;color:#070b1c;font:700 16px var(--font-body);cursor:pointer}
+.audio-prompt svg{width:20px;height:20px}.audio-prompt span{font-size:12px}

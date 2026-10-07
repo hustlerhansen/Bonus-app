@@ -18,8 +18,8 @@ for (const [key, duration] of Object.entries(SCENE_DURATIONS)) {
   offset += duration;
 }
 
-export default function VideoTemplate({ durations = SCENE_DURATIONS, loop = true, paused = false, muted = false, onSceneChange }: {
-  durations?: Record<string, number>; loop?: boolean; paused?: boolean; muted?: boolean; onSceneChange?: (key: string) => void;
+export default function VideoTemplate({ durations = SCENE_DURATIONS, loop = true, paused = false, muted = false, onSceneChange, onAudioBlocked }: {
+  durations?: Record<string, number>; loop?: boolean; paused?: boolean; muted?: boolean; onSceneChange?: (key: string) => void; onAudioBlocked?: (blocked: boolean) => void;
 } = {}) {
   const { currentSceneKey } = useVideoPlayer({ durations, loop, paused });
   const baseKey = currentSceneKey.replace(/_r[12]$/, '');
@@ -38,13 +38,13 @@ export default function VideoTemplate({ durations = SCENE_DURATIONS, loop = true
       const target = SCENE_START_SEC[baseKey] ?? 0;
       if (Math.abs(audio.currentTime - target) > .18) audio.currentTime = target;
     }
-    audio.play().catch(() => {});
-  }, [currentSceneKey, baseKey, paused, muted]);
+    audio.play().then(() => onAudioBlocked?.(false)).catch(() => onAudioBlocked?.(true));
+  }, [currentSceneKey, baseKey, paused, muted, onAudioBlocked]);
   return (
     <VideoPausedContext.Provider value={paused}>
     <VideoCanvas aspectRatio={VIDEO_ASPECT_RATIO} style={{ backgroundColor: '#070b1c' }}>
       <AnimatePresence mode="sync"><Scene key={currentSceneKey} /></AnimatePresence>
-      <audio ref={audioRef} src={`${import.meta.env.BASE_URL}audio/bg_music.mp3`} preload="auto" autoPlay muted={muted} />
+      <audio ref={audioRef} src={`${import.meta.env.BASE_URL}audio/bg_music.mp3`} preload="auto" autoPlay muted={muted} onPlaying={() => onAudioBlocked?.(false)} />
     </VideoCanvas>
     </VideoPausedContext.Provider>
   );

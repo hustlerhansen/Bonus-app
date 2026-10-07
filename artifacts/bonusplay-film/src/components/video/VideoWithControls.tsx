@@ -27,10 +27,31 @@ export default function VideoWithControls() {
   const isIframed = window.self !== window.top;
   const controls = useSceneControls(SCENE_DURATIONS);
   const [muted, setMuted] = useState(false);
+  const [audioBlocked, setAudioBlocked] = useState(true);
+  const [audioError, setAudioError] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
   const [hovering, setHovering] = useState(false);
   const [tapPinned, setTapPinned] = useState(false);
   const sensor = useRef<HTMLDivElement>(null);
+  const toggleAudio = () => {
+    const audio = sensor.current?.closest('.video-preview')?.querySelector('audio');
+    if (!audio) return;
+    if (audioBlocked || muted) {
+      // Play inside the click handler: browsers require a real user gesture.
+      audio.muted = false;
+      audio.volume = .65;
+      setMuted(false);
+      setAudioError(false);
+      if (controls.paused) controls.togglePause();
+      audio.play().then(() => setAudioBlocked(false)).catch(() => {
+        setAudioBlocked(true);
+        setAudioError(true);
+      });
+    } else {
+      audio.muted = true;
+      setMuted(true);
+    }
+  };
   const handleJump = useCallback((index: number) => {
     controls.jumpTo(index);
     window.parent.postMessage({ type: 'REPLIT_VIDEO_SCENE_SELECTED', payload: {
@@ -57,13 +78,17 @@ export default function VideoWithControls() {
   if (!isIframed) return <VideoTemplate />;
   const visible = !collapsed || hovering || tapPinned;
   return <div className="video-preview">
-    <VideoTemplate key={controls.mountKey} durations={controls.durations} paused={controls.paused} muted={muted} onSceneChange={controls.onSceneChange} />
+    <VideoTemplate key={controls.mountKey} durations={controls.durations} paused={controls.paused} muted={muted} onSceneChange={controls.onSceneChange} onAudioBlocked={setAudioBlocked} />
     <div ref={sensor} className="control-sensor" onPointerEnter={enter} onPointerLeave={leave} onPointerDown={e => { if (e.pointerType !== 'mouse' && collapsed) setTapPinned(true); }}>
       <div className="control-filler" />
+      {audioBlocked && <div className="audio-prompt" role="status">
+        <button onClick={toggleAudio}><Volume2 /> Slå på lyd</button>
+        <span>{audioError ? 'Kunne ikke starte lyden. Trykk for å prøve igjen.' : 'Trykk for å høre musikken.'}</span>
+      </div>}
       <div className={`video-controls ${visible ? 'visible' : ''}`} aria-hidden={!visible}>
         <button aria-label={controls.paused ? 'Spill av' : 'Pause'} onClick={controls.togglePause}>{controls.paused ? <Play /> : <Pause />}</button>
         <button aria-label="Gjenta denne scenen" aria-pressed={controls.locked} onClick={controls.toggleLock}><Repeat /></button>
-        <button aria-label={muted ? 'Slå på lyd' : 'Demp lyd'} onClick={() => setMuted(m => !m)}>{muted ? <VolumeX /> : <Volume2 />}</button>
+        <button aria-label={muted || audioBlocked ? 'Slå på lyd' : 'Demp lyd'} onClick={toggleAudio}>{muted || audioBlocked ? <VolumeX /> : <Volume2 />}</button>
         <div className="control-divider" />
         <PlaybackStatus controls={controls} onJump={handleJump} />
         <button aria-label={collapsed ? 'Vis kontroller' : 'Skjul kontroller'} onClick={() => { setCollapsed(c => !c); setHovering(false); setTapPinned(false); }}>{collapsed ? <ChevronUp /> : <ChevronDown />}</button>
