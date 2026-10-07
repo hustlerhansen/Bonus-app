@@ -3,6 +3,7 @@ import { ClerkProvider, useClerk } from '@clerk/react';
 import { publishableKeyFromHost } from '@clerk/react/internal';
 import { dark } from '@clerk/themes';
 import { V2Landing, BusinessPage } from '@/pages/v2/public';
+import { PointsAdminPage, PointsPage } from '@/pages/v2/points';
 import { SignInPage, SignUpPage } from '@/pages/v2/auth';
 import { AccountPage, AccountProfilePage, AccountSecurityPage } from '@/pages/v2/account';
 import { QueryClient, QueryClientProvider, useQueryClient } from '@tanstack/react-query';
@@ -127,6 +128,8 @@ function Router() {
         <Route path="/sign-in/*?" component={SignInPage} />
         <Route path="/sign-up/*?" component={SignUpPage} />
         <Route path="/account" component={AccountPage} />
+        <Route path="/account/points" component={PointsPage} />
+        <Route path="/account/points/admin" component={PointsAdminPage} />
         <Route path="/account/profile" component={AccountProfilePage} />
         <Route path="/account/security/*?" component={AccountSecurityPage} />
         {wrapped.map(([p, C]) => <Route key={p} path={p} component={C} />)}

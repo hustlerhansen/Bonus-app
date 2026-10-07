@@ -24,6 +24,14 @@ Pause marketing delivery, preserve transactional jobs and retry with bounded bac
 
 Disable earning/redemption with feature flags, preserve all ledger history and affected conversion IDs. Reconcile per account and settlement; correct through audited adjustment/reversal/refund entries, never editing/deleting historical financial events. Run duplicate/concurrency regression tests before reopening.
 
+### V2 phase-2 points operations
+
+See `V2_POINTS.md` for balance formulas, transitions and endpoints. Use `/account/points/admin` only with an operator-provisioned ADMIN/SUPER_ADMIN account. Every adjustment/decision/refund/reversal needs a 10–500-character reason and is audited with actor and before/after balances. Full compensation derives the amount from the original on the server; partial refunds are not enabled.
+
+If a request times out, retry the unchanged intent with the same idempotency key. The server returns the same transaction ID with current state. A changed intent with an already-used key is a 409, not permission to silently alter the previous entry. Do not switch keys just to bypass an insufficient-balance error or invalid transition.
+
+V2 schema changes use `pnpm --filter @workspace/db run migrate:dev`, never schema push: the versioned SQL contains append-only triggers and CHECK constraints. It is development-only and not run at application startup. Production remains a separately approved migration/release gate. Regression command: `pnpm --filter @workspace/api-server run test:v2-points`; tests isolate and remove their own PostgreSQL schema.
+
 ## Fraud attack
 
 Rate-limit abusive entry points, review suspicious accounts/transactions, hold high-risk redemptions. Do not ban on IP alone. Record reviewed decisions and minimize retained signals. Require explicit approval before any bulk destructive action.

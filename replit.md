@@ -40,3 +40,4 @@ Norwegian Bokmål, mobile-first rewards and mini-games PWA for adults, with demo
 - Real account enrollment defaults to USER. Roles are controlled by the server/database; no first-user-admin shortcut or public promotion.
 - Do not publish V2, enable real payouts or mutate production schemas during development without explicit approval.
 - `CURRENT_STATE.md`, `LAUNCH_CHECKLIST.md`, and `RUNBOOK.md` describe current status and commercial prerequisites.
+- V2 points use additive SQL migrations (`migrate:dev`), not schema push; migrations retain CHECK constraints and append-only triggers. `V2_POINTS.md` defines balances, reservations and compensation rules.

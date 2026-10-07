@@ -5,6 +5,7 @@ import { EnrollV2AccountBody, UpdateV2AccountBody } from "@workspace/api-zod";
 import { authenticated, accountState, enroll, requireAccount, updateProfile } from "../v2/accounts";
 import { isSafeMutation } from "../v2/access-policy";
 import { getClerkProxyHost } from "../middlewares/clerkProxyMiddleware";
+import pointsRouter from "./v2-points";
 
 const router: IRouter = Router();
 router.use("/v2", rateLimit({
@@ -25,6 +26,8 @@ router.use("/v2", (req, res, next) => {
   }
   next();
 });
+
+router.use("/v2", pointsRouter);
 
 router.get("/v2/me", async (req, res) => {
   const identity = authenticated(req);

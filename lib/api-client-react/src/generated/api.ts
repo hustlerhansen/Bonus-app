@@ -34,6 +34,8 @@ import type {
   FeatureFlag,
   FeatureFlagInput,
   HealthStatus,
+  ListV2AdminTransactionsParams,
+  ListV2TransactionsParams,
   Mission,
   MissionUpdate,
   NotificationReadInput,
@@ -42,7 +44,14 @@ import type {
   V2Access,
   V2AccountState,
   V2EnrollmentInput,
-  V2ProfileInput
+  V2PointsAdjustment,
+  V2PointsCompensation,
+  V2PointsDecision,
+  V2PointsErrorResponse,
+  V2PointsResult,
+  V2ProfileInput,
+  V2TransactionPage,
+  V2Wallet
 } from './api.schemas';
 
 import { customFetch } from '../custom-fetch';
@@ -71,6 +80,582 @@ const withQueryKey = <T extends object, K>(query: T, queryKey: K): T & { queryKe
   }
   return result;
 };
+
+export const getGetV2WalletUrl = () => {
+
+
+
+
+  return `/api/v2/wallet`
+}
+
+/**
+ * @summary Read own real ledger balance, never demo balances
+ */
+export const getV2Wallet = async ( options?: Parameters<typeof customFetch>[1]): Promise<V2Wallet> => {
+
+  return customFetch<V2Wallet>(getGetV2WalletUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetV2WalletQueryKey = () => {
+    return [
+    `/api/v2/wallet`
+    ] as const;
+    }
+
+
+export const getGetV2WalletQueryOptions = <TData = Awaited<ReturnType<typeof getV2Wallet>>, TError = ErrorType<V2PointsErrorResponse>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getV2Wallet>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetV2WalletQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getV2Wallet>>> = ({ signal }) => getV2Wallet({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getV2Wallet>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetV2WalletQueryResult = NonNullable<Awaited<ReturnType<typeof getV2Wallet>>>
+export type GetV2WalletQueryError = ErrorType<V2PointsErrorResponse>
+
+
+/**
+ * @summary Read own real ledger balance, never demo balances
+ */
+
+export function useGetV2Wallet<TData = Awaited<ReturnType<typeof getV2Wallet>>, TError = ErrorType<V2PointsErrorResponse>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getV2Wallet>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetV2WalletQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getListV2TransactionsUrl = (params?: ListV2TransactionsParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/v2/transactions?${stringifiedParams}` : `/api/v2/transactions`
+}
+
+export const listV2Transactions = async (params?: ListV2TransactionsParams, options?: Parameters<typeof customFetch>[1]): Promise<V2TransactionPage> => {
+
+  return customFetch<V2TransactionPage>(getListV2TransactionsUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListV2TransactionsQueryKey = (params?: ListV2TransactionsParams,) => {
+    return [
+    `/api/v2/transactions`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getListV2TransactionsQueryOptions = <TData = Awaited<ReturnType<typeof listV2Transactions>>, TError = ErrorType<V2PointsErrorResponse>>(params?: ListV2TransactionsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listV2Transactions>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListV2TransactionsQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listV2Transactions>>> = ({ signal }) => listV2Transactions(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listV2Transactions>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListV2TransactionsQueryResult = NonNullable<Awaited<ReturnType<typeof listV2Transactions>>>
+export type ListV2TransactionsQueryError = ErrorType<V2PointsErrorResponse>
+
+
+
+export function useListV2Transactions<TData = Awaited<ReturnType<typeof listV2Transactions>>, TError = ErrorType<V2PointsErrorResponse>>(
+ params?: ListV2TransactionsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listV2Transactions>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListV2TransactionsQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getGetV2AdminWalletUrl = (accountId: string,) => {
+
+
+
+
+  return `/api/v2/admin/accounts/${accountId}/wallet`
+}
+
+export const getV2AdminWallet = async (accountId: string, options?: Parameters<typeof customFetch>[1]): Promise<V2Wallet> => {
+
+  return customFetch<V2Wallet>(getGetV2AdminWalletUrl(accountId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetV2AdminWalletQueryKey = (accountId: string,) => {
+    return [
+    `/api/v2/admin/accounts/${accountId}/wallet`
+    ] as const;
+    }
+
+
+export const getGetV2AdminWalletQueryOptions = <TData = Awaited<ReturnType<typeof getV2AdminWallet>>, TError = ErrorType<V2PointsErrorResponse>>(accountId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getV2AdminWallet>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetV2AdminWalletQueryKey(accountId);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getV2AdminWallet>>> = ({ signal }) => getV2AdminWallet(accountId, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: accountId !== null && accountId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getV2AdminWallet>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetV2AdminWalletQueryResult = NonNullable<Awaited<ReturnType<typeof getV2AdminWallet>>>
+export type GetV2AdminWalletQueryError = ErrorType<V2PointsErrorResponse>
+
+
+
+export function useGetV2AdminWallet<TData = Awaited<ReturnType<typeof getV2AdminWallet>>, TError = ErrorType<V2PointsErrorResponse>>(
+ accountId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getV2AdminWallet>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetV2AdminWalletQueryOptions(accountId,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getListV2AdminTransactionsUrl = (accountId: string,
+    params?: ListV2AdminTransactionsParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/v2/admin/accounts/${accountId}/transactions?${stringifiedParams}` : `/api/v2/admin/accounts/${accountId}/transactions`
+}
+
+export const listV2AdminTransactions = async (accountId: string,
+    params?: ListV2AdminTransactionsParams, options?: Parameters<typeof customFetch>[1]): Promise<V2TransactionPage> => {
+
+  return customFetch<V2TransactionPage>(getListV2AdminTransactionsUrl(accountId,params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListV2AdminTransactionsQueryKey = (accountId: string,
+    params?: ListV2AdminTransactionsParams,) => {
+    return [
+    `/api/v2/admin/accounts/${accountId}/transactions`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getListV2AdminTransactionsQueryOptions = <TData = Awaited<ReturnType<typeof listV2AdminTransactions>>, TError = ErrorType<V2PointsErrorResponse>>(accountId: string,
+    params?: ListV2AdminTransactionsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listV2AdminTransactions>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListV2AdminTransactionsQueryKey(accountId,params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listV2AdminTransactions>>> = ({ signal }) => listV2AdminTransactions(accountId,params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: accountId !== null && accountId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listV2AdminTransactions>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListV2AdminTransactionsQueryResult = NonNullable<Awaited<ReturnType<typeof listV2AdminTransactions>>>
+export type ListV2AdminTransactionsQueryError = ErrorType<V2PointsErrorResponse>
+
+
+
+export function useListV2AdminTransactions<TData = Awaited<ReturnType<typeof listV2AdminTransactions>>, TError = ErrorType<V2PointsErrorResponse>>(
+ accountId: string,
+    params?: ListV2AdminTransactionsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listV2AdminTransactions>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListV2AdminTransactionsQueryOptions(accountId,params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getAdjustV2PointsUrl = (accountId: string,) => {
+
+
+
+
+  return `/api/v2/admin/accounts/${accountId}/adjustments`
+}
+
+/**
+ * @summary Audited administrator adjustment with mandatory reason
+ */
+export const adjustV2Points = async (accountId: string,
+    v2PointsAdjustment: V2PointsAdjustment, options?: Parameters<typeof customFetch>[1]): Promise<V2PointsResult> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<V2PointsResult>(getAdjustV2PointsUrl(accountId),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(v2PointsAdjustment)
+  }
+);}
+
+
+
+
+
+export const getAdjustV2PointsMutationKey = () => ['adjustV2Points'] as const;
+
+export const getAdjustV2PointsMutationOptions = <TError = ErrorType<V2PointsErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adjustV2Points>>, TError,AdjustV2PointsMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof adjustV2Points>>, TError,AdjustV2PointsMutationVariables, TContext> => {
+
+const mutationKey = getAdjustV2PointsMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof adjustV2Points>>, AdjustV2PointsMutationVariables> = (props) => {
+          const {accountId,data} = props ?? {};
+
+          return  adjustV2Points(accountId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AdjustV2PointsMutationResult = NonNullable<Awaited<ReturnType<typeof adjustV2Points>>>
+    export type AdjustV2PointsMutationBody = BodyType<V2PointsAdjustment>
+    export type AdjustV2PointsMutationError = ErrorType<V2PointsErrorResponse>
+    export type AdjustV2PointsMutationVariables = {accountId: string;data: BodyType<V2PointsAdjustment>}
+
+    /**
+ * @summary Audited administrator adjustment with mandatory reason
+ */
+export const useAdjustV2Points = <TError = ErrorType<V2PointsErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adjustV2Points>>, TError,AdjustV2PointsMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof adjustV2Points>>,
+        TError,
+        AdjustV2PointsMutationVariables,
+        TContext
+      > => {
+      return useMutation(getAdjustV2PointsMutationOptions(options));
+    }
+
+export const getDecideV2PointsUrl = (transactionId: string,) => {
+
+
+
+
+  return `/api/v2/admin/transactions/${transactionId}/decision`
+}
+
+/**
+ * @summary Approve or reject a pending transaction, append-only
+ */
+export const decideV2Points = async (transactionId: string,
+    v2PointsDecision: V2PointsDecision, options?: Parameters<typeof customFetch>[1]): Promise<V2PointsResult> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<V2PointsResult>(getDecideV2PointsUrl(transactionId),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(v2PointsDecision)
+  }
+);}
+
+
+
+
+
+export const getDecideV2PointsMutationKey = () => ['decideV2Points'] as const;
+
+export const getDecideV2PointsMutationOptions = <TError = ErrorType<V2PointsErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof decideV2Points>>, TError,DecideV2PointsMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof decideV2Points>>, TError,DecideV2PointsMutationVariables, TContext> => {
+
+const mutationKey = getDecideV2PointsMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof decideV2Points>>, DecideV2PointsMutationVariables> = (props) => {
+          const {transactionId,data} = props ?? {};
+
+          return  decideV2Points(transactionId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DecideV2PointsMutationResult = NonNullable<Awaited<ReturnType<typeof decideV2Points>>>
+    export type DecideV2PointsMutationBody = BodyType<V2PointsDecision>
+    export type DecideV2PointsMutationError = ErrorType<V2PointsErrorResponse>
+    export type DecideV2PointsMutationVariables = {transactionId: string;data: BodyType<V2PointsDecision>}
+
+    /**
+ * @summary Approve or reject a pending transaction, append-only
+ */
+export const useDecideV2Points = <TError = ErrorType<V2PointsErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof decideV2Points>>, TError,DecideV2PointsMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof decideV2Points>>,
+        TError,
+        DecideV2PointsMutationVariables,
+        TContext
+      > => {
+      return useMutation(getDecideV2PointsMutationOptions(options));
+    }
+
+export const getCompensateV2PointsUrl = (transactionId: string,) => {
+
+
+
+
+  return `/api/v2/admin/transactions/${transactionId}/compensation`
+}
+
+/**
+ * @summary Full refund of a debit or full reversal of a credit/debit
+ */
+export const compensateV2Points = async (transactionId: string,
+    v2PointsCompensation: V2PointsCompensation, options?: Parameters<typeof customFetch>[1]): Promise<V2PointsResult> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<V2PointsResult>(getCompensateV2PointsUrl(transactionId),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(v2PointsCompensation)
+  }
+);}
+
+
+
+
+
+export const getCompensateV2PointsMutationKey = () => ['compensateV2Points'] as const;
+
+export const getCompensateV2PointsMutationOptions = <TError = ErrorType<V2PointsErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof compensateV2Points>>, TError,CompensateV2PointsMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof compensateV2Points>>, TError,CompensateV2PointsMutationVariables, TContext> => {
+
+const mutationKey = getCompensateV2PointsMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof compensateV2Points>>, CompensateV2PointsMutationVariables> = (props) => {
+          const {transactionId,data} = props ?? {};
+
+          return  compensateV2Points(transactionId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CompensateV2PointsMutationResult = NonNullable<Awaited<ReturnType<typeof compensateV2Points>>>
+    export type CompensateV2PointsMutationBody = BodyType<V2PointsCompensation>
+    export type CompensateV2PointsMutationError = ErrorType<V2PointsErrorResponse>
+    export type CompensateV2PointsMutationVariables = {transactionId: string;data: BodyType<V2PointsCompensation>}
+
+    /**
+ * @summary Full refund of a debit or full reversal of a credit/debit
+ */
+export const useCompensateV2Points = <TError = ErrorType<V2PointsErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof compensateV2Points>>, TError,CompensateV2PointsMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof compensateV2Points>>,
+        TError,
+        CompensateV2PointsMutationVariables,
+        TContext
+      > => {
+      return useMutation(getCompensateV2PointsMutationOptions(options));
+    }
 
 export const getGetV2AccountUrl = () => {
 

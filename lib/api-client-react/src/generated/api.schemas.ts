@@ -5,6 +5,151 @@
  * API for the BONUSPLAY demo rewards platform
  * OpenAPI spec version: 0.1.0
  */
+export type V2PointsType = typeof V2PointsType[keyof typeof V2PointsType];
+
+
+export const V2PointsType = {
+  EARN: 'EARN',
+  REDEEM: 'REDEEM',
+  REFERRAL: 'REFERRAL',
+  BONUS: 'BONUS',
+  ADJUSTMENT: 'ADJUSTMENT',
+  REFUND: 'REFUND',
+  REVERSAL: 'REVERSAL',
+  EXPIRATION: 'EXPIRATION',
+} as const;
+
+export type V2PointsStatus = typeof V2PointsStatus[keyof typeof V2PointsStatus];
+
+
+export const V2PointsStatus = {
+  pending: 'pending',
+  approved: 'approved',
+  rejected: 'rejected',
+  reversed: 'reversed',
+} as const;
+
+export interface V2Wallet {
+  accountId: string;
+  /** @minimum 0 */
+  available: number;
+  /** @minimum 0 */
+  pending: number;
+  /** @minimum 0 */
+  reserved: number;
+  /** @minimum 0 */
+  balance: number;
+  /** @minimum 0 */
+  lifetimeEarned: number;
+  /** @minimum 0 */
+  lifetimeRedeemed: number;
+}
+
+export interface V2PointsEvent {
+  status: V2PointsStatus;
+  delta: number;
+  reservedDelta: number;
+  reason: string;
+  actorId: string;
+  createdAt: string;
+}
+
+export interface V2PointsTransaction {
+  id: string;
+  sequence: string;
+  accountId: string;
+  type: V2PointsType;
+  amount: number;
+  status: V2PointsStatus;
+  source: string;
+  reference: string;
+  description: string;
+  reason: string;
+  /** @nullable */
+  relatedTransactionId: string | null;
+  actorId: string;
+  createdAt: string;
+  updatedAt: string;
+  events: V2PointsEvent[];
+}
+
+export interface V2TransactionPage {
+  items: V2PointsTransaction[];
+  /** @nullable */
+  nextCursor: string | null;
+}
+
+export interface V2PointsAdjustment {
+  /**
+     * @minimum -1000000
+     * @maximum 1000000
+     */
+  amount: number;
+  /**
+     * @minLength 10
+     * @maxLength 500
+     */
+  reason: string;
+  /**
+     * @minLength 16
+     * @maxLength 128
+     * @pattern ^[A-Za-z0-9_.:-]{16,128}$
+     */
+  idempotencyKey: string;
+}
+
+export type V2PointsDecisionStatus = typeof V2PointsDecisionStatus[keyof typeof V2PointsDecisionStatus];
+
+
+export const V2PointsDecisionStatus = {
+  approved: 'approved',
+  rejected: 'rejected',
+} as const;
+
+export interface V2PointsDecision {
+  status: V2PointsDecisionStatus;
+  /**
+     * @minLength 10
+     * @maxLength 500
+     */
+  reason: string;
+  /**
+     * @minLength 16
+     * @maxLength 128
+     * @pattern ^[A-Za-z0-9_.:-]{16,128}$
+     */
+  idempotencyKey: string;
+}
+
+export type V2PointsCompensationType = typeof V2PointsCompensationType[keyof typeof V2PointsCompensationType];
+
+
+export const V2PointsCompensationType = {
+  REFUND: 'REFUND',
+  REVERSAL: 'REVERSAL',
+} as const;
+
+export interface V2PointsCompensation {
+  type: V2PointsCompensationType;
+  /**
+     * @minLength 10
+     * @maxLength 500
+     */
+  reason: string;
+  /**
+     * @minLength 16
+     * @maxLength 128
+     * @pattern ^[A-Za-z0-9_.:-]{16,128}$
+     */
+  idempotencyKey: string;
+}
+
+export interface V2PointsResult {
+  transaction: V2PointsTransaction;
+  wallet: V2Wallet;
+  replayed: boolean;
+}
+
 export type V2ProfileInputCountry = typeof V2ProfileInputCountry[keyof typeof V2ProfileInputCountry];
 
 
@@ -115,6 +260,7 @@ export type V2AccountStatePhase = typeof V2AccountStatePhase[keyof typeof V2Acco
 
 export const V2AccountStatePhase = {
   FOUNDATION: 'FOUNDATION',
+  POINTS: 'POINTS',
 } as const;
 
 export interface V2AccountState {
@@ -649,4 +795,37 @@ export interface AnalyticsInput {
   /** @maxLength 80 */
   sourceId?: string;
 }
+
+/**
+ * 400 invalid input; 401 login required; 403 forbidden; 404 not found; 409 replay conflict, insufficient balance or invalid transition; 429 rate limit
+ */
+export type V2PointsErrorResponse = ErrorResponse;
+
+export type PointsCursorParameter = string;
+
+export type PointsLimitParameter = number;
+
+export type ListV2TransactionsParams = {
+/**
+ * @pattern ^[1-9][0-9]{0,18}$
+ */
+cursor?: PointsCursorParameter;
+/**
+ * @minimum 1
+ * @maximum 100
+ */
+limit?: PointsLimitParameter;
+};
+
+export type ListV2AdminTransactionsParams = {
+/**
+ * @pattern ^[1-9][0-9]{0,18}$
+ */
+cursor?: PointsCursorParameter;
+/**
+ * @minimum 1
+ * @maximum 100
+ */
+limit?: PointsLimitParameter;
+};
 

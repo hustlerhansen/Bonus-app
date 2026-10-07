@@ -30,7 +30,7 @@ export async function accountState(userId: string, client: PoolClient | typeof p
   }
   return GetV2AccountResponse.parse({
     account, termsVersion: TERMS_VERSION, privacyVersion: PRIVACY_VERSION,
-    phase: "FOUNDATION", commerceEnabled: false,
+    phase: "POINTS", commerceEnabled: false,
   });
 }
 

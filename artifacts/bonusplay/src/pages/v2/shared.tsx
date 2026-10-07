@@ -23,9 +23,14 @@ export function fmtDate(s?: string | null) {
 export function PhaseNotice({ className }: { className?: string }) {
   return (
     <div className={cn('rounded-2xl border border-amber-300/25 bg-amber-400/10 p-4 text-sm text-amber-100', className)} data-testid="notice-phase">
-      <b>Fase 1: kontofundament.</b> Poengopptjening, innløsning, partnerkampanjer og fakturering er ikke aktive. Det finnes ingen ekte saldo, ingen partnere og ingen utbetalinger i V2 ennå. Den eksisterende demoen er uendret.
+      <b>Fase 2: poengbok aktiv.</b> Du kan se saldo og historikk for BonusPoints. Kommersielle tilbud, opptjeningsknapper, innløsning og utbetalinger er ikke aktive. Den eksisterende demoen er uendret.
     </div>
   );
+}
+
+export function useIsAdmin() {
+  const r = useV2State().data?.account?.role;
+  return r === 'ADMIN' || r === 'SUPER_ADMIN';
 }
 
 export function V2Frame({ children, title, desc, nav }: { children: ReactNode; title: string; desc: string; nav?: boolean }) {
@@ -41,7 +46,8 @@ export function V2Frame({ children, title, desc, nav }: { children: ReactNode; t
   const clerk = useClerk();
   const qc = useQueryClient();
   const out = () => clerk.signOut({ redirectUrl: `${basePath}/v2` }).then(() => qc.clear());
-  const links: [string, string][] = [['/account', 'Oversikt'], ['/account/profile', 'Profil'], ['/account/security', 'Sikkerhet']];
+  const isAdmin = useIsAdmin();
+  const links: [string, string][] = [['/account', 'Oversikt'], ['/account/points', 'Poeng'], ...(isAdmin ? [['/account/points/admin', 'Poengadmin'] as [string, string]] : []), ['/account/profile', 'Profil'], ['/account/security', 'Sikkerhet']];
   return (
     <div className="mx-auto min-h-[100dvh] max-w-3xl px-4 pb-16 pt-5">
       <header className="mb-6 flex flex-wrap items-center justify-between gap-3">
@@ -55,7 +61,7 @@ export function V2Frame({ children, title, desc, nav }: { children: ReactNode; t
       {nav && (
         <nav className="mb-6 flex gap-1 overflow-x-auto rounded-full bg-white/5 p-1 text-sm" aria-label="Konto">
           {links.map(([h, l]) => (
-            <Link key={h} href={h} className={cn('whitespace-nowrap rounded-full px-4 py-2 font-bold', loc === h || loc.startsWith(`${h}/`) ? 'btn-electric' : 'text-muted-foreground')}>{l}</Link>
+            <Link key={h} href={h} className={cn('whitespace-nowrap rounded-full px-4 py-2 font-bold', (h === '/account/points' ? loc === h : loc === h || loc.startsWith(`${h}/`)) ? 'btn-electric' : 'text-muted-foreground')}>{l}</Link>
           ))}
         </nav>
       )}

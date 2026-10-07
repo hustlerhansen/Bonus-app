@@ -9,6 +9,387 @@ import * as zod from 'zod';
 
 
 /**
+ * @summary Read own real ledger balance, never demo balances
+ */
+export const getV2WalletResponseAvailableMin = 0;
+
+export const getV2WalletResponsePendingMin = 0;
+
+export const getV2WalletResponseReservedMin = 0;
+
+export const getV2WalletResponseBalanceMin = 0;
+
+export const getV2WalletResponseLifetimeEarnedMin = 0;
+
+export const getV2WalletResponseLifetimeRedeemedMin = 0;
+
+
+
+export const GetV2WalletResponse = zod.object({
+  "accountId": zod.string(),
+  "available": zod.number().int().min(getV2WalletResponseAvailableMin),
+  "pending": zod.number().int().min(getV2WalletResponsePendingMin),
+  "reserved": zod.number().int().min(getV2WalletResponseReservedMin),
+  "balance": zod.number().int().min(getV2WalletResponseBalanceMin),
+  "lifetimeEarned": zod.number().int().min(getV2WalletResponseLifetimeEarnedMin),
+  "lifetimeRedeemed": zod.number().int().min(getV2WalletResponseLifetimeRedeemedMin)
+})
+
+
+export const listV2TransactionsQueryCursorRegExp = new RegExp('^[1-9][0-9]{0,18}$');
+export const listV2TransactionsQueryLimitDefault = 20;
+export const listV2TransactionsQueryLimitMax = 100;
+
+
+
+export const ListV2TransactionsQueryParams = zod.object({
+  "cursor": zod.coerce.string().regex(listV2TransactionsQueryCursorRegExp).optional(),
+  "limit": zod.coerce.number().int().min(1).max(listV2TransactionsQueryLimitMax).default(listV2TransactionsQueryLimitDefault)
+})
+
+export const ListV2TransactionsResponse = zod.object({
+  "items": zod.array(zod.object({
+  "id": zod.string().uuid(),
+  "sequence": zod.string(),
+  "accountId": zod.string(),
+  "type": zod.enum(['EARN', 'REDEEM', 'REFERRAL', 'BONUS', 'ADJUSTMENT', 'REFUND', 'REVERSAL', 'EXPIRATION']),
+  "amount": zod.number().int(),
+  "status": zod.enum(['pending', 'approved', 'rejected', 'reversed']),
+  "source": zod.string(),
+  "reference": zod.string(),
+  "description": zod.string(),
+  "reason": zod.string(),
+  "relatedTransactionId": zod.string().nullable(),
+  "actorId": zod.string(),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string(),
+  "events": zod.array(zod.object({
+  "status": zod.enum(['pending', 'approved', 'rejected', 'reversed']),
+  "delta": zod.number().int(),
+  "reservedDelta": zod.number().int(),
+  "reason": zod.string(),
+  "actorId": zod.string(),
+  "createdAt": zod.string()
+}))
+})),
+  "nextCursor": zod.string().nullable()
+})
+
+
+export const getV2AdminWalletPathAccountIdMax = 128;
+
+
+
+export const GetV2AdminWalletParams = zod.object({
+  "accountId": zod.coerce.string().min(1).max(getV2AdminWalletPathAccountIdMax)
+})
+
+export const getV2AdminWalletResponseAvailableMin = 0;
+
+export const getV2AdminWalletResponsePendingMin = 0;
+
+export const getV2AdminWalletResponseReservedMin = 0;
+
+export const getV2AdminWalletResponseBalanceMin = 0;
+
+export const getV2AdminWalletResponseLifetimeEarnedMin = 0;
+
+export const getV2AdminWalletResponseLifetimeRedeemedMin = 0;
+
+
+
+export const GetV2AdminWalletResponse = zod.object({
+  "accountId": zod.string(),
+  "available": zod.number().int().min(getV2AdminWalletResponseAvailableMin),
+  "pending": zod.number().int().min(getV2AdminWalletResponsePendingMin),
+  "reserved": zod.number().int().min(getV2AdminWalletResponseReservedMin),
+  "balance": zod.number().int().min(getV2AdminWalletResponseBalanceMin),
+  "lifetimeEarned": zod.number().int().min(getV2AdminWalletResponseLifetimeEarnedMin),
+  "lifetimeRedeemed": zod.number().int().min(getV2AdminWalletResponseLifetimeRedeemedMin)
+})
+
+
+export const listV2AdminTransactionsPathAccountIdMax = 128;
+
+
+
+export const ListV2AdminTransactionsParams = zod.object({
+  "accountId": zod.coerce.string().min(1).max(listV2AdminTransactionsPathAccountIdMax)
+})
+
+export const listV2AdminTransactionsQueryCursorRegExp = new RegExp('^[1-9][0-9]{0,18}$');
+export const listV2AdminTransactionsQueryLimitDefault = 20;
+export const listV2AdminTransactionsQueryLimitMax = 100;
+
+
+
+export const ListV2AdminTransactionsQueryParams = zod.object({
+  "cursor": zod.coerce.string().regex(listV2AdminTransactionsQueryCursorRegExp).optional(),
+  "limit": zod.coerce.number().int().min(1).max(listV2AdminTransactionsQueryLimitMax).default(listV2AdminTransactionsQueryLimitDefault)
+})
+
+export const ListV2AdminTransactionsResponse = zod.object({
+  "items": zod.array(zod.object({
+  "id": zod.string().uuid(),
+  "sequence": zod.string(),
+  "accountId": zod.string(),
+  "type": zod.enum(['EARN', 'REDEEM', 'REFERRAL', 'BONUS', 'ADJUSTMENT', 'REFUND', 'REVERSAL', 'EXPIRATION']),
+  "amount": zod.number().int(),
+  "status": zod.enum(['pending', 'approved', 'rejected', 'reversed']),
+  "source": zod.string(),
+  "reference": zod.string(),
+  "description": zod.string(),
+  "reason": zod.string(),
+  "relatedTransactionId": zod.string().nullable(),
+  "actorId": zod.string(),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string(),
+  "events": zod.array(zod.object({
+  "status": zod.enum(['pending', 'approved', 'rejected', 'reversed']),
+  "delta": zod.number().int(),
+  "reservedDelta": zod.number().int(),
+  "reason": zod.string(),
+  "actorId": zod.string(),
+  "createdAt": zod.string()
+}))
+})),
+  "nextCursor": zod.string().nullable()
+})
+
+
+/**
+ * @summary Audited administrator adjustment with mandatory reason
+ */
+export const adjustV2PointsPathAccountIdMax = 128;
+
+
+
+export const AdjustV2PointsParams = zod.object({
+  "accountId": zod.coerce.string().min(1).max(adjustV2PointsPathAccountIdMax)
+})
+
+export const adjustV2PointsBodyAmountMin = -1000000;
+export const adjustV2PointsBodyAmountMax = 1000000;
+
+export const adjustV2PointsBodyReasonMin = 10;
+export const adjustV2PointsBodyReasonMax = 500;
+
+export const adjustV2PointsBodyIdempotencyKeyMin = 16;
+export const adjustV2PointsBodyIdempotencyKeyMax = 128;
+
+
+export const adjustV2PointsBodyIdempotencyKeyRegExp = new RegExp('^[A-Za-z0-9_.:-]{16,128}$');
+
+
+export const AdjustV2PointsBody = zod.object({
+  "amount": zod.number().int().min(adjustV2PointsBodyAmountMin).max(adjustV2PointsBodyAmountMax),
+  "reason": zod.string().min(adjustV2PointsBodyReasonMin).max(adjustV2PointsBodyReasonMax),
+  "idempotencyKey": zod.string().min(adjustV2PointsBodyIdempotencyKeyMin).max(adjustV2PointsBodyIdempotencyKeyMax).regex(adjustV2PointsBodyIdempotencyKeyRegExp)
+})
+
+export const adjustV2PointsResponseWalletAvailableMin = 0;
+
+export const adjustV2PointsResponseWalletPendingMin = 0;
+
+export const adjustV2PointsResponseWalletReservedMin = 0;
+
+export const adjustV2PointsResponseWalletBalanceMin = 0;
+
+export const adjustV2PointsResponseWalletLifetimeEarnedMin = 0;
+
+export const adjustV2PointsResponseWalletLifetimeRedeemedMin = 0;
+
+
+
+export const AdjustV2PointsResponse = zod.object({
+  "transaction": zod.object({
+  "id": zod.string().uuid(),
+  "sequence": zod.string(),
+  "accountId": zod.string(),
+  "type": zod.enum(['EARN', 'REDEEM', 'REFERRAL', 'BONUS', 'ADJUSTMENT', 'REFUND', 'REVERSAL', 'EXPIRATION']),
+  "amount": zod.number().int(),
+  "status": zod.enum(['pending', 'approved', 'rejected', 'reversed']),
+  "source": zod.string(),
+  "reference": zod.string(),
+  "description": zod.string(),
+  "reason": zod.string(),
+  "relatedTransactionId": zod.string().nullable(),
+  "actorId": zod.string(),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string(),
+  "events": zod.array(zod.object({
+  "status": zod.enum(['pending', 'approved', 'rejected', 'reversed']),
+  "delta": zod.number().int(),
+  "reservedDelta": zod.number().int(),
+  "reason": zod.string(),
+  "actorId": zod.string(),
+  "createdAt": zod.string()
+}))
+}),
+  "wallet": zod.object({
+  "accountId": zod.string(),
+  "available": zod.number().int().min(adjustV2PointsResponseWalletAvailableMin),
+  "pending": zod.number().int().min(adjustV2PointsResponseWalletPendingMin),
+  "reserved": zod.number().int().min(adjustV2PointsResponseWalletReservedMin),
+  "balance": zod.number().int().min(adjustV2PointsResponseWalletBalanceMin),
+  "lifetimeEarned": zod.number().int().min(adjustV2PointsResponseWalletLifetimeEarnedMin),
+  "lifetimeRedeemed": zod.number().int().min(adjustV2PointsResponseWalletLifetimeRedeemedMin)
+}),
+  "replayed": zod.boolean()
+})
+
+
+/**
+ * @summary Approve or reject a pending transaction, append-only
+ */
+export const DecideV2PointsParams = zod.object({
+  "transactionId": zod.coerce.string().uuid()
+})
+
+export const decideV2PointsBodyReasonMin = 10;
+export const decideV2PointsBodyReasonMax = 500;
+
+export const decideV2PointsBodyIdempotencyKeyMin = 16;
+export const decideV2PointsBodyIdempotencyKeyMax = 128;
+
+
+export const decideV2PointsBodyIdempotencyKeyRegExp = new RegExp('^[A-Za-z0-9_.:-]{16,128}$');
+
+
+export const DecideV2PointsBody = zod.object({
+  "status": zod.enum(['approved', 'rejected']),
+  "reason": zod.string().min(decideV2PointsBodyReasonMin).max(decideV2PointsBodyReasonMax),
+  "idempotencyKey": zod.string().min(decideV2PointsBodyIdempotencyKeyMin).max(decideV2PointsBodyIdempotencyKeyMax).regex(decideV2PointsBodyIdempotencyKeyRegExp)
+})
+
+export const decideV2PointsResponseWalletAvailableMin = 0;
+
+export const decideV2PointsResponseWalletPendingMin = 0;
+
+export const decideV2PointsResponseWalletReservedMin = 0;
+
+export const decideV2PointsResponseWalletBalanceMin = 0;
+
+export const decideV2PointsResponseWalletLifetimeEarnedMin = 0;
+
+export const decideV2PointsResponseWalletLifetimeRedeemedMin = 0;
+
+
+
+export const DecideV2PointsResponse = zod.object({
+  "transaction": zod.object({
+  "id": zod.string().uuid(),
+  "sequence": zod.string(),
+  "accountId": zod.string(),
+  "type": zod.enum(['EARN', 'REDEEM', 'REFERRAL', 'BONUS', 'ADJUSTMENT', 'REFUND', 'REVERSAL', 'EXPIRATION']),
+  "amount": zod.number().int(),
+  "status": zod.enum(['pending', 'approved', 'rejected', 'reversed']),
+  "source": zod.string(),
+  "reference": zod.string(),
+  "description": zod.string(),
+  "reason": zod.string(),
+  "relatedTransactionId": zod.string().nullable(),
+  "actorId": zod.string(),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string(),
+  "events": zod.array(zod.object({
+  "status": zod.enum(['pending', 'approved', 'rejected', 'reversed']),
+  "delta": zod.number().int(),
+  "reservedDelta": zod.number().int(),
+  "reason": zod.string(),
+  "actorId": zod.string(),
+  "createdAt": zod.string()
+}))
+}),
+  "wallet": zod.object({
+  "accountId": zod.string(),
+  "available": zod.number().int().min(decideV2PointsResponseWalletAvailableMin),
+  "pending": zod.number().int().min(decideV2PointsResponseWalletPendingMin),
+  "reserved": zod.number().int().min(decideV2PointsResponseWalletReservedMin),
+  "balance": zod.number().int().min(decideV2PointsResponseWalletBalanceMin),
+  "lifetimeEarned": zod.number().int().min(decideV2PointsResponseWalletLifetimeEarnedMin),
+  "lifetimeRedeemed": zod.number().int().min(decideV2PointsResponseWalletLifetimeRedeemedMin)
+}),
+  "replayed": zod.boolean()
+})
+
+
+/**
+ * @summary Full refund of a debit or full reversal of a credit/debit
+ */
+export const CompensateV2PointsParams = zod.object({
+  "transactionId": zod.coerce.string().uuid()
+})
+
+export const compensateV2PointsBodyReasonMin = 10;
+export const compensateV2PointsBodyReasonMax = 500;
+
+export const compensateV2PointsBodyIdempotencyKeyMin = 16;
+export const compensateV2PointsBodyIdempotencyKeyMax = 128;
+
+
+export const compensateV2PointsBodyIdempotencyKeyRegExp = new RegExp('^[A-Za-z0-9_.:-]{16,128}$');
+
+
+export const CompensateV2PointsBody = zod.object({
+  "type": zod.enum(['REFUND', 'REVERSAL']),
+  "reason": zod.string().min(compensateV2PointsBodyReasonMin).max(compensateV2PointsBodyReasonMax),
+  "idempotencyKey": zod.string().min(compensateV2PointsBodyIdempotencyKeyMin).max(compensateV2PointsBodyIdempotencyKeyMax).regex(compensateV2PointsBodyIdempotencyKeyRegExp)
+})
+
+export const compensateV2PointsResponseWalletAvailableMin = 0;
+
+export const compensateV2PointsResponseWalletPendingMin = 0;
+
+export const compensateV2PointsResponseWalletReservedMin = 0;
+
+export const compensateV2PointsResponseWalletBalanceMin = 0;
+
+export const compensateV2PointsResponseWalletLifetimeEarnedMin = 0;
+
+export const compensateV2PointsResponseWalletLifetimeRedeemedMin = 0;
+
+
+
+export const CompensateV2PointsResponse = zod.object({
+  "transaction": zod.object({
+  "id": zod.string().uuid(),
+  "sequence": zod.string(),
+  "accountId": zod.string(),
+  "type": zod.enum(['EARN', 'REDEEM', 'REFERRAL', 'BONUS', 'ADJUSTMENT', 'REFUND', 'REVERSAL', 'EXPIRATION']),
+  "amount": zod.number().int(),
+  "status": zod.enum(['pending', 'approved', 'rejected', 'reversed']),
+  "source": zod.string(),
+  "reference": zod.string(),
+  "description": zod.string(),
+  "reason": zod.string(),
+  "relatedTransactionId": zod.string().nullable(),
+  "actorId": zod.string(),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string(),
+  "events": zod.array(zod.object({
+  "status": zod.enum(['pending', 'approved', 'rejected', 'reversed']),
+  "delta": zod.number().int(),
+  "reservedDelta": zod.number().int(),
+  "reason": zod.string(),
+  "actorId": zod.string(),
+  "createdAt": zod.string()
+}))
+}),
+  "wallet": zod.object({
+  "accountId": zod.string(),
+  "available": zod.number().int().min(compensateV2PointsResponseWalletAvailableMin),
+  "pending": zod.number().int().min(compensateV2PointsResponseWalletPendingMin),
+  "reserved": zod.number().int().min(compensateV2PointsResponseWalletReservedMin),
+  "balance": zod.number().int().min(compensateV2PointsResponseWalletBalanceMin),
+  "lifetimeEarned": zod.number().int().min(compensateV2PointsResponseWalletLifetimeEarnedMin),
+  "lifetimeRedeemed": zod.number().int().min(compensateV2PointsResponseWalletLifetimeRedeemedMin)
+}),
+  "replayed": zod.boolean()
+})
+
+
+/**
  * @summary Get the authenticated V2 profile, or null before enrollment
  */
 export const GetV2AccountResponse = zod.object({
@@ -32,7 +413,7 @@ export const GetV2AccountResponse = zod.object({
 }),zod.null()]),
   "termsVersion": zod.string(),
   "privacyVersion": zod.string(),
-  "phase": zod.enum(['FOUNDATION']),
+  "phase": zod.enum(['FOUNDATION', 'POINTS']),
   "commerceEnabled": zod.literal(false)
 })
 
@@ -74,7 +455,7 @@ export const UpdateV2AccountResponse = zod.object({
 }),zod.null()]),
   "termsVersion": zod.string(),
   "privacyVersion": zod.string(),
-  "phase": zod.enum(['FOUNDATION']),
+  "phase": zod.enum(['FOUNDATION', 'POINTS']),
   "commerceEnabled": zod.literal(false)
 })
 
@@ -125,7 +506,7 @@ export const EnrollV2AccountResponse = zod.object({
 }),zod.null()]),
   "termsVersion": zod.string(),
   "privacyVersion": zod.string(),
-  "phase": zod.enum(['FOUNDATION']),
+  "phase": zod.enum(['FOUNDATION', 'POINTS']),
   "commerceEnabled": zod.literal(false)
 })
 

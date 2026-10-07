@@ -2,6 +2,14 @@
 
 Unchecked means unverified or not implemented. A demo or passing typecheck is not production evidence.
 
+## Phase 2 development evidence (not launch approval)
+- [x] Additive V2 ledger migration applied and rerun with checksum verification
+- [x] 17 isolated PostgreSQL financial tests, 4 access-policy tests and 3 demo regression tests pass
+- [x] 4 frontend-cache regression tests protect immediate updates, account isolation, pagination and older-read cancellation
+- [x] Required OpenAPI codegen and workspace typecheck pass
+- [x] Protected 390px wallet/admin journey verified, including live cache refresh after refund, insufficient balance, replay and permission denial
+- [ ] Outstanding phase-1 identity/email/production and real-administrator gates resolved
+
 ## Product
 - [ ] Real signup, email verification, login and logout verified
 - [ ] Password reset and session handling verified

@@ -8,9 +8,9 @@ export function V2Landing() {
   const { isLoaded, isSignedIn } = useAuth();
   if (isLoaded && isSignedIn) return <Redirect to="/account" />;
   return (
-    <V2Frame title="BONUSPLAY V2" desc="Verifiserte BONUSPLAY-kontoer for voksne i Norge. Fase 1: kontofundament.">
+    <V2Frame title="BONUSPLAY V2" desc="Verifiserte BONUSPLAY-kontoer for voksne i Norge. Fase 2: sporbar poengbok.">
       <section className="rise py-8">
-        <div className="mb-2 text-[11px] font-bold uppercase tracking-[0.22em] text-primary">V2 fase 1</div>
+        <div className="mb-2 text-[11px] font-bold uppercase tracking-[0.22em] text-primary">V2 fase 2</div>
         <h1 className="font-display text-3xl leading-tight sm:text-4xl">En ekte konto, <span className="grad-text">før noe annet</span></h1>
         <p className="mt-4 max-w-xl text-muted-foreground">Vi bygger BONUSPLAY steg for steg. Første steg er verifiserte kontoer for voksne i Norge, med tydelig samtykke og full kontroll over egen profil.</p>
         <div className="mt-6 flex flex-wrap gap-3">
@@ -37,7 +37,7 @@ export function V2Landing() {
 
 export function BusinessPage() {
   return (
-    <V2Frame title="For bedrifter" desc="Informasjon om fremtidig partnerskap med BONUSPLAY. Ikke aktivt i fase 1.">
+    <V2Frame title="For bedrifter" desc="Informasjon om fremtidig partnerskap med BONUSPLAY. Ikke aktivt i fase 2.">
       <PageHead eyebrow="For bedrifter" title="Partnerskap er ikke åpnet" sub="Denne siden er kun informasjon." />
       <PhaseNotice />
       <Card className="mt-6 space-y-3 text-sm text-muted-foreground">

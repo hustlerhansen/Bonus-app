@@ -11,4 +11,5 @@ export type V2AccountStatePhase = typeof V2AccountStatePhase[keyof typeof V2Acco
 
 export const V2AccountStatePhase = {
   FOUNDATION: 'FOUNDATION',
+  POINTS: 'POINTS',
 } as const;

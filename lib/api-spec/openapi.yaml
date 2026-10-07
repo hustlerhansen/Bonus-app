@@ -13,6 +13,124 @@ tags:
   - name: bonusplay
     description: BONUSPLAY demo account, game and rewards operations
 paths:
+  /v2/wallet:
+    get:
+      operationId: getV2Wallet
+      tags: [v2]
+      summary: Read own real ledger balance, never demo balances
+      responses:
+        "200":
+          description: Points wallet
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/V2Wallet" }
+        default:
+          $ref: "#/components/responses/V2PointsError"
+  /v2/transactions:
+    get:
+      operationId: listV2Transactions
+      tags: [v2]
+      parameters:
+        - $ref: "#/components/parameters/PointsCursor"
+        - $ref: "#/components/parameters/PointsLimit"
+      responses:
+        "200":
+          description: Newest first keyset-paginated history
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/V2TransactionPage" }
+        default:
+          $ref: "#/components/responses/V2PointsError"
+  /v2/admin/accounts/{accountId}/wallet:
+    get:
+      operationId: getV2AdminWallet
+      tags: [v2]
+      parameters:
+        - $ref: "#/components/parameters/PointsAccountId"
+      responses:
+        "200":
+          description: Administrator account wallet
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/V2Wallet" }
+        default:
+          $ref: "#/components/responses/V2PointsError"
+  /v2/admin/accounts/{accountId}/transactions:
+    get:
+      operationId: listV2AdminTransactions
+      tags: [v2]
+      parameters:
+        - $ref: "#/components/parameters/PointsAccountId"
+        - $ref: "#/components/parameters/PointsCursor"
+        - $ref: "#/components/parameters/PointsLimit"
+      responses:
+        "200":
+          description: Administrator account history
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/V2TransactionPage" }
+        default:
+          $ref: "#/components/responses/V2PointsError"
+  /v2/admin/accounts/{accountId}/adjustments:
+    post:
+      operationId: adjustV2Points
+      tags: [v2]
+      summary: Audited administrator adjustment with mandatory reason
+      parameters:
+        - $ref: "#/components/parameters/PointsAccountId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/V2PointsAdjustment" }
+      responses:
+        "200":
+          description: Committed transaction or identical idempotent replay
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/V2PointsResult" }
+        default:
+          $ref: "#/components/responses/V2PointsError"
+  /v2/admin/transactions/{transactionId}/decision:
+    post:
+      operationId: decideV2Points
+      tags: [v2]
+      summary: Approve or reject a pending transaction, append-only
+      parameters:
+        - $ref: "#/components/parameters/PointsTransactionId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/V2PointsDecision" }
+      responses:
+        "200":
+          description: Committed decision or identical replay
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/V2PointsResult" }
+        default:
+          $ref: "#/components/responses/V2PointsError"
+  /v2/admin/transactions/{transactionId}/compensation:
+    post:
+      operationId: compensateV2Points
+      tags: [v2]
+      summary: Full refund of a debit or full reversal of a credit/debit
+      parameters:
+        - $ref: "#/components/parameters/PointsTransactionId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/V2PointsCompensation" }
+      responses:
+        "200":
+          description: Committed compensation or identical replay; amount derived from original
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/V2PointsResult" }
+        default:
+          $ref: "#/components/responses/V2PointsError"
   /v2/me:
     get:
       operationId: getV2Account
@@ -486,7 +604,119 @@ paths:
               schema:
                 $ref: "#/components/schemas/OkResponse"
 components:
+  responses:
+    V2PointsError:
+      description: 400 invalid input; 401 login required; 403 forbidden; 404 not found; 409 replay conflict, insufficient balance or invalid transition; 429 rate limit
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/ErrorResponse" }
+  parameters:
+    PointsAccountId:
+      name: accountId
+      in: path
+      required: true
+      schema: { type: string, minLength: 1, maxLength: 128 }
+    PointsTransactionId:
+      name: transactionId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    PointsCursor:
+      name: cursor
+      in: query
+      schema: { type: string, pattern: '^[1-9][0-9]{0,18}$' }
+    PointsLimit:
+      name: limit
+      in: query
+      schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
   schemas:
+    V2PointsType:
+      type: string
+      enum: [EARN, REDEEM, REFERRAL, BONUS, ADJUSTMENT, REFUND, REVERSAL, EXPIRATION]
+    V2PointsStatus:
+      type: string
+      enum: [pending, approved, rejected, reversed]
+    V2Wallet:
+      type: object
+      required: [accountId, available, pending, reserved, balance, lifetimeEarned, lifetimeRedeemed]
+      properties:
+        accountId: { type: string }
+        available: { type: integer, minimum: 0 }
+        pending: { type: integer, minimum: 0 }
+        reserved: { type: integer, minimum: 0 }
+        balance: { type: integer, minimum: 0 }
+        lifetimeEarned: { type: integer, minimum: 0 }
+        lifetimeRedeemed: { type: integer, minimum: 0 }
+    V2PointsTransaction:
+      type: object
+      required: [id, sequence, accountId, type, amount, status, source, reference, description, reason, relatedTransactionId, actorId, createdAt, updatedAt, events]
+      properties:
+        id: { type: string, format: uuid }
+        sequence: { type: string }
+        accountId: { type: string }
+        type: { $ref: "#/components/schemas/V2PointsType" }
+        amount: { type: integer }
+        status: { $ref: "#/components/schemas/V2PointsStatus" }
+        source: { type: string }
+        reference: { type: string }
+        description: { type: string }
+        reason: { type: string }
+        relatedTransactionId: { type: [string, "null"] }
+        actorId: { type: string }
+        createdAt: { type: string }
+        updatedAt: { type: string }
+        events:
+          type: array
+          items: { $ref: "#/components/schemas/V2PointsEvent" }
+    V2PointsEvent:
+      type: object
+      required: [status, delta, reservedDelta, reason, actorId, createdAt]
+      properties:
+        status: { $ref: "#/components/schemas/V2PointsStatus" }
+        delta: { type: integer }
+        reservedDelta: { type: integer }
+        reason: { type: string }
+        actorId: { type: string }
+        createdAt: { type: string }
+    V2TransactionPage:
+      type: object
+      required: [items, nextCursor]
+      properties:
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/V2PointsTransaction" }
+        nextCursor: { type: [string, "null"] }
+    V2PointsAdjustment:
+      type: object
+      additionalProperties: false
+      required: [amount, reason, idempotencyKey]
+      properties:
+        amount: { type: integer, minimum: -1000000, maximum: 1000000 }
+        reason: { type: string, minLength: 10, maxLength: 500 }
+        idempotencyKey: { type: string, minLength: 16, maxLength: 128, pattern: '^[A-Za-z0-9_.:-]{16,128}$' }
+    V2PointsDecision:
+      type: object
+      additionalProperties: false
+      required: [status, reason, idempotencyKey]
+      properties:
+        status: { type: string, enum: [approved, rejected] }
+        reason: { type: string, minLength: 10, maxLength: 500 }
+        idempotencyKey: { type: string, minLength: 16, maxLength: 128, pattern: '^[A-Za-z0-9_.:-]{16,128}$' }
+    V2PointsCompensation:
+      type: object
+      additionalProperties: false
+      required: [type, reason, idempotencyKey]
+      properties:
+        type: { type: string, enum: [REFUND, REVERSAL] }
+        reason: { type: string, minLength: 10, maxLength: 500 }
+        idempotencyKey: { type: string, minLength: 16, maxLength: 128, pattern: '^[A-Za-z0-9_.:-]{16,128}$' }
+    V2PointsResult:
+      type: object
+      required: [transaction, wallet, replayed]
+      properties:
+        transaction: { $ref: "#/components/schemas/V2PointsTransaction" }
+        wallet: { $ref: "#/components/schemas/V2Wallet" }
+        replayed: { type: boolean }
     V2ProfileInput:
       type: object
       additionalProperties: false
@@ -540,7 +770,7 @@ components:
             - { type: "null" }
         termsVersion: { type: string }
         privacyVersion: { type: string }
-        phase: { type: string, enum: [FOUNDATION] }
+        phase: { type: string, enum: [FOUNDATION, POINTS] }
         commerceEnabled: { type: boolean, enum: [false] }
     V2Access:
       type: object

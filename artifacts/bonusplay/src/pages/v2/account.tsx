@@ -7,7 +7,7 @@ import { CheckCircle2 } from 'lucide-react';
 import { getGetV2AccountQueryKey, useEnrollV2Account, useUpdateV2Account, type V2Account, type V2AccountState } from '@workspace/api-client-react';
 import { Btn, Card, ErrorState, PageHead, PageSkeleton } from '@/components/bp';
 import { errMsg } from '@/hooks/use-bp';
-import { basePath, fmtDate, PhaseNotice, SignedInOnly, useV2State, V2Frame } from './shared';
+import { basePath, fmtDate, PhaseNotice, SignedInOnly, useIsAdmin, useV2State, V2Frame } from './shared';
 
 const inputCls = 'mt-1 h-11 w-full rounded-xl border border-white/15 bg-white/5 px-3 text-sm outline-none focus:border-primary';
 
@@ -89,6 +89,7 @@ function Row({ k, v }: { k: string; v: string }) {
 }
 
 function Dashboard({ a }: { a: V2Account }) {
+  const isAdmin = useIsAdmin();
   return (
     <>
       <PageHead eyebrow="Konto" title={`Hei, ${a.firstName}`} sub="Din verifiserte BONUSPLAY-konto er aktiv." />
@@ -105,6 +106,8 @@ function Dashboard({ a }: { a: V2Account }) {
         </dl>
       </Card>
       <div className="mt-4 flex flex-wrap gap-3">
+        <Link href="/account/points"><Btn variant="gold">Mine BonusPoints</Btn></Link>
+        {isAdmin && <Link href="/account/points/admin"><Btn variant="ghost">Poengadministrasjon</Btn></Link>}
         <Link href="/account/profile"><Btn variant="ghost">Rediger profil</Btn></Link>
         <Link href="/account/security"><Btn variant="ghost">Passord og økter</Btn></Link>
       </div>

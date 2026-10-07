@@ -4,6 +4,7 @@ import pinoHttp from "pino-http";
 import router from "./routes";
 import { logger } from "./lib/logger";
 import { DemoError } from "./bonusplay/service";
+import { PointsError } from "./v2/points";
 import helmet from "helmet";
 import { clerkMiddleware } from "@clerk/express";
 import { publishableKeyFromHost } from "@clerk/shared/keys";
@@ -47,7 +48,7 @@ app.use(
 
 app.use("/api", router);
 const errorHandler: ErrorRequestHandler = (error, req, res, _next) => {
-  if (error instanceof DemoError) {
+  if (error instanceof DemoError || error instanceof PointsError) {
     req.log.warn({ status: error.status }, error.message);
     res.status(error.status).json({ error: error.message });
     return;

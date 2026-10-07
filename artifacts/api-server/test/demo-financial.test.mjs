@@ -61,4 +61,15 @@ test("demo identity never authorizes V2; user cannot access demo admin", async (
   assert.equal((await call("/api/v2/partner/access")).status, 401);
   assert.equal((await call("/api/bonusplay/admin")).status, 401);
   assert.equal((await call("/api/v2/enroll", {}, "POST")).status, 401);
+  for (const path of [
+    "/api/v2/wallet",
+    "/api/v2/transactions",
+    "/api/v2/admin/accounts/demo/wallet",
+    "/api/v2/admin/accounts/demo/transactions",
+  ]) assert.equal((await call(path)).status, 401);
+  for (const path of [
+    "/api/v2/admin/accounts/demo/adjustments",
+    `/api/v2/admin/transactions/${randomUUID()}/decision`,
+    `/api/v2/admin/transactions/${randomUUID()}/compensation`,
+  ]) assert.equal((await call(path, {}, "POST")).status, 401);
 });

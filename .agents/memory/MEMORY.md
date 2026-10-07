@@ -1,3 +1,4 @@
 - [Embedded demo sessions](embedded-demo-sessions.md) — HTTPS session cookies must work inside the Preview iframe without sharing sessions across unrelated sites.
 - [Video verification](video-verification.md) — verify the clean export composition separately from iframe controls; host-injected preview chrome affects browser checks.
 - [V2 economics](v2-economics.md) — BonusPoints are a traceable financial liability; do not carry the demo exchange rate into real partner economics.
+- [OpenAPI Zod collisions](openapi-zod-collisions.md) — Orval path validators and query types can collide; disambiguate barrel exports, never hand-edit generated files.
