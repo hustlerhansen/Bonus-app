@@ -13,6 +13,85 @@ tags:
   - name: bonusplay
     description: BONUSPLAY demo account, game and rewards operations
 paths:
+  /v2/me:
+    get:
+      operationId: getV2Account
+      tags: [v2]
+      summary: Get the authenticated V2 profile, or null before enrollment
+      responses:
+        "200":
+          description: Account state
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/V2AccountState" }
+        "401":
+          description: Login required
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorResponse" }
+    patch:
+      operationId: updateV2Account
+      tags: [v2]
+      summary: Update the current account profile, never roles or balances
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/V2ProfileInput" }
+      responses:
+        "200":
+          description: Updated account state
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/V2AccountState" }
+  /v2/enroll:
+    post:
+      operationId: enrollV2Account
+      tags: [v2]
+      summary: Enroll a verified identity with versioned legal acceptance
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/V2EnrollmentInput" }
+      responses:
+        "201":
+          description: Account enrolled
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/V2AccountState" }
+  /v2/admin/access:
+    get:
+      operationId: checkV2AdminAccess
+      tags: [v2]
+      summary: Server-side administrator authorization probe
+      responses:
+        "200":
+          description: Access permitted
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/V2Access" }
+        "403":
+          description: Insufficient permissions
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorResponse" }
+  /v2/partner/access:
+    get:
+      operationId: checkV2PartnerAccess
+      tags: [v2]
+      summary: Server-side partner authorization probe
+      responses:
+        "200":
+          description: Access permitted
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/V2Access" }
+        "403":
+          description: Insufficient permissions
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorResponse" }
   /healthz:
     get:
       operationId: healthCheck
@@ -408,6 +487,67 @@ paths:
                 $ref: "#/components/schemas/OkResponse"
 components:
   schemas:
+    V2ProfileInput:
+      type: object
+      additionalProperties: false
+      required: [firstName, lastName, country, language]
+      properties:
+        firstName: { type: string, minLength: 1, maxLength: 80 }
+        lastName: { type: string, minLength: 1, maxLength: 80 }
+        country: { type: string, enum: [NO] }
+        language: { type: string, enum: [nb, en] }
+    V2EnrollmentInput:
+      type: object
+      additionalProperties: false
+      required: [firstName, lastName, country, language, termsAccepted, privacyAccepted, termsVersion, privacyVersion, ageConfirmed]
+      properties:
+        firstName: { type: string, minLength: 1, maxLength: 80 }
+        lastName: { type: string, minLength: 1, maxLength: 80 }
+        country: { type: string, enum: [NO] }
+        language: { type: string, enum: [nb, en] }
+        termsAccepted: { type: boolean, enum: [true] }
+        privacyAccepted: { type: boolean, enum: [true] }
+        ageConfirmed: { type: boolean, enum: [true] }
+        termsVersion: { type: string, maxLength: 64 }
+        privacyVersion: { type: string, maxLength: 64 }
+    V2Account:
+      type: object
+      required: [id, email, firstName, lastName, country, language, role, status, referralCode, termsVersion, privacyVersion, termsAcceptedAt, privacyAcceptedAt, emailVerifiedAt, createdAt, lastLoginAt]
+      properties:
+        id: { type: string }
+        email: { type: string }
+        firstName: { type: string }
+        lastName: { type: string }
+        country: { type: string }
+        language: { type: string }
+        role: { type: string, enum: [USER, PARTNER, ADMIN, SUPER_ADMIN] }
+        status: { type: string, enum: [ACTIVE, SUSPENDED, DELETION_REQUESTED] }
+        referralCode: { type: string }
+        termsVersion: { type: string }
+        privacyVersion: { type: string }
+        termsAcceptedAt: { type: string }
+        privacyAcceptedAt: { type: string }
+        emailVerifiedAt: { type: string }
+        createdAt: { type: string }
+        lastLoginAt: { type: string }
+    V2AccountState:
+      type: object
+      required: [account, termsVersion, privacyVersion, phase, commerceEnabled]
+      properties:
+        account:
+          anyOf:
+            - { $ref: "#/components/schemas/V2Account" }
+            - { type: "null" }
+        termsVersion: { type: string }
+        privacyVersion: { type: string }
+        phase: { type: string, enum: [FOUNDATION] }
+        commerceEnabled: { type: boolean, enum: [false] }
+    V2Access:
+      type: object
+      required: [ok, role]
+      properties:
+        ok: { type: boolean }
+        role: { type: string, enum: [USER, PARTNER, ADMIN, SUPER_ADMIN] }
     HealthStatus:
       type: object
       properties:

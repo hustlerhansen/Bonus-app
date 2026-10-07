@@ -1,0 +1,1984 @@
+BONUSPLAY V2 — MASTER BUILD PROMPT
+
+You are the lead product engineer, software architect, UX designer, security engineer, and QA engineer responsible for evolving the EXISTING BonusPlay application into a production-ready rewards platform.
+
+IMPORTANT:
+
+This is an EXISTING project.
+
+DO NOT rebuild the application from scratch.
+
+DO NOT remove or break existing functionality that already works.
+
+DO NOT replace the existing design unnecessarily.
+
+Your first responsibility is to inspect the current codebase and understand:
+
+* Existing architecture
+* Framework and dependencies
+* Database
+* Authentication
+* Routes
+* Components
+* APIs
+* Existing UI
+* Existing working functionality
+* Environment variables
+* Deployment configuration
+* Current errors or technical debt
+
+Preserve working functionality and improve the application incrementally.
+
+The goal is to transform the current BonusPlay demo into:
+
+BONUSPLAY V2
+
+A scalable rewards and performance-marketing platform where users earn BonusPoints for completing verified actions and spend those points on rewards.
+
+Businesses can create campaigns and pay for measurable customer actions.
+
+BonusPlay controls the marketplace, economics, fraud prevention, rewards and reporting.
+
+⸻
+
+1. CORE PRODUCT MODEL
+
+BonusPlay has three primary user types:
+
+USER
+
+Users can:
+
+* Register
+* Log in
+* Earn BonusPoints
+* Complete offers
+* View transactions
+* Redeem rewards
+* Refer friends
+* Track referral earnings
+* Build streaks
+* Progress through levels
+* Manage account/privacy settings
+
+PARTNER
+
+Businesses can:
+
+* Register a company
+* Create campaigns
+* Set campaign budgets
+* Define conversion events
+* Set reward amounts
+* Track results
+* Track spending
+* View conversion statistics
+* Pause campaigns
+* Manage billing
+
+ADMIN
+
+BonusPlay administrators must have complete control over:
+
+* Users
+* Partners
+* Campaigns
+* Offers
+* Rewards
+* Transactions
+* Redemptions
+* Referrals
+* Fraud
+* Payments
+* Support
+* Analytics
+* System configuration
+
+Use proper role-based access control.
+
+Roles:
+
+USER
+PARTNER
+ADMIN
+SUPER_ADMIN
+
+Never rely only on frontend role checks.
+
+Permissions MUST be enforced server-side.
+
+⸻
+
+2. BEFORE MODIFYING THE PROJECT
+
+Perform a complete codebase audit.
+
+Create internally:
+
+CURRENT_STATE.md
+
+Document:
+
+* Current stack
+* Database structure
+* Authentication
+* Routes
+* Components
+* APIs
+* Existing functionality
+* Broken functionality
+* Technical debt
+* Security risks
+* Missing environment variables
+* Existing integrations
+
+Then create:
+
+V2_IMPLEMENTATION_PLAN.md
+
+Break development into safe phases.
+
+Do NOT begin large destructive refactors before understanding the current system.
+
+Where possible:
+
+reuse existing components.
+
+Make database migrations backward-compatible.
+
+Do not delete existing database data.
+
+Do not expose secrets.
+
+Do not hardcode credentials.
+
+⸻
+
+3. USER AUTHENTICATION
+
+Build production-ready authentication.
+
+Support:
+
+Email/password
+
+and prepare architecture for:
+
+Google
+Apple
+
+Features:
+
+Registration
+Login
+Logout
+Email verification
+Forgot password
+Reset password
+Session management
+
+User profile fields:
+
+First name
+Last name
+Email
+Country
+Language
+Date created
+Last login
+Referral code
+Referral source
+Account status
+
+Optional:
+
+Profile image
+Phone number
+Birthday
+
+Users must accept:
+
+Terms of Service
+Privacy Policy
+
+Store:
+
+termsAcceptedAt
+privacyAcceptedAt
+termsVersion
+privacyVersion
+
+Never store passwords directly.
+
+⸻
+
+4. USER DASHBOARD
+
+Create a polished mobile-first dashboard.
+
+Top section:
+
+Welcome back, [NAME]
+
+Current balance:
+
+4,850 BonusPoints
+
+Primary CTA:
+
+EARN POINTS
+
+Show:
+
+Available points
+Pending points
+Lifetime earned
+Lifetime redeemed
+
+Then display:
+
+Recommended offers
+
+Example:
+
+Complete survey
++150 BP
+
+Try partner service
++500 BP
+
+Purchase from partner
++1,000 BP
+
+Refer a friend
++1,000 BP
+
+Also display:
+
+Daily streak
+
+Example:
+
+🔥 4 day streak
+
+Progress:
+
+1,150 BP until Gold
+
+Recent activity.
+
+⸻
+
+5. POINTS ENGINE
+
+THIS IS A CRITICAL SYSTEM.
+
+Do NOT implement points as a simple editable number on the user record.
+
+Build a proper immutable points ledger.
+
+Create a transaction model.
+
+Suggested fields:
+
+id
+userId
+type
+amount
+status
+sourceType
+sourceId
+description
+createdAt
+approvedAt
+expiresAt
+metadata
+
+Transaction types:
+
+EARN
+REDEEM
+REFERRAL
+BONUS
+ADJUSTMENT
+REFUND
+REVERSAL
+EXPIRATION
+
+Statuses:
+
+PENDING
+APPROVED
+REJECTED
+REVERSED
+
+Balance must be calculated reliably from valid ledger transactions or maintained through an atomic balance system backed by the ledger.
+
+Never trust point values coming from the browser.
+
+All points calculations must happen server-side.
+
+Prevent:
+
+Duplicate rewards
+Replay attacks
+Double redemptions
+Negative balances
+Race conditions
+
+Use database transactions where appropriate.
+
+Implement idempotency.
+
+Example:
+
+A conversion ID can only reward a user once.
+
+⸻
+
+6. EARN POINTS MARKETPLACE
+
+Create:
+
+/earn
+
+Users can browse ways to earn BonusPoints.
+
+Categories:
+
+Featured
+Shopping
+Subscriptions
+Surveys
+Apps
+Services
+Finance
+Travel
+Food
+Entertainment
+Other
+
+Offer card should contain:
+
+Partner logo
+Offer title
+Description
+Reward
+Requirements
+Estimated completion time
+Expiration
+CTA
+
+Example:
+
+Get 1,000 BP
+
+Subscribe to Partner X
+
+Requirements:
+
+New customers only.
+
+Offer details page:
+
+/earn/[offer]
+
+Show:
+
+Reward
+Requirements
+Terms
+Tracking information
+Completion steps
+Expected approval time
+
+CTA:
+
+START OFFER
+
+⸻
+
+7. OFFER / CONVERSION TRACKING
+
+Build a proper conversion system.
+
+Possible conversion sources:
+
+Unique tracking link
+Referral parameter
+Promo code
+Partner API
+Webhook
+Manual verification
+Purchase reference
+
+Conversion lifecycle:
+
+CLICKED
+STARTED
+PENDING
+VERIFIED
+REWARDED
+REJECTED
+REVERSED
+
+Each conversion needs:
+
+conversionId
+userId
+campaignId
+partnerId
+clickId
+status
+rewardPoints
+partnerRevenue
+timestamp
+metadata
+
+Implement server-side webhook endpoints.
+
+Verify webhook signatures.
+
+Use idempotency keys.
+
+Do not award duplicate conversions.
+
+⸻
+
+8. REWARDS STORE
+
+Create:
+
+/rewards
+
+Users spend BonusPoints.
+
+Reward categories:
+
+Gift cards
+Discounts
+Products
+Experiences
+Partner rewards
+Competitions
+
+Reward card:
+
+Image
+Reward name
+Points required
+Stock
+Provider
+Delivery method
+
+Example:
+
+NOK 100 gift card
+
+2,000 BP
+
+Reward page:
+
+/rewards/[reward]
+
+CTA:
+
+REDEEM
+
+Before redemption:
+
+Verify account
+Verify sufficient points
+Verify inventory
+Verify fraud/risk rules
+
+Use atomic database transaction.
+
+Deduct points only once.
+
+Create redemption.
+
+Statuses:
+
+PENDING
+PROCESSING
+FULFILLED
+FAILED
+CANCELLED
+REFUNDED
+
+User page:
+
+/my-rewards
+
+Show redemption history.
+
+⸻
+
+9. REFERRAL SYSTEM
+
+Every user receives a unique referral code.
+
+Example:
+
+bonusplay.no/r/MAG123
+
+Track:
+
+Referrer
+Referred user
+Signup
+Verification
+Qualification
+Reward
+
+DO NOT reward simply for clicking or registering.
+
+Referral should become qualified only after a configurable event.
+
+Example:
+
+Referred user completes first verified offer.
+
+Then:
+
+Referrer receives 1,000 BP.
+
+Create:
+
+/refer
+
+Show:
+
+Referral link
+Copy button
+Share button
+Successful referrals
+Pending referrals
+Points earned
+
+Anti-abuse:
+
+Device/IP checks
+Duplicate account detection
+Self-referral detection
+Velocity limits
+
+⸻
+
+10. GAMIFICATION
+
+Implement optional gamification.
+
+Levels:
+
+BRONZE
+SILVER
+GOLD
+PLATINUM
+
+Make thresholds configurable by admin.
+
+Example:
+
+Bronze:
+0–5,000 lifetime BP
+
+Silver:
+5,000–20,000
+
+Gold:
+20,000–50,000
+
+Platinum:
+50,000+
+
+Create:
+
+Daily streaks
+Milestones
+Achievements
+
+Examples:
+
+First reward
+First referral
+1,000 BP earned
+10,000 BP earned
+5 offers completed
+
+Do NOT allow gamification logic to compromise financial integrity.
+
+⸻
+
+11. PARTNER PORTAL
+
+Create separate partner experience.
+
+/partner
+
+Partner dashboard:
+
+Campaign spend
+Conversions
+Conversion rate
+Cost per acquisition
+Active campaigns
+Pending conversions
+Revenue/value generated
+
+Navigation:
+
+Dashboard
+Campaigns
+Create campaign
+Conversions
+Analytics
+Billing
+Company
+Settings
+
+⸻
+
+12. PARTNER ONBOARDING
+
+Partner registration should collect:
+
+Company name
+Organization number
+Country
+Website
+Contact name
+Email
+Phone
+
+Status:
+
+PENDING
+APPROVED
+SUSPENDED
+REJECTED
+
+Admin must approve businesses before campaigns can go live unless auto-approval is explicitly enabled later.
+
+⸻
+
+13. CAMPAIGN CREATION
+
+Partners create campaigns.
+
+Fields:
+
+Campaign name
+Offer title
+Description
+Landing URL
+Category
+Reward points
+Conversion type
+CPA/CPL/CPC price
+Campaign budget
+Daily budget
+Start date
+End date
+Maximum conversions
+Target country
+Target audience
+Terms
+Creative/logo
+
+Campaign states:
+
+DRAFT
+PENDING_APPROVAL
+ACTIVE
+PAUSED
+COMPLETED
+REJECTED
+
+Admin approval required.
+
+Partner must never be able to manipulate conversions or point balances directly.
+
+⸻
+
+14. PARTNER BILLING
+
+Integrate Stripe.
+
+Use Stripe for:
+
+Partner billing
+Campaign funding
+Invoices
+Subscription plans if enabled later
+
+Never trust payment status from frontend.
+
+Use Stripe webhooks.
+
+Verify webhook signatures.
+
+Store Stripe IDs.
+
+Suggested entities:
+
+stripeCustomerId
+stripePaymentIntentId
+stripeInvoiceId
+stripeSubscriptionId
+
+Webhook processing must be idempotent.
+
+Support:
+
+Payment succeeded
+Payment failed
+Refund
+Subscription update
+Invoice paid
+
+Never store card details.
+
+⸻
+
+15. BONUSPLAY BUSINESS MODEL
+
+Prepare the architecture for several revenue models:
+
+CPA — Cost per acquisition
+
+CPL — Cost per lead
+
+CPC — Cost per click
+
+Sponsored offers
+
+Featured placement
+
+Partner subscription
+
+Example:
+
+Partner CPA:
+
+250 NOK
+
+User reward cost:
+
+50 NOK
+
+BonusPlay gross margin:
+
+200 NOK
+
+Admin analytics should calculate:
+
+Partner revenue
+Reward liability
+Reward cost
+Gross margin
+Gross margin %
+Campaign profitability
+
+Do NOT assume that:
+
+1 BP = fixed monetary value.
+
+Create configurable economics.
+
+⸻
+
+16. ADMIN PANEL
+
+Create:
+
+/admin
+
+Protect completely using server-side RBAC.
+
+Dashboard:
+
+Total users
+Active users
+New users
+Partners
+Active campaigns
+Pending campaigns
+Points issued
+Points redeemed
+Outstanding points liability
+Revenue
+Reward cost
+Gross profit
+Fraud alerts
+
+Admin sections:
+
+Users
+Partners
+Campaigns
+Offers
+Conversions
+Transactions
+Rewards
+Redemptions
+Referrals
+Fraud
+Payments
+Support
+Analytics
+Settings
+Audit logs
+
+⸻
+
+17. ADMIN USER MANAGEMENT
+
+Admin can:
+
+Search users
+View account
+Suspend account
+Reactivate account
+View transactions
+View referrals
+View redemptions
+View conversions
+View fraud flags
+
+Admin may manually adjust points.
+
+BUT:
+
+Manual adjustment MUST create ledger transaction.
+
+Require:
+
+Reason
+Admin ID
+Timestamp
+
+Never silently edit balance.
+
+⸻
+
+18. ADMIN CAMPAIGN MANAGEMENT
+
+Admin can:
+
+Approve campaign
+Reject campaign
+Pause campaign
+Edit campaign
+Feature campaign
+Set reward
+Set commission
+Set limits
+
+All significant actions must create audit logs.
+
+⸻
+
+19. REWARD MANAGEMENT
+
+Admin can:
+
+Create reward
+Edit reward
+Disable reward
+Set inventory
+Set point cost
+Set category
+Upload image
+Configure delivery type
+
+Delivery types:
+
+MANUAL
+CODE
+DIGITAL
+PHYSICAL
+API
+
+For digital codes:
+
+Store securely.
+
+Do not expose unused codes to frontend.
+
+⸻
+
+20. FRAUD PREVENTION
+
+Fraud prevention is essential.
+
+Create fraud detection infrastructure.
+
+Track signals such as:
+
+Multiple accounts from same device
+Multiple accounts from same IP
+Unusual signup velocity
+Referral loops
+Self referrals
+Repeated payment details where legally/technically appropriate
+Impossible conversion patterns
+Repeated failed redemptions
+Unusual point accumulation
+High-value redemption immediately after signup
+
+Create:
+
+riskScore
+
+Example:
+
+0–100
+
+Risk states:
+
+LOW
+MEDIUM
+HIGH
+BLOCKED
+
+High-risk transactions may require manual review.
+
+Do NOT automatically ban legitimate users based solely on IP.
+
+Create admin:
+
+/admin/fraud
+
+Show:
+
+User
+Risk score
+Reason
+Activity
+Recommended action
+
+⸻
+
+21. AUDIT LOGGING
+
+Create immutable audit logs.
+
+Track:
+
+Admin actions
+Partner changes
+Campaign changes
+Point adjustments
+Reward changes
+Account suspensions
+Fraud decisions
+
+Fields:
+
+actorId
+actorRole
+action
+entityType
+entityId
+before
+after
+timestamp
+ip where appropriate
+
+Sensitive values must be redacted.
+
+⸻
+
+22. GDPR / PRIVACY
+
+BonusPlay targets European users.
+
+Implement GDPR-ready architecture.
+
+Create pages:
+
+/privacy
+/terms
+/cookies
+
+Account settings:
+
+/settings/privacy
+
+Users should be able to:
+
+Download/export their data
+Request account deletion
+Manage marketing consent
+Manage optional tracking consent
+
+Separate:
+
+Required cookies
+
+from:
+
+Analytics/marketing cookies.
+
+Do not load optional trackers before valid consent where consent is legally required.
+
+Maintain consent records.
+
+Account deletion should safely handle financial/audit records that must legally or operationally be retained.
+
+Use anonymization where appropriate instead of deleting records required for accounting, security or fraud prevention.
+
+⸻
+
+23. EMAIL SYSTEM
+
+Implement transactional email architecture.
+
+Prefer existing email provider if already configured.
+
+Otherwise support Resend.
+
+Emails:
+
+Welcome
+Verify email
+Reset password
+Points earned
+Offer approved
+Referral qualified
+Reward redeemed
+Reward delivered
+Partner approved
+Campaign approved
+Campaign rejected
+Payment receipt
+Security notification
+
+Build reusable email templates.
+
+Add email preferences.
+
+Marketing emails require appropriate consent.
+
+Transactional/security emails must remain functional.
+
+⸻
+
+24. NOTIFICATIONS
+
+Create notification infrastructure.
+
+Types:
+
+POINTS
+REWARD
+REFERRAL
+CAMPAIGN
+SECURITY
+SYSTEM
+
+Create notification center:
+
+/notifications
+
+Support:
+
+Unread count
+Mark as read
+Mark all read
+
+Architecture should allow future:
+
+Push notifications
+SMS
+
+⸻
+
+25. ANALYTICS
+
+Implement privacy-conscious analytics.
+
+Track important product events.
+
+Examples:
+
+signup_started
+signup_completed
+offer_viewed
+offer_started
+offer_completed
+conversion_verified
+points_awarded
+reward_viewed
+reward_redeemed
+referral_shared
+referral_qualified
+partner_registered
+campaign_created
+campaign_activated
+
+Admin analytics:
+
+DAU
+WAU
+MAU
+Signup conversion
+Offer conversion
+Average points earned
+Average points redeemed
+Reward redemption rate
+Referral rate
+Retention
+Partner CPA
+Revenue
+Gross margin
+
+Partner analytics:
+
+Impressions
+Clicks
+Conversions
+CPA
+Spend
+Conversion rate
+
+Avoid collecting unnecessary personal data.
+
+⸻
+
+26. SUPPORT
+
+Create basic support infrastructure.
+
+User:
+
+/support
+
+Allow:
+
+FAQ
+Contact support
+Submit ticket
+
+Ticket fields:
+
+Subject
+Category
+Message
+Status
+Created
+Updated
+
+Statuses:
+
+OPEN
+IN_PROGRESS
+WAITING_USER
+RESOLVED
+CLOSED
+
+Admin can manage tickets.
+
+⸻
+
+27. DATABASE DESIGN
+
+Inspect existing database FIRST.
+
+Extend rather than blindly replace it.
+
+Expected entities may include:
+
+User
+Account
+Session
+Partner
+Campaign
+Offer
+Click
+Conversion
+PointsTransaction
+Reward
+Redemption
+Referral
+FraudSignal
+FraudCase
+Notification
+SupportTicket
+Payment
+Consent
+AuditLog
+SystemSetting
+
+Use:
+
+Foreign keys
+Indexes
+Unique constraints
+Database transactions
+
+Add indexes for frequently queried fields.
+
+Create migrations.
+
+Do not manually mutate production schemas without migrations.
+
+⸻
+
+28. SECURITY REQUIREMENTS
+
+Security is mandatory.
+
+Implement:
+
+Server-side authorization
+Input validation
+Output sanitization
+Rate limiting
+CSRF protection where relevant
+Secure cookies
+HTTP security headers
+SQL injection protection
+XSS protection
+Webhook signature verification
+Secure secret handling
+
+Never expose:
+
+Database secrets
+Stripe secret key
+Webhook secrets
+Email API keys
+
+Never put sensitive secrets in frontend bundles.
+
+Validate ALL API input server-side.
+
+⸻
+
+29. API DESIGN
+
+Create consistent API structure.
+
+Example:
+
+/api/auth/*
+/api/offers/*
+/api/rewards/*
+/api/referrals/*
+/api/partner/*
+/api/admin/*
+/api/webhooks/stripe
+/api/webhooks/partners
+
+Return consistent errors.
+
+Use proper HTTP status codes.
+
+Implement request logging without leaking secrets.
+
+⸻
+
+30. MOBILE-FIRST DESIGN
+
+Most consumers may use BonusPlay from mobile.
+
+Design mobile first.
+
+Requirements:
+
+Fast
+Simple
+Touch friendly
+Accessible
+Clear CTAs
+Minimal friction
+
+Bottom navigation for users:
+
+Home
+Earn
+Rewards
+Refer
+Profile
+
+Desktop can use expanded navigation.
+
+Partner/admin dashboards should be optimized primarily for desktop but remain responsive.
+
+⸻
+
+31. DESIGN SYSTEM
+
+Preserve the current BonusPlay identity where good.
+
+Improve consistency.
+
+Create reusable components:
+
+Button
+Card
+OfferCard
+RewardCard
+StatCard
+Modal
+Dialog
+Input
+Select
+Badge
+Table
+Pagination
+EmptyState
+LoadingState
+ErrorState
+Toast
+
+Define:
+
+Typography
+Spacing
+Border radius
+Shadows
+Colors
+States
+
+Avoid random styling.
+
+Do not redesign existing working screens without a clear reason.
+
+⸻
+
+32. LOADING / ERROR / EMPTY STATES
+
+Every data-driven screen must handle:
+
+Loading
+
+Empty
+
+Error
+
+Success
+
+Example:
+
+No rewards available
+
+should not appear as broken page.
+
+Provide useful CTA.
+
+⸻
+
+33. SEO
+
+Public pages should support SEO.
+
+Create:
+
+Metadata
+OpenGraph
+Sitemap
+robots.txt
+Canonical URLs
+
+Public pages:
+
+Home
+How it works
+For businesses
+Rewards overview
+FAQ
+About
+Terms
+Privacy
+
+Private dashboards should not be indexed.
+
+⸻
+
+34. PUBLIC LANDING PAGE
+
+Improve homepage if needed.
+
+Core message:
+
+GET REWARDED FOR WHAT YOU ALREADY DO
+
+Explain:
+
+1. Create account
+2. Complete offers
+3. Earn BonusPoints
+4. Choose rewards
+
+CTA:
+
+JOIN BONUSPLAY
+
+Secondary:
+
+FOR BUSINESSES
+
+Include:
+
+How it works
+Example rewards
+Featured partners
+Trust/security section
+FAQ
+Business CTA
+
+Do not display fake statistics or fake partner logos.
+
+Use clearly marked placeholders until real partners exist.
+
+⸻
+
+35. BUSINESS LANDING PAGE
+
+Create:
+
+/business
+
+Explain:
+
+BonusPlay helps companies acquire measurable customers while rewarding consumers.
+
+Show:
+
+CPA campaigns
+CPL campaigns
+Sponsored offers
+Performance analytics
+
+CTA:
+
+BECOME A PARTNER
+
+Include simple ROI example.
+
+⸻
+
+36. FEATURE FLAGS
+
+Use feature flags/configuration where appropriate.
+
+Examples:
+
+referralsEnabled
+streaksEnabled
+partnerSignupEnabled
+rewardStoreEnabled
+
+This allows features to be disabled without emergency deployments.
+
+⸻
+
+37. SYSTEM SETTINGS
+
+Admin settings should control:
+
+Referral reward
+Level thresholds
+Minimum redemption
+Point expiration policy
+Fraud thresholds
+Campaign defaults
+Maintenance mode
+Feature flags
+
+Do not hardcode business rules throughout the codebase.
+
+⸻
+
+38. DEMO DATA VS PRODUCTION DATA
+
+Existing demo content must be identified.
+
+Do not allow fake demo records to be confused with real production records.
+
+Create proper seed data for development.
+
+Production should start clean or migrate only legitimate data.
+
+Never show fake customers, partners, balances or statistics as real.
+
+⸻
+
+39. TESTING
+
+Create automated tests for CRITICAL financial logic.
+
+At minimum test:
+
+Points awarding
+Duplicate conversion prevention
+Points redemption
+Insufficient balance
+Concurrent redemption
+Referral qualification
+Referral abuse rules
+Stripe webhook idempotency
+Authorization
+Admin access
+Partner access
+
+Add integration tests for critical flows.
+
+⸻
+
+40. CORE END-TO-END TEST
+
+The following journey MUST work before launch:
+
+USER:
+
+Register
+→ verify email
+→ login
+→ browse offer
+→ start offer
+→ conversion received
+→ conversion pending
+→ conversion verified
+→ points awarded
+→ balance updates
+→ user selects reward
+→ redeems reward
+→ redemption appears
+→ transaction history correct
+
+PARTNER:
+
+Register
+→ admin approves
+→ create campaign
+→ fund/pay
+→ admin approves campaign
+→ campaign becomes active
+→ user conversion occurs
+→ partner dashboard updates
+
+ADMIN:
+
+Login
+→ approve partner
+→ approve campaign
+→ view conversion
+→ view points transaction
+→ process reward
+→ inspect analytics
+
+⸻
+
+41. PERFORMANCE
+
+Optimize:
+
+Database queries
+API calls
+Images
+Frontend bundles
+
+Use pagination.
+
+Do not load entire transaction tables.
+
+Lazy-load appropriate content.
+
+Avoid unnecessary re-renders.
+
+Target good Core Web Vitals.
+
+⸻
+
+42. OBSERVABILITY
+
+Implement:
+
+Application logging
+Error logging
+Webhook logging
+Payment error logging
+
+Prepare integration with an error monitoring service such as Sentry.
+
+Never log:
+
+Passwords
+Card details
+Tokens
+API secrets
+
+⸻
+
+43. BACKUPS AND RECOVERY
+
+Document:
+
+Database backup strategy
+Restore procedure
+Environment configuration
+Deployment procedure
+
+Create:
+
+RUNBOOK.md
+
+Include:
+
+What to do if:
+
+Stripe fails
+Email fails
+Points bug occurs
+Fraud attack occurs
+Database migration fails
+Deployment fails
+
+⸻
+
+44. LAUNCH CHECKLIST
+
+Create:
+
+LAUNCH_CHECKLIST.md
+
+It must contain checkboxes.
+
+Sections:
+
+PRODUCT
+
+User signup works
+Login works
+Email verification works
+Offers work
+Points ledger works
+Rewards work
+Referral works
+Partner portal works
+Admin works
+
+PAYMENTS
+
+Stripe production keys
+Webhook configured
+Webhook verification
+Payment success tested
+Payment failure tested
+Refund tested
+
+SECURITY
+
+Secrets checked
+Authorization tested
+Rate limiting
+Webhook security
+Admin protection
+Dependency audit
+
+GDPR
+
+Privacy policy
+Terms
+Cookie consent
+Marketing consent
+Data export
+Deletion request
+
+EMAIL
+
+Domain verified
+Transactional emails
+Reset password
+Verification email
+Delivery tested
+
+ANALYTICS
+
+Production analytics
+Conversion tracking
+Admin analytics
+Partner analytics
+
+OPERATIONS
+
+Production database
+Backups
+Monitoring
+Error tracking
+Support email
+Runbook
+
+COMMERCIAL
+
+Real rewards
+Real partner
+Reward economics validated
+Campaign economics validated
+Fraud policy
+Support process
+
+Do not mark an item complete unless it has actually been verified.
+
+⸻
+
+45. DEVELOPMENT PHASES
+
+Do NOT attempt everything simultaneously.
+
+Implement in this order:
+
+PHASE 0
+
+Audit current application.
+
+No destructive changes.
+
+PHASE 1 — FOUNDATION
+
+Database
+Authentication
+Roles
+Security
+Core navigation
+Profiles
+
+PHASE 2 — POINTS
+
+Points ledger
+Transactions
+Balance
+Admin adjustments
+
+PHASE 3 — EARN
+
+Offers
+Tracking
+Conversions
+Verification
+
+PHASE 4 — REWARDS
+
+Rewards store
+Redemptions
+Inventory
+
+PHASE 5 — REFERRALS
+
+Referral links
+Qualification
+Rewards
+Anti-abuse
+
+PHASE 6 — PARTNER
+
+Partner onboarding
+Campaigns
+Dashboard
+Analytics
+
+PHASE 7 — BILLING
+
+Stripe
+Campaign payments
+Invoices
+Webhooks
+
+PHASE 8 — ADMIN
+
+Full admin control
+Fraud
+Audit logs
+Analytics
+
+PHASE 9 — COMPLIANCE
+
+GDPR
+Privacy
+Terms
+Consent
+Data export/deletion
+
+PHASE 10 — COMMUNICATION
+
+Email
+Notifications
+Support
+
+PHASE 11 — HARDENING
+
+Security
+Anti-fraud
+Performance
+Testing
+Monitoring
+Backups
+
+PHASE 12 — LAUNCH
+
+Production configuration
+Final QA
+Launch checklist
+
+⸻
+
+46. DEFINITION OF DONE
+
+A feature is NOT complete merely because the UI exists.
+
+Every feature must include where applicable:
+
+Frontend
+Backend
+Database
+Validation
+Authorization
+Loading states
+Error handling
+Mobile responsiveness
+Security
+Logging
+Testing
+
+Never create buttons that do nothing.
+
+Never display functionality as working when only the UI has been created.
+
+Clearly mark unfinished functionality.
+
+⸻
+
+47. DEVELOPMENT PRINCIPLES
+
+Prioritize:
+
+1. Financial integrity
+2. Security
+3. Reliability
+4. Simple user experience
+5. Measurable business value
+6. Scalability
+
+Avoid unnecessary complexity.
+
+Do not introduce microservices unless justified.
+
+Prefer a well-structured modular monolith for V2.
+
+Do not overengineer.
+
+⸻
+
+48. CRITICAL FINANCIAL RULE
+
+BonusPoints represent a financial liability for BonusPlay.
+
+Therefore:
+
+Points must never be created, duplicated, redeemed or reversed without a traceable ledger event.
+
+Every point must be explainable.
+
+We must always be able to answer:
+
+Where did these points come from?
+
+Why were they awarded?
+
+Were they verified?
+
+Were they redeemed?
+
+Were they reversed?
+
+Who changed them?
+
+⸻
+
+49. BONUSPLAY NORTH STAR
+
+The platform should ultimately make this transaction possible:
+
+PARTNER
+
+pays BonusPlay for a measurable customer action
+
+↓
+
+BONUSPLAY
+
+tracks and verifies the action
+
+↓
+
+USER
+
+receives BonusPoints
+
+↓
+
+USER
+
+redeems a reward
+
+↓
+
+BONUSPLAY
+
+keeps the margin
+
+↓
+
+PARTNER
+
+receives measurable customer acquisition
+
+Every major feature should support this loop.
+
+⸻
+
+50. YOUR FIRST ACTION
+
+DO NOT immediately start rewriting the entire application.
+
+First:
+
+1. Inspect the entire existing repository.
+2. Run the current application.
+3. Identify what currently works.
+4. Identify broken functionality.
+5. Inspect database/schema.
+6. Inspect authentication.
+7. Inspect existing dependencies.
+8. Identify security problems.
+9. Identify demo/mock functionality.
+10. Produce a concise CURRENT STATE report.
+11. Produce the phased implementation plan.
+12. Back up/checkpoint the current working version before major modifications.
+
+Then begin PHASE 1.
+
+After each phase:
+
+Run the application.
+
+Run relevant tests.
+
+Fix regressions.
+
+Confirm existing functionality still works.
+
+Create a checkpoint.
+
+Update documentation.
+
+Then proceed to the next phase.
+
+DO NOT sacrifice existing working functionality simply to implement V2 faster.
+
+The final result must be a real, secure, maintainable BonusPlay platform — not merely a visually convincing prototype.

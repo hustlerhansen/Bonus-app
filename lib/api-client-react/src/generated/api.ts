@@ -38,7 +38,11 @@ import type {
   MissionUpdate,
   NotificationReadInput,
   OkResponse,
-  RedemptionInput
+  RedemptionInput,
+  V2Access,
+  V2AccountState,
+  V2EnrollmentInput,
+  V2ProfileInput
 } from './api.schemas';
 
 import { customFetch } from '../custom-fetch';
@@ -67,6 +71,413 @@ const withQueryKey = <T extends object, K>(query: T, queryKey: K): T & { queryKe
   }
   return result;
 };
+
+export const getGetV2AccountUrl = () => {
+
+
+
+
+  return `/api/v2/me`
+}
+
+/**
+ * @summary Get the authenticated V2 profile, or null before enrollment
+ */
+export const getV2Account = async ( options?: Parameters<typeof customFetch>[1]): Promise<V2AccountState> => {
+
+  return customFetch<V2AccountState>(getGetV2AccountUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetV2AccountQueryKey = () => {
+    return [
+    `/api/v2/me`
+    ] as const;
+    }
+
+
+export const getGetV2AccountQueryOptions = <TData = Awaited<ReturnType<typeof getV2Account>>, TError = ErrorType<ErrorResponse>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getV2Account>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetV2AccountQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getV2Account>>> = ({ signal }) => getV2Account({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getV2Account>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetV2AccountQueryResult = NonNullable<Awaited<ReturnType<typeof getV2Account>>>
+export type GetV2AccountQueryError = ErrorType<ErrorResponse>
+
+
+/**
+ * @summary Get the authenticated V2 profile, or null before enrollment
+ */
+
+export function useGetV2Account<TData = Awaited<ReturnType<typeof getV2Account>>, TError = ErrorType<ErrorResponse>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getV2Account>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetV2AccountQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getUpdateV2AccountUrl = () => {
+
+
+
+
+  return `/api/v2/me`
+}
+
+/**
+ * @summary Update the current account profile, never roles or balances
+ */
+export const updateV2Account = async (v2ProfileInput: V2ProfileInput, options?: Parameters<typeof customFetch>[1]): Promise<V2AccountState> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<V2AccountState>(getUpdateV2AccountUrl(),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(v2ProfileInput)
+  }
+);}
+
+
+
+
+
+export const getUpdateV2AccountMutationKey = () => ['updateV2Account'] as const;
+
+export const getUpdateV2AccountMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateV2Account>>, TError,UpdateV2AccountMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateV2Account>>, TError,UpdateV2AccountMutationVariables, TContext> => {
+
+const mutationKey = getUpdateV2AccountMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateV2Account>>, UpdateV2AccountMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  updateV2Account(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateV2AccountMutationResult = NonNullable<Awaited<ReturnType<typeof updateV2Account>>>
+    export type UpdateV2AccountMutationBody = BodyType<V2ProfileInput>
+    export type UpdateV2AccountMutationError = ErrorType<unknown>
+    export type UpdateV2AccountMutationVariables = {data: BodyType<V2ProfileInput>}
+
+    /**
+ * @summary Update the current account profile, never roles or balances
+ */
+export const useUpdateV2Account = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateV2Account>>, TError,UpdateV2AccountMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateV2Account>>,
+        TError,
+        UpdateV2AccountMutationVariables,
+        TContext
+      > => {
+      return useMutation(getUpdateV2AccountMutationOptions(options));
+    }
+
+export const getEnrollV2AccountUrl = () => {
+
+
+
+
+  return `/api/v2/enroll`
+}
+
+/**
+ * @summary Enroll a verified identity with versioned legal acceptance
+ */
+export const enrollV2Account = async (v2EnrollmentInput: V2EnrollmentInput, options?: Parameters<typeof customFetch>[1]): Promise<V2AccountState> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<V2AccountState>(getEnrollV2AccountUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(v2EnrollmentInput)
+  }
+);}
+
+
+
+
+
+export const getEnrollV2AccountMutationKey = () => ['enrollV2Account'] as const;
+
+export const getEnrollV2AccountMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof enrollV2Account>>, TError,EnrollV2AccountMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof enrollV2Account>>, TError,EnrollV2AccountMutationVariables, TContext> => {
+
+const mutationKey = getEnrollV2AccountMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof enrollV2Account>>, EnrollV2AccountMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  enrollV2Account(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type EnrollV2AccountMutationResult = NonNullable<Awaited<ReturnType<typeof enrollV2Account>>>
+    export type EnrollV2AccountMutationBody = BodyType<V2EnrollmentInput>
+    export type EnrollV2AccountMutationError = ErrorType<unknown>
+    export type EnrollV2AccountMutationVariables = {data: BodyType<V2EnrollmentInput>}
+
+    /**
+ * @summary Enroll a verified identity with versioned legal acceptance
+ */
+export const useEnrollV2Account = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof enrollV2Account>>, TError,EnrollV2AccountMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof enrollV2Account>>,
+        TError,
+        EnrollV2AccountMutationVariables,
+        TContext
+      > => {
+      return useMutation(getEnrollV2AccountMutationOptions(options));
+    }
+
+export const getCheckV2AdminAccessUrl = () => {
+
+
+
+
+  return `/api/v2/admin/access`
+}
+
+/**
+ * @summary Server-side administrator authorization probe
+ */
+export const checkV2AdminAccess = async ( options?: Parameters<typeof customFetch>[1]): Promise<V2Access> => {
+
+  return customFetch<V2Access>(getCheckV2AdminAccessUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getCheckV2AdminAccessQueryKey = () => {
+    return [
+    `/api/v2/admin/access`
+    ] as const;
+    }
+
+
+export const getCheckV2AdminAccessQueryOptions = <TData = Awaited<ReturnType<typeof checkV2AdminAccess>>, TError = ErrorType<ErrorResponse>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof checkV2AdminAccess>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getCheckV2AdminAccessQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof checkV2AdminAccess>>> = ({ signal }) => checkV2AdminAccess({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof checkV2AdminAccess>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type CheckV2AdminAccessQueryResult = NonNullable<Awaited<ReturnType<typeof checkV2AdminAccess>>>
+export type CheckV2AdminAccessQueryError = ErrorType<ErrorResponse>
+
+
+/**
+ * @summary Server-side administrator authorization probe
+ */
+
+export function useCheckV2AdminAccess<TData = Awaited<ReturnType<typeof checkV2AdminAccess>>, TError = ErrorType<ErrorResponse>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof checkV2AdminAccess>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getCheckV2AdminAccessQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getCheckV2PartnerAccessUrl = () => {
+
+
+
+
+  return `/api/v2/partner/access`
+}
+
+/**
+ * @summary Server-side partner authorization probe
+ */
+export const checkV2PartnerAccess = async ( options?: Parameters<typeof customFetch>[1]): Promise<V2Access> => {
+
+  return customFetch<V2Access>(getCheckV2PartnerAccessUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getCheckV2PartnerAccessQueryKey = () => {
+    return [
+    `/api/v2/partner/access`
+    ] as const;
+    }
+
+
+export const getCheckV2PartnerAccessQueryOptions = <TData = Awaited<ReturnType<typeof checkV2PartnerAccess>>, TError = ErrorType<ErrorResponse>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof checkV2PartnerAccess>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getCheckV2PartnerAccessQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof checkV2PartnerAccess>>> = ({ signal }) => checkV2PartnerAccess({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof checkV2PartnerAccess>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type CheckV2PartnerAccessQueryResult = NonNullable<Awaited<ReturnType<typeof checkV2PartnerAccess>>>
+export type CheckV2PartnerAccessQueryError = ErrorType<ErrorResponse>
+
+
+/**
+ * @summary Server-side partner authorization probe
+ */
+
+export function useCheckV2PartnerAccess<TData = Awaited<ReturnType<typeof checkV2PartnerAccess>>, TError = ErrorType<ErrorResponse>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof checkV2PartnerAccess>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getCheckV2PartnerAccessQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
 
 export const getHealthCheckUrl = () => {
 

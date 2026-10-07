@@ -68,7 +68,8 @@ export default function Onboarding() {
               onClick={() => (i < slides.length - 1 ? setI(i + 1) : setLogin(true))}>{i < slides.length - 1 ? 'Neste' : 'Kom i gang'}</Btn>
           </>
         )}
-        <p className="mt-5 text-center text-[11px] text-muted-foreground">
+        <p className="mt-4 text-center text-xs text-muted-foreground">Ny: <Link href="/v2" className="font-bold text-primary underline" data-testid="link-v2">Verifiserte kontoer (V2, fase 1)</Link></p>
+        <p className="mt-3 text-center text-[11px] text-muted-foreground">
           <Link href="/terms" className="underline">Vilkår</Link> · <Link href="/privacy" className="underline">Personvern</Link> · <Link href="/help" className="underline">Hjelp</Link>
         </p>
       </div>

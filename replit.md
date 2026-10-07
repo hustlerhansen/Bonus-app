@@ -23,7 +23,8 @@ Norwegian Bokmål, mobile-first rewards and mini-games PWA for adults, with demo
 - All external providers, monetary figures and redemptions remain explicitly DEMO. No real money or gift cards are sent.
 - Never sell random chests for real money.
 - Rewards must never exceed what verified unit economics can support.
-- Do not replace demo providers with live providers or authentication without an explicit new request.
+- The V2 master specification authorizes incremental production-oriented development, not a rewrite or commercial launch.
+- Demo providers remain simulated. V2 identity/financial data must never be seeded from demo accounts or balances.
 
 ## Architecture
 - Each signed browser demo session gets an isolated Magnar profile; public demo admin enrollment is intentional and is not production authorization.
@@ -32,3 +33,10 @@ Norwegian Bokmål, mobile-first rewards and mini-games PWA for adults, with demo
 - Catalog disablement preserves historical ledger references. Admin changes are audited.
 - Database schema is applied in development, not via startup DDL. Startup seed only inserts missing demo catalog rows.
 - API changes require codegen; do not edit generated clients or validation schemas.
+
+## V2 rollout
+- Follow `V2_IMPLEMENTATION_PLAN.md`; record verified results and remaining gates, not just UI completion.
+- Keep existing demo routes/data/film working while V2 is built alongside them. A signed demo admin cookie grants no V2 permissions.
+- Real account enrollment defaults to USER. Roles are controlled by the server/database; no first-user-admin shortcut or public promotion.
+- Do not publish V2, enable real payouts or mutate production schemas during development without explicit approval.
+- `CURRENT_STATE.md`, `LAUNCH_CHECKLIST.md`, and `RUNBOOK.md` describe current status and commercial prerequisites.

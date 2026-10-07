@@ -9,6 +9,146 @@ import * as zod from 'zod';
 
 
 /**
+ * @summary Get the authenticated V2 profile, or null before enrollment
+ */
+export const GetV2AccountResponse = zod.object({
+  "account": zod.union([zod.object({
+  "id": zod.string(),
+  "email": zod.string(),
+  "firstName": zod.string(),
+  "lastName": zod.string(),
+  "country": zod.string(),
+  "language": zod.string(),
+  "role": zod.enum(['USER', 'PARTNER', 'ADMIN', 'SUPER_ADMIN']),
+  "status": zod.enum(['ACTIVE', 'SUSPENDED', 'DELETION_REQUESTED']),
+  "referralCode": zod.string(),
+  "termsVersion": zod.string(),
+  "privacyVersion": zod.string(),
+  "termsAcceptedAt": zod.string(),
+  "privacyAcceptedAt": zod.string(),
+  "emailVerifiedAt": zod.string(),
+  "createdAt": zod.string(),
+  "lastLoginAt": zod.string()
+}),zod.null()]),
+  "termsVersion": zod.string(),
+  "privacyVersion": zod.string(),
+  "phase": zod.enum(['FOUNDATION']),
+  "commerceEnabled": zod.literal(false)
+})
+
+
+/**
+ * @summary Update the current account profile, never roles or balances
+ */
+export const updateV2AccountBodyFirstNameMax = 80;
+
+export const updateV2AccountBodyLastNameMax = 80;
+
+
+
+export const UpdateV2AccountBody = zod.object({
+  "firstName": zod.string().min(1).max(updateV2AccountBodyFirstNameMax),
+  "lastName": zod.string().min(1).max(updateV2AccountBodyLastNameMax),
+  "country": zod.enum(['NO']),
+  "language": zod.enum(['nb', 'en'])
+})
+
+export const UpdateV2AccountResponse = zod.object({
+  "account": zod.union([zod.object({
+  "id": zod.string(),
+  "email": zod.string(),
+  "firstName": zod.string(),
+  "lastName": zod.string(),
+  "country": zod.string(),
+  "language": zod.string(),
+  "role": zod.enum(['USER', 'PARTNER', 'ADMIN', 'SUPER_ADMIN']),
+  "status": zod.enum(['ACTIVE', 'SUSPENDED', 'DELETION_REQUESTED']),
+  "referralCode": zod.string(),
+  "termsVersion": zod.string(),
+  "privacyVersion": zod.string(),
+  "termsAcceptedAt": zod.string(),
+  "privacyAcceptedAt": zod.string(),
+  "emailVerifiedAt": zod.string(),
+  "createdAt": zod.string(),
+  "lastLoginAt": zod.string()
+}),zod.null()]),
+  "termsVersion": zod.string(),
+  "privacyVersion": zod.string(),
+  "phase": zod.enum(['FOUNDATION']),
+  "commerceEnabled": zod.literal(false)
+})
+
+
+/**
+ * @summary Enroll a verified identity with versioned legal acceptance
+ */
+export const enrollV2AccountBodyFirstNameMax = 80;
+
+export const enrollV2AccountBodyLastNameMax = 80;
+
+export const enrollV2AccountBodyTermsVersionMax = 64;
+
+export const enrollV2AccountBodyPrivacyVersionMax = 64;
+
+
+
+export const EnrollV2AccountBody = zod.object({
+  "firstName": zod.string().min(1).max(enrollV2AccountBodyFirstNameMax),
+  "lastName": zod.string().min(1).max(enrollV2AccountBodyLastNameMax),
+  "country": zod.enum(['NO']),
+  "language": zod.enum(['nb', 'en']),
+  "termsAccepted": zod.literal(true),
+  "privacyAccepted": zod.literal(true),
+  "ageConfirmed": zod.literal(true),
+  "termsVersion": zod.string().max(enrollV2AccountBodyTermsVersionMax),
+  "privacyVersion": zod.string().max(enrollV2AccountBodyPrivacyVersionMax)
+})
+
+export const EnrollV2AccountResponse = zod.object({
+  "account": zod.union([zod.object({
+  "id": zod.string(),
+  "email": zod.string(),
+  "firstName": zod.string(),
+  "lastName": zod.string(),
+  "country": zod.string(),
+  "language": zod.string(),
+  "role": zod.enum(['USER', 'PARTNER', 'ADMIN', 'SUPER_ADMIN']),
+  "status": zod.enum(['ACTIVE', 'SUSPENDED', 'DELETION_REQUESTED']),
+  "referralCode": zod.string(),
+  "termsVersion": zod.string(),
+  "privacyVersion": zod.string(),
+  "termsAcceptedAt": zod.string(),
+  "privacyAcceptedAt": zod.string(),
+  "emailVerifiedAt": zod.string(),
+  "createdAt": zod.string(),
+  "lastLoginAt": zod.string()
+}),zod.null()]),
+  "termsVersion": zod.string(),
+  "privacyVersion": zod.string(),
+  "phase": zod.enum(['FOUNDATION']),
+  "commerceEnabled": zod.literal(false)
+})
+
+
+/**
+ * @summary Server-side administrator authorization probe
+ */
+export const CheckV2AdminAccessResponse = zod.object({
+  "ok": zod.boolean(),
+  "role": zod.enum(['USER', 'PARTNER', 'ADMIN', 'SUPER_ADMIN'])
+})
+
+
+/**
+ * @summary Server-side partner authorization probe
+ */
+export const CheckV2PartnerAccessResponse = zod.object({
+  "ok": zod.boolean(),
+  "role": zod.enum(['USER', 'PARTNER', 'ADMIN', 'SUPER_ADMIN'])
+})
+
+
+/**
  * Returns server health status
  * @summary Health check
  */

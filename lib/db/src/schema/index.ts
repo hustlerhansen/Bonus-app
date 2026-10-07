@@ -1,3 +1,4 @@
+export * from "./v2-accounts";
 // Export your models here. Add one export per file
 // export * from "./posts";
 //

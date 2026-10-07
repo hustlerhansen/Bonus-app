@@ -5,6 +5,141 @@
  * API for the BONUSPLAY demo rewards platform
  * OpenAPI spec version: 0.1.0
  */
+export type V2ProfileInputCountry = typeof V2ProfileInputCountry[keyof typeof V2ProfileInputCountry];
+
+
+export const V2ProfileInputCountry = {
+  NO: 'NO',
+} as const;
+
+export type V2ProfileInputLanguage = typeof V2ProfileInputLanguage[keyof typeof V2ProfileInputLanguage];
+
+
+export const V2ProfileInputLanguage = {
+  nb: 'nb',
+  en: 'en',
+} as const;
+
+export interface V2ProfileInput {
+  /**
+     * @minLength 1
+     * @maxLength 80
+     */
+  firstName: string;
+  /**
+     * @minLength 1
+     * @maxLength 80
+     */
+  lastName: string;
+  country: V2ProfileInputCountry;
+  language: V2ProfileInputLanguage;
+}
+
+export type V2EnrollmentInputCountry = typeof V2EnrollmentInputCountry[keyof typeof V2EnrollmentInputCountry];
+
+
+export const V2EnrollmentInputCountry = {
+  NO: 'NO',
+} as const;
+
+export type V2EnrollmentInputLanguage = typeof V2EnrollmentInputLanguage[keyof typeof V2EnrollmentInputLanguage];
+
+
+export const V2EnrollmentInputLanguage = {
+  nb: 'nb',
+  en: 'en',
+} as const;
+
+export interface V2EnrollmentInput {
+  /**
+     * @minLength 1
+     * @maxLength 80
+     */
+  firstName: string;
+  /**
+     * @minLength 1
+     * @maxLength 80
+     */
+  lastName: string;
+  country: V2EnrollmentInputCountry;
+  language: V2EnrollmentInputLanguage;
+  termsAccepted: true;
+  privacyAccepted: true;
+  ageConfirmed: true;
+  /** @maxLength 64 */
+  termsVersion: string;
+  /** @maxLength 64 */
+  privacyVersion: string;
+}
+
+export type V2AccountRole = typeof V2AccountRole[keyof typeof V2AccountRole];
+
+
+export const V2AccountRole = {
+  USER: 'USER',
+  PARTNER: 'PARTNER',
+  ADMIN: 'ADMIN',
+  SUPER_ADMIN: 'SUPER_ADMIN',
+} as const;
+
+export type V2AccountStatus = typeof V2AccountStatus[keyof typeof V2AccountStatus];
+
+
+export const V2AccountStatus = {
+  ACTIVE: 'ACTIVE',
+  SUSPENDED: 'SUSPENDED',
+  DELETION_REQUESTED: 'DELETION_REQUESTED',
+} as const;
+
+export interface V2Account {
+  id: string;
+  email: string;
+  firstName: string;
+  lastName: string;
+  country: string;
+  language: string;
+  role: V2AccountRole;
+  status: V2AccountStatus;
+  referralCode: string;
+  termsVersion: string;
+  privacyVersion: string;
+  termsAcceptedAt: string;
+  privacyAcceptedAt: string;
+  emailVerifiedAt: string;
+  createdAt: string;
+  lastLoginAt: string;
+}
+
+export type V2AccountStatePhase = typeof V2AccountStatePhase[keyof typeof V2AccountStatePhase];
+
+
+export const V2AccountStatePhase = {
+  FOUNDATION: 'FOUNDATION',
+} as const;
+
+export interface V2AccountState {
+  account: V2Account | null;
+  termsVersion: string;
+  privacyVersion: string;
+  phase: V2AccountStatePhase;
+  commerceEnabled: false;
+}
+
+export type V2AccessRole = typeof V2AccessRole[keyof typeof V2AccessRole];
+
+
+export const V2AccessRole = {
+  USER: 'USER',
+  PARTNER: 'PARTNER',
+  ADMIN: 'ADMIN',
+  SUPER_ADMIN: 'SUPER_ADMIN',
+} as const;
+
+export interface V2Access {
+  ok: boolean;
+  role: V2AccessRole;
+}
+
 export interface HealthStatus {
   status: string;
 }
