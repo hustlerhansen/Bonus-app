@@ -9,6 +9,7 @@ import type { Achievement } from './achievement';
 import type { EventProgress } from './eventProgress';
 import type { FeatureFlag } from './featureFlag';
 import type { LeaderboardEntry } from './leaderboardEntry';
+import type { LeaderboardPeriods } from './leaderboardPeriods';
 import type { Mission } from './mission';
 import type { Notification } from './notification';
 import type { Offer } from './offer';
@@ -30,6 +31,8 @@ export interface BonusplayState {
   achievements: Achievement[];
   notifications: Notification[];
   event: EventProgress;
+  events: EventProgress[];
+  leaderboards: LeaderboardPeriods;
   featureFlags: FeatureFlag[];
   /** @nullable */
   lastDailyClaim: string | null;

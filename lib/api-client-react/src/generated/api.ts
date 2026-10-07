@@ -21,7 +21,11 @@ import type {
 
 import type {
   AdminDashboard,
+  AnalyticsInput,
   BonusplayState,
+  CatalogInput,
+  CatalogItem,
+  CatalogUpdate,
   ClaimActivityInput,
   ClaimResult,
   DemoSession,
@@ -32,6 +36,7 @@ import type {
   HealthStatus,
   Mission,
   MissionUpdate,
+  NotificationReadInput,
   OkResponse,
   RedemptionInput
 } from './api.schemas';
@@ -958,4 +963,434 @@ export function useGetAdminDashboard<TData = Awaited<ReturnType<typeof getAdminD
 
 
 
+
+export const getGetAdminCatalogUrl = () => {
+
+
+
+
+  return `/api/bonusplay/admin/catalog`
+}
+
+/**
+ * @summary List all editable demo catalog items
+ */
+export const getAdminCatalog = async ( options?: Parameters<typeof customFetch>[1]): Promise<CatalogItem[]> => {
+
+  return customFetch<CatalogItem[]>(getGetAdminCatalogUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetAdminCatalogQueryKey = () => {
+    return [
+    `/api/bonusplay/admin/catalog`
+    ] as const;
+    }
+
+
+export const getGetAdminCatalogQueryOptions = <TData = Awaited<ReturnType<typeof getAdminCatalog>>, TError = ErrorType<ErrorResponse>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getAdminCatalog>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetAdminCatalogQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getAdminCatalog>>> = ({ signal }) => getAdminCatalog({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getAdminCatalog>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetAdminCatalogQueryResult = NonNullable<Awaited<ReturnType<typeof getAdminCatalog>>>
+export type GetAdminCatalogQueryError = ErrorType<ErrorResponse>
+
+
+/**
+ * @summary List all editable demo catalog items
+ */
+
+export function useGetAdminCatalog<TData = Awaited<ReturnType<typeof getAdminCatalog>>, TError = ErrorType<ErrorResponse>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getAdminCatalog>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetAdminCatalogQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getCreateCatalogItemUrl = () => {
+
+
+
+
+  return `/api/bonusplay/admin/catalog`
+}
+
+/**
+ * @summary Create a mission, survey, offer, event or reward
+ */
+export const createCatalogItem = async (catalogInput: CatalogInput, options?: Parameters<typeof customFetch>[1]): Promise<CatalogItem> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<CatalogItem>(getCreateCatalogItemUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(catalogInput)
+  }
+);}
+
+
+
+
+
+export const getCreateCatalogItemMutationKey = () => ['createCatalogItem'] as const;
+
+export const getCreateCatalogItemMutationOptions = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createCatalogItem>>, TError,CreateCatalogItemMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createCatalogItem>>, TError,CreateCatalogItemMutationVariables, TContext> => {
+
+const mutationKey = getCreateCatalogItemMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createCatalogItem>>, CreateCatalogItemMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  createCatalogItem(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateCatalogItemMutationResult = NonNullable<Awaited<ReturnType<typeof createCatalogItem>>>
+    export type CreateCatalogItemMutationBody = BodyType<CatalogInput>
+    export type CreateCatalogItemMutationError = ErrorType<ErrorResponse>
+    export type CreateCatalogItemMutationVariables = {data: BodyType<CatalogInput>}
+
+    /**
+ * @summary Create a mission, survey, offer, event or reward
+ */
+export const useCreateCatalogItem = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createCatalogItem>>, TError,CreateCatalogItemMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createCatalogItem>>,
+        TError,
+        CreateCatalogItemMutationVariables,
+        TContext
+      > => {
+      return useMutation(getCreateCatalogItemMutationOptions(options));
+    }
+
+export const getUpdateCatalogItemUrl = (id: string,) => {
+
+
+
+
+  return `/api/bonusplay/admin/catalog/${id}`
+}
+
+/**
+ * @summary Edit or disable a demo catalog item
+ */
+export const updateCatalogItem = async (id: string,
+    catalogUpdate: CatalogUpdate, options?: Parameters<typeof customFetch>[1]): Promise<CatalogItem> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<CatalogItem>(getUpdateCatalogItemUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(catalogUpdate)
+  }
+);}
+
+
+
+
+
+export const getUpdateCatalogItemMutationKey = () => ['updateCatalogItem'] as const;
+
+export const getUpdateCatalogItemMutationOptions = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateCatalogItem>>, TError,UpdateCatalogItemMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateCatalogItem>>, TError,UpdateCatalogItemMutationVariables, TContext> => {
+
+const mutationKey = getUpdateCatalogItemMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateCatalogItem>>, UpdateCatalogItemMutationVariables> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  updateCatalogItem(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateCatalogItemMutationResult = NonNullable<Awaited<ReturnType<typeof updateCatalogItem>>>
+    export type UpdateCatalogItemMutationBody = BodyType<CatalogUpdate>
+    export type UpdateCatalogItemMutationError = ErrorType<ErrorResponse>
+    export type UpdateCatalogItemMutationVariables = {id: string;data: BodyType<CatalogUpdate>}
+
+    /**
+ * @summary Edit or disable a demo catalog item
+ */
+export const useUpdateCatalogItem = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateCatalogItem>>, TError,UpdateCatalogItemMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateCatalogItem>>,
+        TError,
+        UpdateCatalogItemMutationVariables,
+        TContext
+      > => {
+      return useMutation(getUpdateCatalogItemMutationOptions(options));
+    }
+
+export const getMarkNotificationsReadUrl = () => {
+
+
+
+
+  return `/api/bonusplay/notifications/read`
+}
+
+/**
+ * @summary Persist notification read status
+ */
+export const markNotificationsRead = async (notificationReadInput: NotificationReadInput, options?: Parameters<typeof customFetch>[1]): Promise<BonusplayState> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<BonusplayState>(getMarkNotificationsReadUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(notificationReadInput)
+  }
+);}
+
+
+
+
+
+export const getMarkNotificationsReadMutationKey = () => ['markNotificationsRead'] as const;
+
+export const getMarkNotificationsReadMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof markNotificationsRead>>, TError,MarkNotificationsReadMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof markNotificationsRead>>, TError,MarkNotificationsReadMutationVariables, TContext> => {
+
+const mutationKey = getMarkNotificationsReadMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof markNotificationsRead>>, MarkNotificationsReadMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  markNotificationsRead(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type MarkNotificationsReadMutationResult = NonNullable<Awaited<ReturnType<typeof markNotificationsRead>>>
+    export type MarkNotificationsReadMutationBody = BodyType<NotificationReadInput>
+    export type MarkNotificationsReadMutationError = ErrorType<unknown>
+    export type MarkNotificationsReadMutationVariables = {data: BodyType<NotificationReadInput>}
+
+    /**
+ * @summary Persist notification read status
+ */
+export const useMarkNotificationsRead = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof markNotificationsRead>>, TError,MarkNotificationsReadMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof markNotificationsRead>>,
+        TError,
+        MarkNotificationsReadMutationVariables,
+        TContext
+      > => {
+      return useMutation(getMarkNotificationsReadMutationOptions(options));
+    }
+
+export const getRecordAnalyticsEventUrl = () => {
+
+
+
+
+  return `/api/bonusplay/analytics`
+}
+
+/**
+ * @summary Record a permitted demo analytics event
+ */
+export const recordAnalyticsEvent = async (analyticsInput: AnalyticsInput, options?: Parameters<typeof customFetch>[1]): Promise<OkResponse> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<OkResponse>(getRecordAnalyticsEventUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(analyticsInput)
+  }
+);}
+
+
+
+
+
+export const getRecordAnalyticsEventMutationKey = () => ['recordAnalyticsEvent'] as const;
+
+export const getRecordAnalyticsEventMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof recordAnalyticsEvent>>, TError,RecordAnalyticsEventMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof recordAnalyticsEvent>>, TError,RecordAnalyticsEventMutationVariables, TContext> => {
+
+const mutationKey = getRecordAnalyticsEventMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof recordAnalyticsEvent>>, RecordAnalyticsEventMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  recordAnalyticsEvent(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RecordAnalyticsEventMutationResult = NonNullable<Awaited<ReturnType<typeof recordAnalyticsEvent>>>
+    export type RecordAnalyticsEventMutationBody = BodyType<AnalyticsInput>
+    export type RecordAnalyticsEventMutationError = ErrorType<unknown>
+    export type RecordAnalyticsEventMutationVariables = {data: BodyType<AnalyticsInput>}
+
+    /**
+ * @summary Record a permitted demo analytics event
+ */
+export const useRecordAnalyticsEvent = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof recordAnalyticsEvent>>, TError,RecordAnalyticsEventMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof recordAnalyticsEvent>>,
+        TError,
+        RecordAnalyticsEventMutationVariables,
+        TContext
+      > => {
+      return useMutation(getRecordAnalyticsEventMutationOptions(options));
+    }
 

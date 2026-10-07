@@ -15,6 +15,7 @@ export interface UserProfile {
   gems: number;
   xp: number;
   level: number;
+  xpTarget: number;
   streak: number;
   achievementsUnlocked: number;
   totalPointsEarned: number;

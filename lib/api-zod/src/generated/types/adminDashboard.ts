@@ -6,11 +6,21 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { AdminMetric } from './adminMetric';
+import type { AdminUser } from './adminUser';
+import type { AuditLog } from './auditLog';
 import type { FeatureFlag } from './featureFlag';
+import type { FraudEvent } from './fraudEvent';
 import type { Mission } from './mission';
+import type { Redemption } from './redemption';
+import type { RevenueEvent } from './revenueEvent';
 
 export interface AdminDashboard {
   metrics: AdminMetric[];
   featureFlags: FeatureFlag[];
   missions: Mission[];
+  users: AdminUser[];
+  redemptions: Redemption[];
+  fraudEvents: FraudEvent[];
+  auditLogs: AuditLog[];
+  revenueEvents: RevenueEvent[];
 }

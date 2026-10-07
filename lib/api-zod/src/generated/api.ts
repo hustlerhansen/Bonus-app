@@ -50,6 +50,7 @@ export const GetBonusplayStateResponse = zod.object({
   "gems": zod.number().int(),
   "xp": zod.number().int(),
   "level": zod.number().int(),
+  "xpTarget": zod.number().int(),
   "streak": zod.number().int(),
   "achievementsUnlocked": zod.number().int(),
   "totalPointsEarned": zod.number().int(),
@@ -132,6 +133,33 @@ export const GetBonusplayStateResponse = zod.object({
   "gems": zod.number().int(),
   "target": zod.number().int(),
   "secondsRemaining": zod.number().int()
+}),
+  "events": zod.array(zod.object({
+  "id": zod.string(),
+  "title": zod.string(),
+  "gems": zod.number().int(),
+  "target": zod.number().int(),
+  "secondsRemaining": zod.number().int()
+})),
+  "leaderboards": zod.object({
+  "day": zod.array(zod.object({
+  "rank": zod.number().int(),
+  "name": zod.string(),
+  "points": zod.number().int(),
+  "isCurrentUser": zod.boolean()
+})),
+  "week": zod.array(zod.object({
+  "rank": zod.number().int(),
+  "name": zod.string(),
+  "points": zod.number().int(),
+  "isCurrentUser": zod.boolean()
+})),
+  "month": zod.array(zod.object({
+  "rank": zod.number().int(),
+  "name": zod.string(),
+  "points": zod.number().int(),
+  "isCurrentUser": zod.boolean()
+}))
 }),
   "featureFlags": zod.array(zod.object({
   "key": zod.string(),
@@ -166,6 +194,7 @@ export const ClaimActivityResponse = zod.object({
   "gems": zod.number().int(),
   "xp": zod.number().int(),
   "level": zod.number().int(),
+  "xpTarget": zod.number().int(),
   "streak": zod.number().int(),
   "achievementsUnlocked": zod.number().int(),
   "totalPointsEarned": zod.number().int(),
@@ -248,6 +277,33 @@ export const ClaimActivityResponse = zod.object({
   "gems": zod.number().int(),
   "target": zod.number().int(),
   "secondsRemaining": zod.number().int()
+}),
+  "events": zod.array(zod.object({
+  "id": zod.string(),
+  "title": zod.string(),
+  "gems": zod.number().int(),
+  "target": zod.number().int(),
+  "secondsRemaining": zod.number().int()
+})),
+  "leaderboards": zod.object({
+  "day": zod.array(zod.object({
+  "rank": zod.number().int(),
+  "name": zod.string(),
+  "points": zod.number().int(),
+  "isCurrentUser": zod.boolean()
+})),
+  "week": zod.array(zod.object({
+  "rank": zod.number().int(),
+  "name": zod.string(),
+  "points": zod.number().int(),
+  "isCurrentUser": zod.boolean()
+})),
+  "month": zod.array(zod.object({
+  "rank": zod.number().int(),
+  "name": zod.string(),
+  "points": zod.number().int(),
+  "isCurrentUser": zod.boolean()
+}))
 }),
   "featureFlags": zod.array(zod.object({
   "key": zod.string(),
@@ -275,6 +331,7 @@ export const ClaimDailyRewardResponse = zod.object({
   "gems": zod.number().int(),
   "xp": zod.number().int(),
   "level": zod.number().int(),
+  "xpTarget": zod.number().int(),
   "streak": zod.number().int(),
   "achievementsUnlocked": zod.number().int(),
   "totalPointsEarned": zod.number().int(),
@@ -357,6 +414,33 @@ export const ClaimDailyRewardResponse = zod.object({
   "gems": zod.number().int(),
   "target": zod.number().int(),
   "secondsRemaining": zod.number().int()
+}),
+  "events": zod.array(zod.object({
+  "id": zod.string(),
+  "title": zod.string(),
+  "gems": zod.number().int(),
+  "target": zod.number().int(),
+  "secondsRemaining": zod.number().int()
+})),
+  "leaderboards": zod.object({
+  "day": zod.array(zod.object({
+  "rank": zod.number().int(),
+  "name": zod.string(),
+  "points": zod.number().int(),
+  "isCurrentUser": zod.boolean()
+})),
+  "week": zod.array(zod.object({
+  "rank": zod.number().int(),
+  "name": zod.string(),
+  "points": zod.number().int(),
+  "isCurrentUser": zod.boolean()
+})),
+  "month": zod.array(zod.object({
+  "rank": zod.number().int(),
+  "name": zod.string(),
+  "points": zod.number().int(),
+  "isCurrentUser": zod.boolean()
+}))
 }),
   "featureFlags": zod.array(zod.object({
   "key": zod.string(),
@@ -394,6 +478,7 @@ export const CreateRedemptionResponse = zod.object({
   "gems": zod.number().int(),
   "xp": zod.number().int(),
   "level": zod.number().int(),
+  "xpTarget": zod.number().int(),
   "streak": zod.number().int(),
   "achievementsUnlocked": zod.number().int(),
   "totalPointsEarned": zod.number().int(),
@@ -476,6 +561,33 @@ export const CreateRedemptionResponse = zod.object({
   "gems": zod.number().int(),
   "target": zod.number().int(),
   "secondsRemaining": zod.number().int()
+}),
+  "events": zod.array(zod.object({
+  "id": zod.string(),
+  "title": zod.string(),
+  "gems": zod.number().int(),
+  "target": zod.number().int(),
+  "secondsRemaining": zod.number().int()
+})),
+  "leaderboards": zod.object({
+  "day": zod.array(zod.object({
+  "rank": zod.number().int(),
+  "name": zod.string(),
+  "points": zod.number().int(),
+  "isCurrentUser": zod.boolean()
+})),
+  "week": zod.array(zod.object({
+  "rank": zod.number().int(),
+  "name": zod.string(),
+  "points": zod.number().int(),
+  "isCurrentUser": zod.boolean()
+})),
+  "month": zod.array(zod.object({
+  "rank": zod.number().int(),
+  "name": zod.string(),
+  "points": zod.number().int(),
+  "isCurrentUser": zod.boolean()
+}))
 }),
   "featureFlags": zod.array(zod.object({
   "key": zod.string(),
@@ -502,6 +614,7 @@ export const ResetDemoResponse = zod.object({
   "gems": zod.number().int(),
   "xp": zod.number().int(),
   "level": zod.number().int(),
+  "xpTarget": zod.number().int(),
   "streak": zod.number().int(),
   "achievementsUnlocked": zod.number().int(),
   "totalPointsEarned": zod.number().int(),
@@ -584,6 +697,33 @@ export const ResetDemoResponse = zod.object({
   "gems": zod.number().int(),
   "target": zod.number().int(),
   "secondsRemaining": zod.number().int()
+}),
+  "events": zod.array(zod.object({
+  "id": zod.string(),
+  "title": zod.string(),
+  "gems": zod.number().int(),
+  "target": zod.number().int(),
+  "secondsRemaining": zod.number().int()
+})),
+  "leaderboards": zod.object({
+  "day": zod.array(zod.object({
+  "rank": zod.number().int(),
+  "name": zod.string(),
+  "points": zod.number().int(),
+  "isCurrentUser": zod.boolean()
+})),
+  "week": zod.array(zod.object({
+  "rank": zod.number().int(),
+  "name": zod.string(),
+  "points": zod.number().int(),
+  "isCurrentUser": zod.boolean()
+})),
+  "month": zod.array(zod.object({
+  "rank": zod.number().int(),
+  "name": zod.string(),
+  "points": zod.number().int(),
+  "isCurrentUser": zod.boolean()
+}))
 }),
   "featureFlags": zod.array(zod.object({
   "key": zod.string(),
@@ -664,7 +804,358 @@ export const GetAdminDashboardResponse = zod.object({
   "xp": zod.number().int(),
   "enabled": zod.boolean(),
   "completed": zod.boolean()
+})),
+  "users": zod.array(zod.object({
+  "id": zod.string(),
+  "displayName": zod.string(),
+  "level": zod.number().int(),
+  "totalPointsEarned": zod.number().int(),
+  "activeReferrals": zod.number().int(),
+  "createdAt": zod.coerce.date()
+})),
+  "redemptions": zod.array(zod.object({
+  "id": zod.string(),
+  "rewardTitle": zod.string(),
+  "nokAmount": zod.number().int(),
+  "points": zod.number().int(),
+  "status": zod.enum(['PENDING', 'MANUAL_REVIEW']),
+  "createdAt": zod.coerce.date()
+})),
+  "fraudEvents": zod.array(zod.object({
+  "id": zod.string(),
+  "userId": zod.string(),
+  "reason": zod.string(),
+  "riskScore": zod.number().int(),
+  "createdAt": zod.coerce.date()
+})),
+  "auditLogs": zod.array(zod.object({
+  "id": zod.string(),
+  "actor": zod.string(),
+  "action": zod.string(),
+  "sourceId": zod.string().nullable(),
+  "createdAt": zod.coerce.date()
+})),
+  "revenueEvents": zod.array(zod.object({
+  "id": zod.string(),
+  "sourceId": zod.string(),
+  "grossRevenueNok": zod.number(),
+  "providerCostNok": zod.number(),
+  "rewardCostNok": zod.number(),
+  "contributionNok": zod.number(),
+  "createdAt": zod.coerce.date()
 }))
+})
+
+
+/**
+ * @summary List all editable demo catalog items
+ */
+export const GetAdminCatalogResponseItem = zod.object({
+  "id": zod.string(),
+  "category": zod.enum(['mission', 'survey', 'offer', 'event', 'reward']),
+  "title": zod.string(),
+  "description": zod.string(),
+  "enabled": zod.boolean(),
+  "type": zod.string().optional(),
+  "points": zod.number().int().optional(),
+  "xp": zod.number().int().optional(),
+  "gems": zod.number().int().optional(),
+  "minutes": zod.number().int().optional(),
+  "cost": zod.number().int().optional(),
+  "nokAmount": zod.number().int().optional(),
+  "rewardCategory": zod.string().optional(),
+  "target": zod.number().int().optional(),
+  "endsAt": zod.coerce.date().optional()
+})
+export const GetAdminCatalogResponse = zod.array(GetAdminCatalogResponseItem)
+
+
+/**
+ * @summary Create a mission, survey, offer, event or reward
+ */
+export const createCatalogItemBodyTitleMax = 100;
+
+export const createCatalogItemBodyDescriptionMax = 500;
+
+export const createCatalogItemBodyPointsMin = 0;
+export const createCatalogItemBodyPointsMax = 10000;
+
+export const createCatalogItemBodyXpMin = 0;
+export const createCatalogItemBodyXpMax = 1000;
+
+export const createCatalogItemBodyGemsMin = 0;
+export const createCatalogItemBodyGemsMax = 100;
+
+export const createCatalogItemBodyMinutesMin = 0;
+export const createCatalogItemBodyMinutesMax = 60;
+
+export const createCatalogItemBodyCostMax = 1000000;
+
+export const createCatalogItemBodyNokAmountMax = 10000;
+
+export const createCatalogItemBodyRewardCategoryMax = 50;
+
+export const createCatalogItemBodyTargetMax = 10000;
+
+
+
+export const CreateCatalogItemBody = zod.object({
+  "category": zod.enum(['mission', 'survey', 'offer', 'event', 'reward']),
+  "title": zod.string().min(1).max(createCatalogItemBodyTitleMax),
+  "description": zod.string().max(createCatalogItemBodyDescriptionMax).optional(),
+  "enabled": zod.boolean().optional(),
+  "type": zod.enum(['WATCH_AD', 'PLAY_GAME', 'SURVEY', 'OFFER', 'DAILY_CHALLENGE', 'REFERRAL', 'STREAK']).optional(),
+  "points": zod.number().int().min(createCatalogItemBodyPointsMin).max(createCatalogItemBodyPointsMax).optional(),
+  "xp": zod.number().int().min(createCatalogItemBodyXpMin).max(createCatalogItemBodyXpMax).optional(),
+  "gems": zod.number().int().min(createCatalogItemBodyGemsMin).max(createCatalogItemBodyGemsMax).optional(),
+  "minutes": zod.number().int().min(createCatalogItemBodyMinutesMin).max(createCatalogItemBodyMinutesMax).optional(),
+  "cost": zod.number().int().min(1).max(createCatalogItemBodyCostMax).optional(),
+  "nokAmount": zod.number().int().min(1).max(createCatalogItemBodyNokAmountMax).optional(),
+  "rewardCategory": zod.string().max(createCatalogItemBodyRewardCategoryMax).optional(),
+  "target": zod.number().int().min(1).max(createCatalogItemBodyTargetMax).optional(),
+  "endsAt": zod.coerce.date().optional()
+})
+
+export const CreateCatalogItemResponse = zod.object({
+  "id": zod.string(),
+  "category": zod.enum(['mission', 'survey', 'offer', 'event', 'reward']),
+  "title": zod.string(),
+  "description": zod.string(),
+  "enabled": zod.boolean(),
+  "type": zod.string().optional(),
+  "points": zod.number().int().optional(),
+  "xp": zod.number().int().optional(),
+  "gems": zod.number().int().optional(),
+  "minutes": zod.number().int().optional(),
+  "cost": zod.number().int().optional(),
+  "nokAmount": zod.number().int().optional(),
+  "rewardCategory": zod.string().optional(),
+  "target": zod.number().int().optional(),
+  "endsAt": zod.coerce.date().optional()
+})
+
+
+/**
+ * @summary Edit or disable a demo catalog item
+ */
+export const UpdateCatalogItemParams = zod.object({
+  "id": zod.coerce.string()
+})
+
+export const updateCatalogItemBodyTitleMax = 100;
+
+export const updateCatalogItemBodyDescriptionMax = 500;
+
+export const updateCatalogItemBodyPointsMin = 0;
+export const updateCatalogItemBodyPointsMax = 10000;
+
+export const updateCatalogItemBodyXpMin = 0;
+export const updateCatalogItemBodyXpMax = 1000;
+
+export const updateCatalogItemBodyGemsMin = 0;
+export const updateCatalogItemBodyGemsMax = 100;
+
+export const updateCatalogItemBodyMinutesMin = 0;
+export const updateCatalogItemBodyMinutesMax = 60;
+
+export const updateCatalogItemBodyCostMax = 1000000;
+
+export const updateCatalogItemBodyNokAmountMax = 10000;
+
+export const updateCatalogItemBodyRewardCategoryMax = 50;
+
+export const updateCatalogItemBodyTargetMax = 10000;
+
+
+
+export const UpdateCatalogItemBody = zod.object({
+  "title": zod.string().min(1).max(updateCatalogItemBodyTitleMax).optional(),
+  "description": zod.string().max(updateCatalogItemBodyDescriptionMax).optional(),
+  "enabled": zod.boolean().optional(),
+  "type": zod.enum(['WATCH_AD', 'PLAY_GAME', 'SURVEY', 'OFFER', 'DAILY_CHALLENGE', 'REFERRAL', 'STREAK']).optional(),
+  "points": zod.number().int().min(updateCatalogItemBodyPointsMin).max(updateCatalogItemBodyPointsMax).optional(),
+  "xp": zod.number().int().min(updateCatalogItemBodyXpMin).max(updateCatalogItemBodyXpMax).optional(),
+  "gems": zod.number().int().min(updateCatalogItemBodyGemsMin).max(updateCatalogItemBodyGemsMax).optional(),
+  "minutes": zod.number().int().min(updateCatalogItemBodyMinutesMin).max(updateCatalogItemBodyMinutesMax).optional(),
+  "cost": zod.number().int().min(1).max(updateCatalogItemBodyCostMax).optional(),
+  "nokAmount": zod.number().int().min(1).max(updateCatalogItemBodyNokAmountMax).optional(),
+  "rewardCategory": zod.string().max(updateCatalogItemBodyRewardCategoryMax).optional(),
+  "target": zod.number().int().min(1).max(updateCatalogItemBodyTargetMax).optional(),
+  "endsAt": zod.coerce.date().optional()
+})
+
+export const UpdateCatalogItemResponse = zod.object({
+  "id": zod.string(),
+  "category": zod.enum(['mission', 'survey', 'offer', 'event', 'reward']),
+  "title": zod.string(),
+  "description": zod.string(),
+  "enabled": zod.boolean(),
+  "type": zod.string().optional(),
+  "points": zod.number().int().optional(),
+  "xp": zod.number().int().optional(),
+  "gems": zod.number().int().optional(),
+  "minutes": zod.number().int().optional(),
+  "cost": zod.number().int().optional(),
+  "nokAmount": zod.number().int().optional(),
+  "rewardCategory": zod.string().optional(),
+  "target": zod.number().int().optional(),
+  "endsAt": zod.coerce.date().optional()
+})
+
+
+/**
+ * @summary Persist notification read status
+ */
+export const markNotificationsReadBodyNotificationIdsMax = 10;
+
+
+
+export const MarkNotificationsReadBody = zod.object({
+  "notificationIds": zod.array(zod.enum(['streak', 'reward', 'event', 'rank', 'balance'])).max(markNotificationsReadBodyNotificationIdsMax)
+})
+
+export const MarkNotificationsReadResponse = zod.object({
+  "user": zod.object({
+  "id": zod.string(),
+  "displayName": zod.string(),
+  "role": zod.enum(['user', 'admin']),
+  "points": zod.number().int(),
+  "gems": zod.number().int(),
+  "xp": zod.number().int(),
+  "level": zod.number().int(),
+  "xpTarget": zod.number().int(),
+  "streak": zod.number().int(),
+  "achievementsUnlocked": zod.number().int(),
+  "totalPointsEarned": zod.number().int(),
+  "gamesPlayed": zod.number().int(),
+  "surveysCompleted": zod.number().int(),
+  "activeReferrals": zod.number().int()
+}),
+  "missions": zod.array(zod.object({
+  "id": zod.string(),
+  "title": zod.string(),
+  "description": zod.string(),
+  "type": zod.enum(['WATCH_AD', 'PLAY_GAME', 'SURVEY', 'OFFER', 'DAILY_CHALLENGE', 'REFERRAL', 'STREAK']),
+  "points": zod.number().int(),
+  "xp": zod.number().int(),
+  "enabled": zod.boolean(),
+  "completed": zod.boolean()
+})),
+  "surveys": zod.array(zod.object({
+  "id": zod.string(),
+  "title": zod.string(),
+  "minutes": zod.number().int(),
+  "points": zod.number().int(),
+  "xp": zod.number().int(),
+  "completed": zod.boolean()
+})),
+  "offers": zod.array(zod.object({
+  "id": zod.string(),
+  "title": zod.string(),
+  "description": zod.string(),
+  "points": zod.number().int(),
+  "xp": zod.number().int(),
+  "completed": zod.boolean()
+})),
+  "transactions": zod.array(zod.object({
+  "id": zod.string(),
+  "amount": zod.number().int(),
+  "currency": zod.enum(['points', 'gems']),
+  "title": zod.string(),
+  "createdAt": zod.coerce.date()
+})),
+  "rewards": zod.array(zod.object({
+  "id": zod.string(),
+  "title": zod.string(),
+  "subtitle": zod.string(),
+  "cost": zod.number().int(),
+  "nokAmount": zod.number().int(),
+  "category": zod.string(),
+  "available": zod.boolean()
+})),
+  "redemptions": zod.array(zod.object({
+  "id": zod.string(),
+  "rewardTitle": zod.string(),
+  "nokAmount": zod.number().int(),
+  "points": zod.number().int(),
+  "status": zod.enum(['PENDING', 'MANUAL_REVIEW']),
+  "createdAt": zod.coerce.date()
+})),
+  "leaderboard": zod.array(zod.object({
+  "rank": zod.number().int(),
+  "name": zod.string(),
+  "points": zod.number().int(),
+  "isCurrentUser": zod.boolean()
+})),
+  "achievements": zod.array(zod.object({
+  "id": zod.string(),
+  "title": zod.string(),
+  "description": zod.string(),
+  "progress": zod.number().int(),
+  "target": zod.number().int(),
+  "unlocked": zod.boolean()
+})),
+  "notifications": zod.array(zod.object({
+  "id": zod.string(),
+  "message": zod.string(),
+  "read": zod.boolean()
+})),
+  "event": zod.object({
+  "id": zod.string(),
+  "title": zod.string(),
+  "gems": zod.number().int(),
+  "target": zod.number().int(),
+  "secondsRemaining": zod.number().int()
+}),
+  "events": zod.array(zod.object({
+  "id": zod.string(),
+  "title": zod.string(),
+  "gems": zod.number().int(),
+  "target": zod.number().int(),
+  "secondsRemaining": zod.number().int()
+})),
+  "leaderboards": zod.object({
+  "day": zod.array(zod.object({
+  "rank": zod.number().int(),
+  "name": zod.string(),
+  "points": zod.number().int(),
+  "isCurrentUser": zod.boolean()
+})),
+  "week": zod.array(zod.object({
+  "rank": zod.number().int(),
+  "name": zod.string(),
+  "points": zod.number().int(),
+  "isCurrentUser": zod.boolean()
+})),
+  "month": zod.array(zod.object({
+  "rank": zod.number().int(),
+  "name": zod.string(),
+  "points": zod.number().int(),
+  "isCurrentUser": zod.boolean()
+}))
+}),
+  "featureFlags": zod.array(zod.object({
+  "key": zod.string(),
+  "enabled": zod.boolean()
+})),
+  "lastDailyClaim": zod.string().nullable()
+})
+
+
+/**
+ * @summary Record a permitted demo analytics event
+ */
+export const recordAnalyticsEventBodySourceIdMax = 80;
+
+
+
+export const RecordAnalyticsEventBody = zod.object({
+  "event": zod.enum(['mission_started', 'ad_started', 'game_started', 'survey_started', 'offer_started', 'reward_viewed', 'redemption_started', 'referral_shared']),
+  "sourceId": zod.string().max(recordAnalyticsEventBodySourceIdMax).optional()
+})
+
+export const RecordAnalyticsEventResponse = zod.object({
+  "ok": zod.boolean()
 })
 
 

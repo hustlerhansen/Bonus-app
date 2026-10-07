@@ -279,6 +279,133 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+  /bonusplay/admin/catalog:
+    get:
+      operationId: getAdminCatalog
+      tags: [bonusplay]
+      summary: List all editable demo catalog items
+      responses:
+        "200":
+          description: Catalog items
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/CatalogItem"
+        "401":
+          description: Admin session required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    post:
+      operationId: createCatalogItem
+      tags: [bonusplay]
+      summary: Create a mission, survey, offer, event or reward
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CatalogInput"
+      responses:
+        "201":
+          description: Catalog item created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CatalogItem"
+        "400":
+          description: Invalid catalog item
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Admin session required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /bonusplay/admin/catalog/{id}:
+    patch:
+      operationId: updateCatalogItem
+      tags: [bonusplay]
+      summary: Edit or disable a demo catalog item
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CatalogUpdate"
+      responses:
+        "200":
+          description: Catalog item updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CatalogItem"
+        "400":
+          description: Invalid catalog item
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Admin session required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Catalog item not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /bonusplay/notifications/read:
+    post:
+      operationId: markNotificationsRead
+      tags: [bonusplay]
+      summary: Persist notification read status
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/NotificationReadInput"
+      responses:
+        "200":
+          description: Notifications updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BonusplayState"
+  /bonusplay/analytics:
+    post:
+      operationId: recordAnalyticsEvent
+      tags: [bonusplay]
+      summary: Record a permitted demo analytics event
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AnalyticsInput"
+      responses:
+        "200":
+          description: Event recorded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OkResponse"
 components:
   schemas:
     HealthStatus:
@@ -334,6 +461,8 @@ components:
           type: integer
         level:
           type: integer
+        xpTarget:
+          type: integer
         streak:
           type: integer
         achievementsUnlocked:
@@ -346,7 +475,7 @@ components:
           type: integer
         activeReferrals:
           type: integer
-      required: [id, displayName, role, points, gems, xp, level, streak, achievementsUnlocked, totalPointsEarned, gamesPlayed, surveysCompleted, activeReferrals]
+      required: [id, displayName, role, points, gems, xp, level, xpTarget, streak, achievementsUnlocked, totalPointsEarned, gamesPlayed, surveysCompleted, activeReferrals]
     Mission:
       type: object
       properties:
@@ -555,13 +684,19 @@ components:
             $ref: "#/components/schemas/Notification"
         event:
           $ref: "#/components/schemas/EventProgress"
+        events:
+          type: array
+          items:
+            $ref: "#/components/schemas/EventProgress"
+        leaderboards:
+          $ref: "#/components/schemas/LeaderboardPeriods"
         featureFlags:
           type: array
           items:
             $ref: "#/components/schemas/FeatureFlag"
         lastDailyClaim:
           type: ["string", "null"]
-      required: [user, missions, surveys, offers, transactions, rewards, redemptions, leaderboard, achievements, notifications, event, featureFlags, lastDailyClaim]
+      required: [user, missions, surveys, offers, transactions, rewards, redemptions, leaderboard, leaderboards, achievements, notifications, event, events, featureFlags, lastDailyClaim]
     ClaimActivityInput:
       type: object
       properties:
@@ -640,5 +775,149 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/Mission"
-      required: [metrics, featureFlags, missions]
+        users:
+          type: array
+          items:
+            $ref: "#/components/schemas/AdminUser"
+        redemptions:
+          type: array
+          items:
+            $ref: "#/components/schemas/Redemption"
+        fraudEvents:
+          type: array
+          items:
+            $ref: "#/components/schemas/FraudEvent"
+        auditLogs:
+          type: array
+          items:
+            $ref: "#/components/schemas/AuditLog"
+        revenueEvents:
+          type: array
+          items:
+            $ref: "#/components/schemas/RevenueEvent"
+      required: [metrics, featureFlags, missions, users, redemptions, fraudEvents, auditLogs, revenueEvents]
+    LeaderboardPeriods:
+      type: object
+      properties:
+        day:
+          type: array
+          items:
+            $ref: "#/components/schemas/LeaderboardEntry"
+        week:
+          type: array
+          items:
+            $ref: "#/components/schemas/LeaderboardEntry"
+        month:
+          type: array
+          items:
+            $ref: "#/components/schemas/LeaderboardEntry"
+      required: [day, week, month]
+    CatalogItem:
+      type: object
+      properties:
+        id: { type: string }
+        category: { type: string, enum: [mission, survey, offer, event, reward] }
+        title: { type: string }
+        description: { type: string }
+        enabled: { type: boolean }
+        type: { type: string }
+        points: { type: integer }
+        xp: { type: integer }
+        gems: { type: integer }
+        minutes: { type: integer }
+        cost: { type: integer }
+        nokAmount: { type: integer }
+        rewardCategory: { type: string }
+        target: { type: integer }
+        endsAt: { type: string, format: date-time }
+      required: [id, category, title, description, enabled]
+    CatalogInput:
+      type: object
+      properties:
+        category: { type: string, enum: [mission, survey, offer, event, reward] }
+        title: { type: string, minLength: 1, maxLength: 100 }
+        description: { type: string, maxLength: 500 }
+        enabled: { type: boolean }
+        type: { type: string, enum: [WATCH_AD, PLAY_GAME, SURVEY, OFFER, DAILY_CHALLENGE, REFERRAL, STREAK] }
+        points: { type: integer, minimum: 0, maximum: 10000 }
+        xp: { type: integer, minimum: 0, maximum: 1000 }
+        gems: { type: integer, minimum: 0, maximum: 100 }
+        minutes: { type: integer, minimum: 0, maximum: 60 }
+        cost: { type: integer, minimum: 1, maximum: 1000000 }
+        nokAmount: { type: integer, minimum: 1, maximum: 10000 }
+        rewardCategory: { type: string, maxLength: 50 }
+        target: { type: integer, minimum: 1, maximum: 10000 }
+        endsAt: { type: string, format: date-time }
+      required: [category, title]
+    CatalogUpdate:
+      type: object
+      properties:
+        title: { type: string, minLength: 1, maxLength: 100 }
+        description: { type: string, maxLength: 500 }
+        enabled: { type: boolean }
+        type: { type: string, enum: [WATCH_AD, PLAY_GAME, SURVEY, OFFER, DAILY_CHALLENGE, REFERRAL, STREAK] }
+        points: { type: integer, minimum: 0, maximum: 10000 }
+        xp: { type: integer, minimum: 0, maximum: 1000 }
+        gems: { type: integer, minimum: 0, maximum: 100 }
+        minutes: { type: integer, minimum: 0, maximum: 60 }
+        cost: { type: integer, minimum: 1, maximum: 1000000 }
+        nokAmount: { type: integer, minimum: 1, maximum: 10000 }
+        rewardCategory: { type: string, maxLength: 50 }
+        target: { type: integer, minimum: 1, maximum: 10000 }
+        endsAt: { type: string, format: date-time }
+    NotificationReadInput:
+      type: object
+      properties:
+        notificationIds:
+          type: array
+          maxItems: 10
+          items: { type: string, enum: [streak, reward, event, rank, balance] }
+      required: [notificationIds]
+    AnalyticsInput:
+      type: object
+      properties:
+        event:
+          type: string
+          enum: [mission_started, ad_started, game_started, survey_started, offer_started, reward_viewed, redemption_started, referral_shared]
+        sourceId: { type: string, maxLength: 80 }
+      required: [event]
+    AdminUser:
+      type: object
+      properties:
+        id: { type: string }
+        displayName: { type: string }
+        level: { type: integer }
+        totalPointsEarned: { type: integer }
+        activeReferrals: { type: integer }
+        createdAt: { type: string, format: date-time }
+      required: [id, displayName, level, totalPointsEarned, activeReferrals, createdAt]
+    FraudEvent:
+      type: object
+      properties:
+        id: { type: string }
+        userId: { type: string }
+        reason: { type: string }
+        riskScore: { type: integer }
+        createdAt: { type: string, format: date-time }
+      required: [id, userId, reason, riskScore, createdAt]
+    AuditLog:
+      type: object
+      properties:
+        id: { type: string }
+        actor: { type: string }
+        action: { type: string }
+        sourceId: { type: ["string", "null"] }
+        createdAt: { type: string, format: date-time }
+      required: [id, actor, action, sourceId, createdAt]
+    RevenueEvent:
+      type: object
+      properties:
+        id: { type: string }
+        sourceId: { type: string }
+        grossRevenueNok: { type: number }
+        providerCostNok: { type: number }
+        rewardCostNok: { type: number }
+        contributionNok: { type: number }
+        createdAt: { type: string, format: date-time }
+      required: [id, sourceId, grossRevenueNok, providerCostNok, rewardCostNok, contributionNok, createdAt]
 

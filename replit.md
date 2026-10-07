@@ -1,45 +1,34 @@
-# [Project name]
+# BONUSPLAY
 
-_Replace the heading above with the project's name, and this line with one sentence describing what this app does for users._
+Norwegian Bokmål, mobile-first rewards and mini-games PWA for adults, with demo-only providers and monetary rewards.
 
 ## Run & Operate
+- Web workflow: `artifacts/bonusplay: web`
+- API workflow: `artifacts/api-server: API Server`
+- `pnpm run typecheck` — all shared libraries and apps
+- `pnpm --filter @workspace/db run push` — development schema
+- `pnpm --filter @workspace/api-spec run codegen` — regenerate contract types
+- Required environment: managed `DATABASE_URL`, secret `SESSION_SECRET`, `DEMO_MODE=true`
 
-- `pnpm --filter @workspace/api-server run dev` — run the API server (port 5000)
-- `pnpm run typecheck` — full typecheck across all packages
-- `pnpm run build` — typecheck + build all packages
-- `pnpm --filter @workspace/api-spec run codegen` — regenerate API hooks and Zod schemas from the OpenAPI spec
-- `pnpm --filter @workspace/db run push` — push DB schema changes (dev only)
-- Required env: `DATABASE_URL` — Postgres connection string
+## Project map
+- `artifacts/bonusplay`: React, Wouter, Tailwind, shadcn, React Query PWA at `/`
+- `artifacts/api-server/src/bonusplay`: catalog seed, signed demo session, wallet/reward engine, providers, admin catalog
+- `artifacts/api-server/src/routes/bonusplay.ts`: validated API at `/api/bonusplay`
+- `lib/api-spec/openapi.yaml`: source of truth for API contracts
+- `lib/db/src/schema`: PostgreSQL/Drizzle schema
+- `README.md`: architecture, operation, security boundaries and launch prerequisites
 
-## Stack
+## Product rules
+- All consumer copy is Norwegian Bokmål, market Norway, currency NOK, audience 18+.
+- All external providers, monetary figures and redemptions remain explicitly DEMO. No real money or gift cards are sent.
+- Never sell random chests for real money.
+- Rewards must never exceed what verified unit economics can support.
+- Do not replace demo providers with live providers or authentication without an explicit new request.
 
-- pnpm workspaces, Node.js 24, TypeScript 5.9
-- API: Express 5
-- DB: PostgreSQL + Drizzle ORM
-- Validation: Zod (`zod/v4`), `drizzle-zod`
-- API codegen: Orval (from OpenAPI spec)
-- Build: esbuild (CJS bundle)
-
-## Where things live
-
-_Populate as you build — short repo map plus pointers to the source-of-truth file for DB schema, API contracts, theme files, etc._
-
-## Architecture decisions
-
-_Populate as you build — non-obvious choices a reader couldn't infer from the code (3-5 bullets)._
-
-## Product
-
-_Describe the high-level user-facing capabilities of this app once they exist._
-
-## User preferences
-
-_Populate as you build — explicit user instructions worth remembering across sessions._
-
-## Gotchas
-
-_Populate as you build — sharp edges, "always run X before Y" rules._
-
-## Pointers
-
-- See the `pnpm-workspace` skill for workspace structure, TypeScript setup, and package details
+## Architecture
+- Each signed browser demo session gets an isolated Magnar profile; public demo admin enrollment is intentional and is not production authorization.
+- Wallet balances are sums of ledger entries, never client-owned mutable balances.
+- Claims and redemptions lock the user row and write ledger/state in one transaction. Reward values and daily limits are server-owned.
+- Catalog disablement preserves historical ledger references. Admin changes are audited.
+- Database schema is applied in development, not via startup DDL. Startup seed only inserts missing demo catalog rows.
+- API changes require codegen; do not edit generated clients or validation schemas.

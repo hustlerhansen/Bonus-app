@@ -1,0 +1,1 @@
+- [Embedded demo sessions](embedded-demo-sessions.md) — HTTPS session cookies must work inside the Preview iframe without sharing sessions across unrelated sites.

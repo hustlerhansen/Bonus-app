@@ -58,6 +58,7 @@ export interface UserProfile {
   gems: number;
   xp: number;
   level: number;
+  xpTarget: number;
   streak: number;
   achievementsUnlocked: number;
   totalPointsEarned: number;
@@ -186,6 +187,12 @@ export interface FeatureFlag {
   enabled: boolean;
 }
 
+export interface LeaderboardPeriods {
+  day: LeaderboardEntry[];
+  week: LeaderboardEntry[];
+  month: LeaderboardEntry[];
+}
+
 export interface BonusplayState {
   user: UserProfile;
   missions: Mission[];
@@ -198,6 +205,8 @@ export interface BonusplayState {
   achievements: Achievement[];
   notifications: Notification[];
   event: EventProgress;
+  events: EventProgress[];
+  leaderboards: LeaderboardPeriods;
   featureFlags: FeatureFlag[];
   /** @nullable */
   lastDailyClaim: string | null;
@@ -256,9 +265,253 @@ export interface AdminMetric {
   value: string;
 }
 
+export interface AdminUser {
+  id: string;
+  displayName: string;
+  level: number;
+  totalPointsEarned: number;
+  activeReferrals: number;
+  createdAt: string;
+}
+
+export interface FraudEvent {
+  id: string;
+  userId: string;
+  reason: string;
+  riskScore: number;
+  createdAt: string;
+}
+
+export interface AuditLog {
+  id: string;
+  actor: string;
+  action: string;
+  /** @nullable */
+  sourceId: string | null;
+  createdAt: string;
+}
+
+export interface RevenueEvent {
+  id: string;
+  sourceId: string;
+  grossRevenueNok: number;
+  providerCostNok: number;
+  rewardCostNok: number;
+  contributionNok: number;
+  createdAt: string;
+}
+
 export interface AdminDashboard {
   metrics: AdminMetric[];
   featureFlags: FeatureFlag[];
   missions: Mission[];
+  users: AdminUser[];
+  redemptions: Redemption[];
+  fraudEvents: FraudEvent[];
+  auditLogs: AuditLog[];
+  revenueEvents: RevenueEvent[];
+}
+
+export type CatalogItemCategory = typeof CatalogItemCategory[keyof typeof CatalogItemCategory];
+
+
+export const CatalogItemCategory = {
+  mission: 'mission',
+  survey: 'survey',
+  offer: 'offer',
+  event: 'event',
+  reward: 'reward',
+} as const;
+
+export interface CatalogItem {
+  id: string;
+  category: CatalogItemCategory;
+  title: string;
+  description: string;
+  enabled: boolean;
+  type?: string;
+  points?: number;
+  xp?: number;
+  gems?: number;
+  minutes?: number;
+  cost?: number;
+  nokAmount?: number;
+  rewardCategory?: string;
+  target?: number;
+  endsAt?: string;
+}
+
+export type CatalogInputCategory = typeof CatalogInputCategory[keyof typeof CatalogInputCategory];
+
+
+export const CatalogInputCategory = {
+  mission: 'mission',
+  survey: 'survey',
+  offer: 'offer',
+  event: 'event',
+  reward: 'reward',
+} as const;
+
+export type CatalogInputType = typeof CatalogInputType[keyof typeof CatalogInputType];
+
+
+export const CatalogInputType = {
+  WATCH_AD: 'WATCH_AD',
+  PLAY_GAME: 'PLAY_GAME',
+  SURVEY: 'SURVEY',
+  OFFER: 'OFFER',
+  DAILY_CHALLENGE: 'DAILY_CHALLENGE',
+  REFERRAL: 'REFERRAL',
+  STREAK: 'STREAK',
+} as const;
+
+export interface CatalogInput {
+  category: CatalogInputCategory;
+  /**
+     * @minLength 1
+     * @maxLength 100
+     */
+  title: string;
+  /** @maxLength 500 */
+  description?: string;
+  enabled?: boolean;
+  type?: CatalogInputType;
+  /**
+     * @minimum 0
+     * @maximum 10000
+     */
+  points?: number;
+  /**
+     * @minimum 0
+     * @maximum 1000
+     */
+  xp?: number;
+  /**
+     * @minimum 0
+     * @maximum 100
+     */
+  gems?: number;
+  /**
+     * @minimum 0
+     * @maximum 60
+     */
+  minutes?: number;
+  /**
+     * @minimum 1
+     * @maximum 1000000
+     */
+  cost?: number;
+  /**
+     * @minimum 1
+     * @maximum 10000
+     */
+  nokAmount?: number;
+  /** @maxLength 50 */
+  rewardCategory?: string;
+  /**
+     * @minimum 1
+     * @maximum 10000
+     */
+  target?: number;
+  endsAt?: string;
+}
+
+export type CatalogUpdateType = typeof CatalogUpdateType[keyof typeof CatalogUpdateType];
+
+
+export const CatalogUpdateType = {
+  WATCH_AD: 'WATCH_AD',
+  PLAY_GAME: 'PLAY_GAME',
+  SURVEY: 'SURVEY',
+  OFFER: 'OFFER',
+  DAILY_CHALLENGE: 'DAILY_CHALLENGE',
+  REFERRAL: 'REFERRAL',
+  STREAK: 'STREAK',
+} as const;
+
+export interface CatalogUpdate {
+  /**
+     * @minLength 1
+     * @maxLength 100
+     */
+  title?: string;
+  /** @maxLength 500 */
+  description?: string;
+  enabled?: boolean;
+  type?: CatalogUpdateType;
+  /**
+     * @minimum 0
+     * @maximum 10000
+     */
+  points?: number;
+  /**
+     * @minimum 0
+     * @maximum 1000
+     */
+  xp?: number;
+  /**
+     * @minimum 0
+     * @maximum 100
+     */
+  gems?: number;
+  /**
+     * @minimum 0
+     * @maximum 60
+     */
+  minutes?: number;
+  /**
+     * @minimum 1
+     * @maximum 1000000
+     */
+  cost?: number;
+  /**
+     * @minimum 1
+     * @maximum 10000
+     */
+  nokAmount?: number;
+  /** @maxLength 50 */
+  rewardCategory?: string;
+  /**
+     * @minimum 1
+     * @maximum 10000
+     */
+  target?: number;
+  endsAt?: string;
+}
+
+export type NotificationReadInputNotificationIdsItem = typeof NotificationReadInputNotificationIdsItem[keyof typeof NotificationReadInputNotificationIdsItem];
+
+
+export const NotificationReadInputNotificationIdsItem = {
+  streak: 'streak',
+  reward: 'reward',
+  event: 'event',
+  rank: 'rank',
+  balance: 'balance',
+} as const;
+
+export interface NotificationReadInput {
+  /** @maxItems 10 */
+  notificationIds: NotificationReadInputNotificationIdsItem[];
+}
+
+export type AnalyticsInputEvent = typeof AnalyticsInputEvent[keyof typeof AnalyticsInputEvent];
+
+
+export const AnalyticsInputEvent = {
+  mission_started: 'mission_started',
+  ad_started: 'ad_started',
+  game_started: 'game_started',
+  survey_started: 'survey_started',
+  offer_started: 'offer_started',
+  reward_viewed: 'reward_viewed',
+  redemption_started: 'redemption_started',
+  referral_shared: 'referral_shared',
+} as const;
+
+export interface AnalyticsInput {
+  event: AnalyticsInputEvent;
+  /** @maxLength 80 */
+  sourceId?: string;
 }
 
