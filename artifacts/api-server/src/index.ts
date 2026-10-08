@@ -1,6 +1,7 @@
 import app from "./app";
 import { logger } from "./lib/logger";
 import { seedDemoCatalog } from "./bonusplay/seed";
+import { startPointsMonitor } from "./v2/points-monitor";
 
 const rawPort = process.env["PORT"];
 
@@ -24,6 +25,7 @@ async function start(): Promise<void> {
       process.exit(1);
     }
     logger.info({ port }, "BONUSPLAY API listening");
+    startPointsMonitor(logger);
   });
 }
 start().catch(err => {

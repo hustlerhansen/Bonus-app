@@ -71,3 +71,19 @@ pnpm --filter @workspace/bonusplay run test:v2-cache
 Finansielle tester bruker en unik PostgreSQL-schema som opprettes fra migrasjonene og fjernes etter testen. Normale kontoer og demo-data endres ikke. Nettlesertesting kan beholde eksplisitt syntetiske utviklingskontoer og deres uforanderlige testhistorikk; ikke slett eller presenter disse som ekte kundeaktivitet.
 
 Fase-1-kontroller og valg av virkelig administrator håndteres separat. Denne poengboken er ikke bevis for gjennomført e-postlevering, produksjonsinnlogging eller lanseringsklarhet. Fase 3 skal ikke aktiveres før de tidligere adgangs- og sikkerhetsportene er avklart.
+
+## Lesende avstemming og periodisk kontroll
+
+`pnpm --silent --filter @workspace/api-server run points:reconcile` gir en JSON-rapport fra én REPEATABLE READ / READ ONLY-snapshot. Den kontrollerer:
+
+- tillatte hendelsesforløp, delta ved godkjenning og opprettelse/frigivelse av reservasjoner;
+- summer per transaksjon og ikke-negative løpende konto-/reservasjons-/tilgjengelig-saldoer;
+- én full kompensasjon per original, samme konto, motsatt beløp, riktig reversed-kobling og ingen kompensasjon av kompensasjon;
+- global opphavsdeduplisering og forespørselsnøkler;
+- én auditdekning per hendelse (to hendelser ved kompensasjon), forespørsels-/aktør-/kontokobling og før/etter-saldo rekonstruert fra bokførte hendelser.
+
+Rapporten inneholder avvikskoder, hashbaserte kontoreferanser, transaksjonsreferanser og eventuelle hendelses-/auditreferanser. Den eksporterer aldri identiteter, persondata, kilde-/forespørselsnøkler eller fritekst. Avvik krever operatørgjennomgang; ingen økonomiske korreksjoner, historikkendringer eller kontosperringer utføres.
+
+API-serveren kjører kontrollen ved oppstart og hvert 15. minutt. Avvik og utilgjengelig kontroll varsles gjennom egne strukturerte error-loggkoder, med overlappsvern per prosess og på tvers av replikaer. Utgående varsling og overvåking av en stoppet server må kobles til driftsoppsettet før lansering. Operatørprosedyre, rapportformat, avvikskoder og exit-koder står i `RUNBOOK.md`.
+
+Kontrollen krever ingen ny migrasjon og endrer ikke `0002_v2_points.sql` eller mutasjonsmotoren. `test:v2-points` tester lesemodus, samtidig skriving, overlappsvern, persondataminimering og deteksjon mot isolerte feilfixtures uten å endre økonomiske historikkrader.

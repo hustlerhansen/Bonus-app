@@ -32,6 +32,68 @@ If a request times out, retry the unchanged intent with the same idempotency key
 
 V2 schema changes use `pnpm --filter @workspace/db run migrate:dev`, never schema push: the versioned SQL contains append-only triggers and CHECK constraints. It is development-only and not run at application startup. Production remains a separately approved migration/release gate. Regression command: `pnpm --filter @workspace/api-server run test:v2-points`; tests isolate and remove their own PostgreSQL schema.
 
+### Read-only points reconciliation and scheduled alerts
+
+The API runs a full V2 ledger check on startup and every 15 minutes while the API process is running. No separate worker, migration, public endpoint or correction job is installed. A PostgreSQL transaction-scoped advisory lock prevents overlapping scheduled scans across API replicas; a busy replica logs `POINTS_RECONCILIATION_SKIPPED`. Every completed scan uses one **REPEATABLE READ, READ ONLY** snapshot of transactions, events, requests and points audits. Each SQL statement has a 60-second timeout. Failed scans are not healthy scans.
+
+For an operator report against the database already configured for the current environment:
+
+```sh
+pnpm --silent --filter @workspace/api-server run points:reconcile
+# Optional local JSON file (do not commit operational reports):
+pnpm --silent --filter @workspace/api-server run points:reconcile > /tmp/points-report.json
+```
+
+Exit codes: **0** = no detected discrepancies, **2** = discrepancies requiring operator review, **1** = report unavailable (including missing schema, connection or build failures). Read the exit code immediately; do not interpret an empty/failed report as success. This command never applies migrations or changes ledger data. It uses the configured database; do not switch it to production without an approved operational procedure.
+
+Report contract (illustrative empty report; `checkedAt` is the snapshot time):
+
+```json
+{
+  "version": 1,
+  "checkedAt": "2026-10-07T12:00:00.000Z",
+  "status": "ok",
+  "requiresOperatorReview": false,
+  "counts": { "transactions": 0, "events": 0, "audits": 0, "requests": 0 },
+  "findings": []
+}
+```
+
+A discrepancy sets `status: "drift"` and includes findings with `code`, `accountRef`, `transactionRef` and, when relevant, `eventRef`/`auditRef`. Account references are `account-sha256:<full SHA-256 of internal account ID>`; transaction/audit references are UUIDs, with a hashed fallback for non-UUID references. Event references are sequence numbers. An orphan may have no resolvable account. **No names, email addresses, raw identity IDs, source references, request keys, reasons, descriptions or database error details are logged or exported.** References remain operationally sensitive: restrict log/report access and retention. To correlate a known internal account ID, an authorized operator can compute its reference locally without searching by personal data:
+
+```sh
+node -e 'const c=require("node:crypto"); console.log("account-sha256:"+c.createHash("sha256").update(process.argv[1]).digest("hex"))' '<internal-account-id>'
+```
+
+| Finding codes | Operator interpretation |
+|---|---|
+| `MISSING_EVENT`, `ORPHAN_EVENT`, `INVALID_LIFECYCLE` | Missing transaction history or illegal transition; review the referenced event chain. |
+| `EVENT_EFFECT_MISMATCH`, `TRANSACTION_TOTAL_MISMATCH` | Approved deltas or reservation creation/release do not match the transaction and lifecycle. |
+| `ACCOUNT_BALANCE_INVARIANT` | Running balance, reserved or available points became negative or exceeded safe integer arithmetic. |
+| `DUPLICATE_COMPENSATION`, `COMPENSATION_LINK_MISMATCH`, `INVALID_COMPENSATION` | More than one compensation, missing reversal/link, wrong account/amount, nested compensation or invalid refund. Review original and compensation references together. |
+| `DUPLICATE_ORIGIN`, `DUPLICATE_REQUEST` | A source/reference pair or global idempotency key was reused; each affected transaction is reported without exporting the keys. |
+| `EVENT_WITHOUT_AUDIT`, `EVENT_MULTIPLE_AUDITS`, `AUDIT_WITHOUT_EVENT`, `ORPHAN_AUDIT` | Event/audit coverage is not one-to-one. A compensation audit must cover both the original reversal event and its own approved event. |
+| `AUDIT_ACTION_MISMATCH`, `AUDIT_ENTITY_MISMATCH`, `AUDIT_ACTOR_MISMATCH`, `AUDIT_REQUEST_MISMATCH`, `REQUEST_AUDIT_CARDINALITY`, `ORPHAN_REQUEST` | Audit action/entity/actor/account/request linkage is inconsistent or absent. |
+| `AUDIT_BALANCE_MISMATCH` | Before/after balance, reserved or available values disagree with independently reconstructed event totals, including both sides of compensation. |
+
+Scheduled checks produce structured log signals:
+- `POINTS_RECONCILIATION_OK` (info): successful check, snapshot timestamp and row counts.
+- `POINTS_RECONCILIATION_DRIFT` (error): timestamp, counts and finding count, followed by `POINTS_RECONCILIATION_FINDINGS` batches of at most 100 references.
+- `POINTS_RECONCILIATION_FAILED` (error): check unavailable, requiring investigation. Error content is deliberately omitted to prevent credential/PII disclosure.
+- `POINTS_RECONCILIATION_SKIPPED` (info): another replica holds the scheduled scan lock.
+
+These are **log-based alerts**, not email/SMS delivery. Before commercial launch, connect error codes to the approved operational alert receiver and arrange an independent dead-man alert if no successful scan is seen for 30 minutes. The in-process schedule cannot detect its own stopped service; it is not evidence of external monitoring or on-call delivery. Unresolved drift is signalled again on later scans; there is no automatic acknowledgement or suppression.
+
+Response procedure:
+1. Preserve the report timestamp and technical references in the restricted incident record. Rerun the read-only report to confirm current state; never try to silence it by changing historical rows.
+2. Review the affected account/transaction event chains, compensation links and audit/request linkage using authorized access. Several findings may describe one underlying defect.
+3. Stop affected financial operations through the approved operational controls if integrity is uncertain; this detector does not suspend users, change roles or automatically disable earning/redemption.
+4. Investigate failed checks through database availability, applied migration versions and server resource limits without copying connection strings or raw SQL errors into logs.
+5. Any correction needs explicit operator approval and an independently justified, audited adjustment/refund/reversal through the existing engine. Never update/delete financial history, disable append-only triggers, or change constraints to make the report pass.
+6. Run `test:v2-points` before reopening and retain the follow-up clean report. A clean report covers these invariants only, not external settlement or partner economics.
+
+Current scale boundary: the detector reads the full ledger into process memory and scans it in event-sequence order. Measure execution time/memory before substantial volume; do not silently truncate a scan or present a partial check as healthy. Fault tests use in-memory copies of an isolated PostgreSQL ledger, so real history, financial constraints and triggers remain unchanged.
+
 ## Fraud attack
 
 Rate-limit abusive entry points, review suspicious accounts/transactions, hold high-risk redemptions. Do not ban on IP alone. Record reviewed decisions and minimize retained signals. Require explicit approval before any bulk destructive action.

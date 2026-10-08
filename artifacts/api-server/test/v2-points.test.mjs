@@ -9,13 +9,13 @@ import { build } from "esbuild";
 const out = new URL("../.cache/v2-points-test.mjs", import.meta.url);
 await mkdir(new URL("../.cache/", import.meta.url), { recursive: true });
 await build({
-  stdin: { contents: 'export * from "./src/v2/points"; export { pool } from "@workspace/db";',
+  stdin: { contents: 'export * from "./src/v2/points"; export * from "./src/v2/points-reconciliation"; export * from "./src/v2/points-monitor"; export { pool } from "@workspace/db";',
     resolveDir: new URL("../", import.meta.url).pathname, loader: "ts" },
   outfile: out.pathname, bundle: true, platform: "node", format: "esm",
   external: ["pg-native"],
   banner: { js: "import {createRequire} from 'node:module'; const require=createRequire(import.meta.url);" },
 });
-const { createPointsLedger, pool } = await import(out.href);
+const { createPointsLedger, createPointsReconciler, analyzePointsSnapshot, pointsAccountRef, startPointsMonitor, pool } = await import(out.href);
 const schema = `points_test_${randomUUID().replaceAll("-", "")}`;
 const isolated = new pool.constructor({ ...pool.options, options: `-c search_path=${schema}`, max: 10 });
 const ledger = createPointsLedger(isolated);
@@ -246,4 +246,180 @@ test("database rejects overwriting or deleting ledger, events, requests and audi
   }
   await assert.rejects(isolated.query("UPDATE v2_points_transactions SET amount=20 WHERE id=$1", [result.transaction.id]), /append-only/);
   assert.equal((await ledger.wallet(id)).available, 10);
+});
+
+async function snapshot() {
+  const transactions = await isolated.query(`SELECT id,account_id,type,amount,source,reference,
+    related_transaction_id,actor_id FROM v2_points_transactions ORDER BY sequence`);
+  const events = await isolated.query(`SELECT sequence::text,transaction_id,status,delta,reserved_delta,actor_id
+    FROM v2_points_events ORDER BY sequence`);
+  const requests = await isolated.query("SELECT idempotency_key,transaction_id,actor_id FROM v2_points_requests");
+  const audits = await isolated.query(`SELECT id,actor_id,action,entity_type,entity_id,metadata->>'accountId' AS account_id,
+    metadata->>'requestKey' AS request_key,metadata->'before' AS before,metadata->'after' AS after
+    FROM v2_audit_logs WHERE entity_type='POINTS_TRANSACTION'`);
+  return { transactions: transactions.rows, events: events.rows, requests: requests.rows, audits: audits.rows };
+}
+
+test("read-only reconciliation accepts all healthy lifecycles and does not write any rows", async () => {
+  const before = await snapshot();
+  const report = await createPointsReconciler(isolated)();
+  assert.equal(report.status, "ok", JSON.stringify(report.findings));
+  assert.equal(report.requiresOperatorReview, false);
+  assert.deepEqual(report.findings, []);
+  assert.equal(report.counts.transactions, before.transactions.length);
+  assert.deepEqual(await snapshot(), before);
+});
+
+test("isolated fault fixtures detect effects, reservations, lifecycle, compensation, origin and audit drift", async (t) => {
+  const id = await account();
+  await adjust(id, 500);
+  const pending = await record(id, "REDEEM", -30, "pending");
+  const debit = await record(id, "REDEEM", -40);
+  const refund = await compensate(debit.transaction.id, "REFUND");
+  const clean = await snapshot();
+  assert.equal(analyzePointsSnapshot(clean, "fixture").status, "ok");
+  const index = clean.events.findIndex(e => e.transaction_id === pending.transaction.id);
+  const refundIndex = clean.transactions.findIndex(t => t.id === refund.transaction.id);
+  const auditIndex = clean.audits.findIndex(a => a.entity_id === pending.transaction.id);
+  const faults = [
+    ["EVENT_EFFECT_MISMATCH", s => { s.events[index].delta = 30; }],
+    ["TRANSACTION_TOTAL_MISMATCH", s => { s.events[index].reserved_delta = 0; }],
+    ["INVALID_LIFECYCLE", s => { s.events[index].status = "rejected"; }],
+    ["MISSING_EVENT", s => { s.events = s.events.filter(e => e.transaction_id !== pending.transaction.id); }],
+    ["ACCOUNT_BALANCE_INVARIANT", s => { s.events[index].reserved_delta = 1000000; }],
+    ["INVALID_COMPENSATION", s => { s.transactions[refundIndex].amount = 39; }],
+    ["INVALID_COMPENSATION", s => { s.transactions[refundIndex].account_id = admin; }],
+    ["INVALID_COMPENSATION", s => { s.transactions[refundIndex].related_transaction_id = randomUUID(); }],
+    ["DUPLICATE_COMPENSATION", s => { s.transactions.push({ ...s.transactions[refundIndex], id: randomUUID(), reference: randomUUID() }); }],
+    ["COMPENSATION_LINK_MISMATCH", s => { s.events = s.events.filter(e => !(e.transaction_id === debit.transaction.id && e.status === "reversed")); }],
+    ["COMPENSATION_LINK_MISMATCH", s => { s.transactions = s.transactions.filter(t => t.id !== refund.transaction.id); }],
+    ["DUPLICATE_ORIGIN", s => { s.transactions.push({ ...s.transactions[refundIndex], id: randomUUID(), related_transaction_id: null }); }],
+    ["EVENT_WITHOUT_AUDIT", s => { s.audits.splice(auditIndex, 1); }],
+    ["EVENT_MULTIPLE_AUDITS", s => { s.audits.push({ ...s.audits[auditIndex], id: randomUUID() }); }],
+    ["AUDIT_BALANCE_MISMATCH", s => { s.audits[auditIndex].after.balance += 1; }],
+    ["AUDIT_BALANCE_MISMATCH", s => { s.audits[auditIndex].before.balance += 10; s.audits[auditIndex].after.balance += 10; }],
+    ["AUDIT_BALANCE_MISMATCH", s => { s.audits[auditIndex].after = null; }],
+    ["AUDIT_REQUEST_MISMATCH", s => { s.audits[auditIndex].request_key = "missing"; }],
+    ["AUDIT_REQUEST_MISMATCH", s => { s.audits[auditIndex].account_id = admin; }],
+    ["AUDIT_ACTOR_MISMATCH", s => { s.audits[auditIndex].actor_id = id; }],
+    ["AUDIT_ACTION_MISMATCH", s => { s.audits[auditIndex].action = "POINTS_UNKNOWN"; }],
+    ["AUDIT_ENTITY_MISMATCH", s => { s.audits[auditIndex].entity_type = "WRONG"; }],
+    ["REQUEST_AUDIT_CARDINALITY", s => { s.requests.push({ idempotency_key: randomUUID(), transaction_id: pending.transaction.id, actor_id: admin }); }],
+    ["DUPLICATE_REQUEST", s => { s.requests.push({ ...s.requests[0] }); }],
+    ["ORPHAN_REQUEST", s => { s.requests[0].transaction_id = randomUUID(); }],
+    ["ORPHAN_EVENT", s => { s.events[index].transaction_id = randomUUID(); }],
+    ["ORPHAN_AUDIT", s => { s.audits[auditIndex].entity_id = randomUUID(); }],
+  ];
+  for (const [code, corrupt] of faults) {
+    await t.test(code, () => {
+      const fixture = structuredClone(clean);
+      corrupt(fixture); // Memory only: append-only history and constraints stay intact.
+      const result = analyzePointsSnapshot(fixture, "fixture");
+      assert.equal(result.requiresOperatorReview, true);
+      assert.ok(result.findings.some(f => f.code === code), JSON.stringify(result.findings));
+      assert.ok(result.findings.every(f => f.transactionRef || f.code === "ORPHAN_REQUEST"));
+    });
+  }
+  assert.deepEqual(await snapshot(), clean);
+});
+
+test("reports expose only hashed account and technical references, never sensitive/free-text values", async () => {
+  const fixture = await snapshot();
+  const target = fixture.transactions[0];
+  const secretLike = "someone@example.invalid secret://credential";
+  target.account_id = secretLike;
+  target.source = secretLike;
+  target.reference = secretLike;
+  fixture.audits[0].id = secretLike;
+  fixture.audits[0].request_key = secretLike;
+  const report = analyzePointsSnapshot(fixture, "fixture");
+  assert.ok(report.findings.some(f => f.accountRef === pointsAccountRef(secretLike)));
+  assert.ok(!JSON.stringify(report).includes(secretLike));
+  assert.ok(!JSON.stringify(report).includes(admin));
+  for (const f of report.findings) {
+    assert.ok(Object.keys(f).every(k => ["code", "accountRef", "transactionRef", "eventRef", "auditRef"].includes(k)));
+  }
+});
+
+test("snapshot remains consistent when a financial mutation commits between read queries", async () => {
+  const id = await account();
+  const database = {
+    async connect() {
+      const client = await isolated.connect();
+      return {
+        release: () => client.release(),
+        async query(sql, values) {
+          const result = await client.query(sql, values);
+          if (sql.includes("FROM v2_points_transactions ORDER BY sequence")) await adjust(id, 12);
+          return result;
+        },
+      };
+    },
+  };
+  const report = await createPointsReconciler(database)();
+  assert.equal(report.status, "ok", JSON.stringify(report.findings));
+  assert.equal((await ledger.wallet(id)).balance, 12);
+});
+
+test("database enforces read-only mode and scheduler avoids concurrent replicas", async () => {
+  let writeRejected = false, readOnly = false;
+  const database = {
+    async connect() {
+      const client = await isolated.connect();
+      return {
+        release: () => client.release(),
+        async query(sql, values) {
+          const result = await client.query(sql, values);
+          if (sql.startsWith("BEGIN")) {
+            readOnly = (await client.query("SHOW transaction_read_only")).rows[0].transaction_read_only === "on";
+          }
+          if (sql.includes("transaction_timestamp()")) {
+            try { await client.query("DELETE FROM v2_points_events"); }
+            catch (e) { writeRejected = e.code === "25006"; throw e; }
+          }
+          return result;
+        },
+      };
+    },
+  };
+  await assert.rejects(createPointsReconciler(database)(), e => e.code === "25006");
+  assert.equal(readOnly, true);
+  assert.equal(writeRejected, true);
+  const holder = await isolated.connect();
+  try {
+    await holder.query("BEGIN");
+    await holder.query("SELECT pg_advisory_xact_lock(20761009, 7)");
+    assert.equal(await createPointsReconciler(isolated)({ scheduled: true }), null);
+  } finally { await holder.query("ROLLBACK"); holder.release(); }
+  assert.equal((await createPointsReconciler(isolated)({ scheduled: true })).status, "ok");
+});
+
+test("scheduled checks alert on drift and failure, sanitize errors and do not overlap", async () => {
+  const logs = [];
+  const logger = { info: (data) => logs.push(data), error: (data) => logs.push(data) };
+  let release, calls = 0;
+  const gate = new Promise(resolve => { release = resolve; });
+  const monitor = startPointsMonitor(logger, async () => {
+    calls++;
+    await gate;
+    return { checkedAt: "fixture", counts: {}, requiresOperatorReview: true,
+      findings: [{ code: "MISSING_EVENT", accountRef: pointsAccountRef("synthetic"), transactionRef: randomUUID() }] };
+  }, 10);
+  try {
+    await monitor.check();
+    await new Promise(resolve => setTimeout(resolve, 25));
+    assert.equal(calls, 1);
+    release();
+    await new Promise(resolve => setTimeout(resolve, 0));
+    assert.ok(logs.some(l => l.code === "POINTS_RECONCILIATION_DRIFT"));
+    assert.ok(logs.some(l => l.code === "POINTS_RECONCILIATION_FINDINGS"));
+  } finally { monitor.stop(); }
+  const failing = startPointsMonitor(logger, async () => { throw new Error("password=do-not-log someone@example.invalid"); }, 10000);
+  await new Promise(resolve => setTimeout(resolve, 0));
+  failing.stop();
+  assert.ok(logs.some(l => l.code === "POINTS_RECONCILIATION_FAILED"));
+  assert.ok(!JSON.stringify(logs).includes("do-not-log"));
+  const count = calls;
+  await monitor.check();
+  assert.equal(calls, count);
 });
