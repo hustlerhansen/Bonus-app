@@ -6,6 +6,7 @@ import { authenticated, accountState, enroll, requireAccount, updateProfile } fr
 import { isSafeMutation } from "../v2/access-policy";
 import { getClerkProxyHost } from "../middlewares/clerkProxyMiddleware";
 import pointsRouter from "./v2-points";
+import offersRouter from "./v2-offers";
 
 const router: IRouter = Router();
 router.use("/v2", rateLimit({
@@ -28,6 +29,7 @@ router.use("/v2", (req, res, next) => {
 });
 
 router.use("/v2", pointsRouter);
+router.use("/v2", offersRouter);
 
 router.get("/v2/me", async (req, res) => {
   const identity = authenticated(req);

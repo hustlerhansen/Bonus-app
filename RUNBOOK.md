@@ -4,6 +4,8 @@ Status: draft, before commercial launch. Existing published product is a demo.
 
 ## Environments and releases
 
+Tilbud/konverteringer har egen lukket port og signert callbackgrense. Se `V2_OFFERS.md` for protokoll, betrodd aktør, operatørkonfigurasjon og hendelsesstans. Ikke klarer tidligere sikkerhets-/innloggingsporter som en sideeffekt av å levere tilbudskode.
+
 Development is not production. Use managed workflows for web/API. Never print secrets or put them in documentation. Apply versioned additive migrations in development, review them, then use the publishing/database workflow for production; never run startup DDL. Do not publish during implementation without the user's approval.
 
 Before a release: record current schema/migration version, ensure a database backup exists, run tests, review launch gates and arrange monitoring. Code-only Git baselines do not back up PostgreSQL. Use the project's recovery/checkpoint controls for supported recovery; confirm the target and data impact before restoring.

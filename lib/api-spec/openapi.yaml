@@ -13,6 +13,168 @@ tags:
   - name: bonusplay
     description: BONUSPLAY demo account, game and rewards operations
 paths:
+  /v2/offers:
+    get:
+      operationId: listV2Offers
+      tags: [v2]
+      responses:
+        "200":
+          description: Approved offers and rollout gate
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/V2OfferPage" }
+        default: { $ref: "#/components/responses/V2PointsError" }
+  /v2/offers/{offerId}:
+    get:
+      operationId: getV2Offer
+      tags: [v2]
+      parameters:
+        - { name: offerId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        "200":
+          description: Approved offer details
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/V2OfferDetail" }
+        default: { $ref: "#/components/responses/V2PointsError" }
+  /v2/offers/{offerId}/start:
+    post:
+      operationId: startV2Offer
+      tags: [v2]
+      parameters:
+        - { name: offerId, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/V2OfferStartInput" }
+      responses:
+        "200":
+          description: Persisted attributed click; no points awarded
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/V2OfferStart" }
+        default: { $ref: "#/components/responses/V2PointsError" }
+  /v2/conversions:
+    get:
+      operationId: listV2Conversions
+      tags: [v2]
+      responses:
+        "200":
+          description: Own latest 100 conversions
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/V2ConversionPage" }
+        default: { $ref: "#/components/responses/V2PointsError" }
+  /v2/admin/offer-partners:
+    get:
+      operationId: listV2OfferPartners
+      tags: [v2]
+      responses:
+        "200":
+          description: Operator-configured partner identifiers; no credentials
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/V2OfferPartner" }
+        default: { $ref: "#/components/responses/V2PointsError" }
+  /v2/admin/offers:
+    get:
+      operationId: listV2AdminOffers
+      tags: [v2]
+      responses:
+        "200":
+          description: Latest 100 offers including drafts
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/V2OfferPage" }
+        default: { $ref: "#/components/responses/V2PointsError" }
+    post:
+      operationId: createV2Offer
+      tags: [v2]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/V2OfferInput" }
+      responses:
+        "201":
+          description: Immutable draft, awaiting review
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/V2Offer" }
+        default: { $ref: "#/components/responses/V2PointsError" }
+  /v2/admin/offers/{offerId}/review:
+    post:
+      operationId: reviewV2Offer
+      tags: [v2]
+      parameters:
+        - { name: offerId, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/V2OfferReviewInput" }
+      responses:
+        "200":
+          description: Reviewed offer
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/V2Offer" }
+        default: { $ref: "#/components/responses/V2PointsError" }
+  /v2/admin/conversions:
+    get:
+      operationId: listV2AdminConversions
+      tags: [v2]
+      responses:
+        "200":
+          description: Latest 100 conversions for administrator review
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/V2ConversionPage" }
+        default: { $ref: "#/components/responses/V2PointsError" }
+  /v2/admin/conversions/{conversionId}/review:
+    post:
+      operationId: reviewV2Conversion
+      tags: [v2]
+      parameters:
+        - { name: conversionId, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/V2ConversionReviewInput" }
+      responses:
+        "200":
+          description: Atomic conversion and ledger decision
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/V2Conversion" }
+        default: { $ref: "#/components/responses/V2PointsError" }
+  /v2/offer-callbacks/{partnerId}:
+    post:
+      operationId: receiveV2OfferCallback
+      tags: [v2]
+      summary: Signed server callback, not cookie authenticated
+      description: HMAC-SHA256 hex over timestamp.nonce.rawBody. Five-minute window; each nonce accepted once. No browser amount or account identifier accepted.
+      parameters:
+        - { name: partnerId, in: path, required: true, schema: { type: string, pattern: "^[a-z0-9-]{3,40}$" } }
+        - { name: X-BP-Timestamp, in: header, required: true, schema: { type: string } }
+        - { name: X-BP-Nonce, in: header, required: true, schema: { type: string, format: uuid } }
+        - { name: X-BP-Signature, in: header, required: true, schema: { type: string } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/V2OfferCallbackInput" }
+      responses:
+        "200":
+          description: Evidence stored; verified evidence still requires administrator approval
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/V2Conversion" }
+        default: { $ref: "#/components/responses/V2PointsError" }
   /v2/wallet:
     get:
       operationId: getV2Wallet
@@ -630,6 +792,122 @@ components:
       in: query
       schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
   schemas:
+    V2OfferPartner:
+      type: object
+      required: [id, name]
+      properties:
+        id: { type: string }
+        name: { type: string }
+    V2OfferInput:
+      type: object
+      additionalProperties: false
+      required: [partnerId, title, description, terms, points, destinationUrl, category, requirements, completionSteps, estimatedMinutes, approvalDays]
+      properties:
+        partnerId: { type: string, pattern: "^[a-z0-9-]{3,40}$" }
+        title: { type: string, minLength: 3, maxLength: 120 }
+        description: { type: string, minLength: 10, maxLength: 2000 }
+        terms: { type: string, minLength: 10, maxLength: 4000 }
+        points: { type: integer, minimum: 1, maximum: 1000000 }
+        destinationUrl: { type: string, format: uri, maxLength: 2000 }
+        category: { type: string, enum: [shopping, subscriptions, surveys, apps, services, finance, travel, food, entertainment, other] }
+        requirements: { type: string, minLength: 10, maxLength: 2000 }
+        completionSteps: { type: string, minLength: 10, maxLength: 2000 }
+        estimatedMinutes: { type: integer, minimum: 1, maximum: 10080 }
+        approvalDays: { type: integer, minimum: 1, maximum: 365 }
+        expiresAt: { type: [string, "null"], format: date-time }
+    V2Offer:
+      type: object
+      required: [id, partnerId, partnerName, partnerLogoUrl, title, description, terms, points, status, createdAt, destinationUrl, category, requirements, completionSteps, estimatedMinutes, approvalDays, expiresAt]
+      properties:
+        id: { type: string, format: uuid }
+        partnerId: { type: string }
+        partnerName: { type: string }
+        title: { type: string }
+        description: { type: string }
+        terms: { type: string }
+        points: { type: integer }
+        status: { type: string, enum: [draft, approved, rejected] }
+        createdAt: { type: string, format: date-time }
+        destinationUrl: { type: string, format: uri }
+        partnerLogoUrl: { type: [string, "null"], format: uri }
+        category: { type: string }
+        requirements: { type: string }
+        completionSteps: { type: string }
+        estimatedMinutes: { type: integer }
+        approvalDays: { type: integer }
+        expiresAt: { type: [string, "null"], format: date-time }
+    V2OfferPage:
+      type: object
+      required: [items, earnEnabled]
+      properties:
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/V2Offer" }
+        earnEnabled: { type: boolean }
+    V2OfferDetail:
+      type: object
+      required: [offer, earnEnabled]
+      properties:
+        offer: { $ref: "#/components/schemas/V2Offer" }
+        earnEnabled: { type: boolean }
+    V2OfferStartInput:
+      type: object
+      additionalProperties: false
+      required: [idempotencyKey]
+      properties:
+        idempotencyKey: { type: string, format: uuid }
+    V2OfferStart:
+      type: object
+      required: [clickId, redirectUrl]
+      properties:
+        clickId: { type: string, format: uuid }
+        redirectUrl: { type: string, format: uri }
+    V2OfferReviewInput:
+      type: object
+      additionalProperties: false
+      required: [status, reason]
+      properties:
+        status: { type: string, enum: [approved, rejected] }
+        reason: { type: string, minLength: 10, maxLength: 500 }
+    V2ConversionReviewInput:
+      type: object
+      additionalProperties: false
+      required: [status, reason]
+      properties:
+        status: { type: string, enum: [verified, rejected] }
+        reason: { type: string, minLength: 10, maxLength: 500 }
+    V2OfferCallbackInput:
+      type: object
+      additionalProperties: false
+      required: [eventId, clickId, status]
+      properties:
+        eventId: { type: string, pattern: "^[A-Za-z0-9_.:-]{1,100}$" }
+        clickId: { type: string, format: uuid }
+        status: { type: string, enum: [pending, verified, rejected] }
+    V2Conversion:
+      type: object
+      required: [id, offerId, offerTitle, points, status, partnerStatus, transactionId, createdAt, updatedAt, accountId, partnerId, eventId, clickId]
+      properties:
+        id: { type: string, format: uuid }
+        offerId: { type: string, format: uuid }
+        offerTitle: { type: string }
+        points: { type: integer }
+        status: { type: string, enum: [pending, verified, rejected] }
+        partnerStatus: { type: string, enum: [pending, verified, rejected] }
+        transactionId: { type: string, format: uuid }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+        accountId: { type: string }
+        partnerId: { type: string }
+        eventId: { type: string }
+        clickId: { type: string, format: uuid }
+    V2ConversionPage:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/V2Conversion" }
     V2PointsType:
       type: string
       enum: [EARN, REDEEM, REFERRAL, BONUS, ADJUSTMENT, REFUND, REVERSAL, EXPIRATION]

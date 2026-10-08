@@ -5,6 +5,215 @@
  * API for the BONUSPLAY demo rewards platform
  * OpenAPI spec version: 0.1.0
  */
+export interface V2OfferPartner {
+  id: string;
+  name: string;
+}
+
+export type V2OfferInputCategory = typeof V2OfferInputCategory[keyof typeof V2OfferInputCategory];
+
+
+export const V2OfferInputCategory = {
+  shopping: 'shopping',
+  subscriptions: 'subscriptions',
+  surveys: 'surveys',
+  apps: 'apps',
+  services: 'services',
+  finance: 'finance',
+  travel: 'travel',
+  food: 'food',
+  entertainment: 'entertainment',
+  other: 'other',
+} as const;
+
+export interface V2OfferInput {
+  /** @pattern ^[a-z0-9-]{3,40}$ */
+  partnerId: string;
+  /**
+     * @minLength 3
+     * @maxLength 120
+     */
+  title: string;
+  /**
+     * @minLength 10
+     * @maxLength 2000
+     */
+  description: string;
+  /**
+     * @minLength 10
+     * @maxLength 4000
+     */
+  terms: string;
+  /**
+     * @minimum 1
+     * @maximum 1000000
+     */
+  points: number;
+  /** @maxLength 2000 */
+  destinationUrl: string;
+  category: V2OfferInputCategory;
+  /**
+     * @minLength 10
+     * @maxLength 2000
+     */
+  requirements: string;
+  /**
+     * @minLength 10
+     * @maxLength 2000
+     */
+  completionSteps: string;
+  /**
+     * @minimum 1
+     * @maximum 10080
+     */
+  estimatedMinutes: number;
+  /**
+     * @minimum 1
+     * @maximum 365
+     */
+  approvalDays: number;
+  /** @nullable */
+  expiresAt?: string | null;
+}
+
+export type V2OfferStatus = typeof V2OfferStatus[keyof typeof V2OfferStatus];
+
+
+export const V2OfferStatus = {
+  draft: 'draft',
+  approved: 'approved',
+  rejected: 'rejected',
+} as const;
+
+export interface V2Offer {
+  id: string;
+  partnerId: string;
+  partnerName: string;
+  title: string;
+  description: string;
+  terms: string;
+  points: number;
+  status: V2OfferStatus;
+  createdAt: string;
+  destinationUrl: string;
+  /** @nullable */
+  partnerLogoUrl: string | null;
+  category: string;
+  requirements: string;
+  completionSteps: string;
+  estimatedMinutes: number;
+  approvalDays: number;
+  /** @nullable */
+  expiresAt: string | null;
+}
+
+export interface V2OfferPage {
+  items: V2Offer[];
+  earnEnabled: boolean;
+}
+
+export interface V2OfferDetail {
+  offer: V2Offer;
+  earnEnabled: boolean;
+}
+
+export interface V2OfferStartInput {
+  idempotencyKey: string;
+}
+
+export interface V2OfferStart {
+  clickId: string;
+  redirectUrl: string;
+}
+
+export type V2OfferReviewInputStatus = typeof V2OfferReviewInputStatus[keyof typeof V2OfferReviewInputStatus];
+
+
+export const V2OfferReviewInputStatus = {
+  approved: 'approved',
+  rejected: 'rejected',
+} as const;
+
+export interface V2OfferReviewInput {
+  status: V2OfferReviewInputStatus;
+  /**
+     * @minLength 10
+     * @maxLength 500
+     */
+  reason: string;
+}
+
+export type V2ConversionReviewInputStatus = typeof V2ConversionReviewInputStatus[keyof typeof V2ConversionReviewInputStatus];
+
+
+export const V2ConversionReviewInputStatus = {
+  verified: 'verified',
+  rejected: 'rejected',
+} as const;
+
+export interface V2ConversionReviewInput {
+  status: V2ConversionReviewInputStatus;
+  /**
+     * @minLength 10
+     * @maxLength 500
+     */
+  reason: string;
+}
+
+export type V2OfferCallbackInputStatus = typeof V2OfferCallbackInputStatus[keyof typeof V2OfferCallbackInputStatus];
+
+
+export const V2OfferCallbackInputStatus = {
+  pending: 'pending',
+  verified: 'verified',
+  rejected: 'rejected',
+} as const;
+
+export interface V2OfferCallbackInput {
+  /** @pattern ^[A-Za-z0-9_.:-]{1,100}$ */
+  eventId: string;
+  clickId: string;
+  status: V2OfferCallbackInputStatus;
+}
+
+export type V2ConversionStatus = typeof V2ConversionStatus[keyof typeof V2ConversionStatus];
+
+
+export const V2ConversionStatus = {
+  pending: 'pending',
+  verified: 'verified',
+  rejected: 'rejected',
+} as const;
+
+export type V2ConversionPartnerStatus = typeof V2ConversionPartnerStatus[keyof typeof V2ConversionPartnerStatus];
+
+
+export const V2ConversionPartnerStatus = {
+  pending: 'pending',
+  verified: 'verified',
+  rejected: 'rejected',
+} as const;
+
+export interface V2Conversion {
+  id: string;
+  offerId: string;
+  offerTitle: string;
+  points: number;
+  status: V2ConversionStatus;
+  partnerStatus: V2ConversionPartnerStatus;
+  transactionId: string;
+  createdAt: string;
+  updatedAt: string;
+  accountId: string;
+  partnerId: string;
+  eventId: string;
+  clickId: string;
+}
+
+export interface V2ConversionPage {
+  items: V2Conversion[];
+}
+
 export type V2PointsType = typeof V2PointsType[keyof typeof V2PointsType];
 
 

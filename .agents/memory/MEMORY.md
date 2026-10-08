@@ -3,3 +3,5 @@
 - [V2 economics](v2-economics.md) — BonusPoints are a traceable financial liability; do not carry the demo exchange rate into real partner economics.
 - [OpenAPI Zod collisions](openapi-zod-collisions.md) — Orval path validators and query types can collide; disambiguate barrel exports, never hand-edit generated files.
 - [Points reconciliation boundaries](points-reconciliation-boundaries.md) — detection stays read-only; use technical/hashed references and operator-approved corrections only.
+- [Earn activation](earn-activation.md) — feature delivery must not clear separate authentication/security gates; settlement tests belong in isolated databases.
+- [Clerk test addresses](clerk-test-addresses.md) — the approved browser-login helper rejects .invalid; use unique reserved example.com identities without sending email.

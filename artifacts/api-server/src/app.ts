@@ -5,6 +5,7 @@ import router from "./routes";
 import { logger } from "./lib/logger";
 import { DemoError } from "./bonusplay/service";
 import { PointsError } from "./v2/points";
+import offerCallbacksRouter from "./routes/v2-offer-callbacks";
 import helmet from "helmet";
 import { clerkMiddleware } from "@clerk/express";
 import { publishableKeyFromHost } from "@clerk/shared/keys";
@@ -35,6 +36,7 @@ app.use(
 app.use(CLERK_PROXY_PATH, clerkProxyMiddleware());
 app.use(helmet());
 app.use(cors());
+app.use("/api/v2/offer-callbacks", offerCallbacksRouter);
 app.use(express.json({ limit: "64kb" }));
 app.use(express.urlencoded({ extended: true }));
 app.use(

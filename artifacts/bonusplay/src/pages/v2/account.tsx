@@ -107,6 +107,7 @@ function Dashboard({ a }: { a: V2Account }) {
       </Card>
       <div className="mt-4 flex flex-wrap gap-3">
         <Link href="/account/points"><Btn variant="gold">Mine BonusPoints</Btn></Link>
+        <Link href="/account/offers"><Btn variant="ghost">Tilbud</Btn></Link>
         {isAdmin && <Link href="/account/points/admin"><Btn variant="ghost">Poengadministrasjon</Btn></Link>}
         <Link href="/account/profile"><Btn variant="ghost">Rediger profil</Btn></Link>
         <Link href="/account/security"><Btn variant="ghost">Passord og økter</Btn></Link>

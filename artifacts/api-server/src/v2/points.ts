@@ -79,8 +79,13 @@ export function createPointsLedger(database: Database = pool) {
     });
   }
 
-  async function execute(input: PointsCommand) {
+  // Internal services may compose ledger writes with their own transaction.
+  // Authorization, locks, idempotency and audit still run; caller owns rollback.
+  async function execute(input: PointsCommand, existingClient?: PoolClient) {
     const cmd = { ...input, reason: input.reason.trim() };
+    if (!existingClient && cmd.idempotencyKey.startsWith("offer-")) {
+      throw new PointsError(400, "Denne forespørselsnøkkelen er reservert for tilbudsintegrasjonen.");
+    }
     if (cmd.reason.length < 10 || cmd.reason.length > 500 ||
       !/^[A-Za-z0-9_.:-]{16,128}$/.test(cmd.idempotencyKey)) throw new PointsError(400, "Begrunnelse eller forespørselsnøkkel er ugyldig.");
     if ("amount" in cmd && (!Number.isInteger(cmd.amount) || cmd.amount === 0 || Math.abs(cmd.amount) > 1_000_000)) {
@@ -99,9 +104,9 @@ export function createPointsLedger(database: Database = pool) {
     const fingerprint = createHash("sha256").update(JSON.stringify(Object.fromEntries(
       Object.entries(cmd).sort(([a], [b]) => a.localeCompare(b)),
     ))).digest("hex");
-    const client = await database.connect();
+    const client = existingClient ?? await database.connect();
     try {
-      await client.query("BEGIN");
+      if (!existingClient) await client.query("BEGIN");
       // Serialize the global request key even when different accounts are targeted.
       await client.query("SELECT pg_advisory_xact_lock(hashtextextended($1,20761009))", [cmd.idempotencyKey]);
       const original = "transactionId" in cmd ? await transaction(cmd.transactionId, client) : null;
@@ -121,7 +126,7 @@ export function createPointsLedger(database: Database = pool) {
         if (previous.rows[0].fingerprint !== fingerprint) throw new PointsError(409, "Nøkkelen er allerede brukt til en annen forespørsel.");
         const result = AdjustV2PointsResponse.parse({ transaction: await transaction(previous.rows[0].transaction_id, client),
           wallet: await wallet(accountId, client), replayed: true });
-        await client.query("COMMIT");
+        if (!existingClient) await client.query("COMMIT");
         return result;
       }
       const before = await wallet(accountId, client);
@@ -133,6 +138,9 @@ export function createPointsLedger(database: Database = pool) {
       if (cmd.kind === "decide") {
         // Re-read after account lock: another decision can have won during lock acquisition.
         const current = await transaction(cmd.transactionId, client);
+        if (!existingClient && current.source.startsWith("offer:")) {
+          throw new PointsError(409, "Tilbudspoeng må behandles gjennom konverteringskontrollen.");
+        }
         if (current.status !== "pending") throw new PointsError(409, "Bare ventende transaksjoner kan behandles.");
         id = current.id;
         await event(id, cmd.status, cmd.status === "approved" ? current.amount : 0, current.amount < 0 ? current.amount : 0);
@@ -142,6 +150,9 @@ export function createPointsLedger(database: Database = pool) {
         let related: string | null = null;
         if (cmd.kind === "compensate") {
           const current = await transaction(cmd.transactionId, client);
+          if (current.source.startsWith("offer:")) {
+            throw new PointsError(409, "Tilbudskompensasjon krever en egen konverterings- og tilbakeføringsflyt.");
+          }
           if (current.status !== "approved" || ["REFUND", "REVERSAL"].includes(current.type)) {
             throw new PointsError(409, "Transaksjonen kan ikke tilbakeføres flere ganger.");
           }
@@ -174,13 +185,13 @@ export function createPointsLedger(database: Database = pool) {
       await client.query(`INSERT INTO v2_points_requests(idempotency_key,fingerprint,transaction_id,actor_id)
         VALUES($1,$2,$3,$4)`, [cmd.idempotencyKey, fingerprint, id, cmd.actorId]);
       const result = AdjustV2PointsResponse.parse({ transaction: await transaction(id, client), wallet: after, replayed: false });
-      await client.query("COMMIT");
+      if (!existingClient) await client.query("COMMIT");
       return result;
     } catch (error) {
-      await client.query("ROLLBACK");
+      if (!existingClient) await client.query("ROLLBACK");
       if ((error as { code?: string }).code === "23505") throw new PointsError(409, "Kilden eller transaksjonen er allerede bokført.");
       throw error;
-    } finally { client.release(); }
+    } finally { if (!existingClient) client.release(); }
   }
   return { wallet, history, execute };
 }

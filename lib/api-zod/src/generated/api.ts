@@ -8,6 +8,312 @@
 import * as zod from 'zod';
 
 
+export const ListV2OffersResponse = zod.object({
+  "items": zod.array(zod.object({
+  "id": zod.string().uuid(),
+  "partnerId": zod.string(),
+  "partnerName": zod.string(),
+  "title": zod.string(),
+  "description": zod.string(),
+  "terms": zod.string(),
+  "points": zod.number().int(),
+  "status": zod.enum(['draft', 'approved', 'rejected']),
+  "createdAt": zod.coerce.date(),
+  "destinationUrl": zod.string().url(),
+  "partnerLogoUrl": zod.string().url().nullable(),
+  "category": zod.string(),
+  "requirements": zod.string(),
+  "completionSteps": zod.string(),
+  "estimatedMinutes": zod.number().int(),
+  "approvalDays": zod.number().int(),
+  "expiresAt": zod.coerce.date().nullable()
+})),
+  "earnEnabled": zod.boolean()
+})
+
+
+export const GetV2OfferParams = zod.object({
+  "offerId": zod.coerce.string().uuid()
+})
+
+export const GetV2OfferResponse = zod.object({
+  "offer": zod.object({
+  "id": zod.string().uuid(),
+  "partnerId": zod.string(),
+  "partnerName": zod.string(),
+  "title": zod.string(),
+  "description": zod.string(),
+  "terms": zod.string(),
+  "points": zod.number().int(),
+  "status": zod.enum(['draft', 'approved', 'rejected']),
+  "createdAt": zod.coerce.date(),
+  "destinationUrl": zod.string().url(),
+  "partnerLogoUrl": zod.string().url().nullable(),
+  "category": zod.string(),
+  "requirements": zod.string(),
+  "completionSteps": zod.string(),
+  "estimatedMinutes": zod.number().int(),
+  "approvalDays": zod.number().int(),
+  "expiresAt": zod.coerce.date().nullable()
+}),
+  "earnEnabled": zod.boolean()
+})
+
+
+export const StartV2OfferParams = zod.object({
+  "offerId": zod.coerce.string().uuid()
+})
+
+export const StartV2OfferBody = zod.object({
+  "idempotencyKey": zod.string().uuid()
+})
+
+export const StartV2OfferResponse = zod.object({
+  "clickId": zod.string().uuid(),
+  "redirectUrl": zod.string().url()
+})
+
+
+export const ListV2ConversionsResponse = zod.object({
+  "items": zod.array(zod.object({
+  "id": zod.string().uuid(),
+  "offerId": zod.string().uuid(),
+  "offerTitle": zod.string(),
+  "points": zod.number().int(),
+  "status": zod.enum(['pending', 'verified', 'rejected']),
+  "partnerStatus": zod.enum(['pending', 'verified', 'rejected']),
+  "transactionId": zod.string().uuid(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date(),
+  "accountId": zod.string(),
+  "partnerId": zod.string(),
+  "eventId": zod.string(),
+  "clickId": zod.string().uuid()
+}))
+})
+
+
+export const ListV2OfferPartnersResponseItem = zod.object({
+  "id": zod.string(),
+  "name": zod.string()
+})
+export const ListV2OfferPartnersResponse = zod.array(ListV2OfferPartnersResponseItem)
+
+
+export const ListV2AdminOffersResponse = zod.object({
+  "items": zod.array(zod.object({
+  "id": zod.string().uuid(),
+  "partnerId": zod.string(),
+  "partnerName": zod.string(),
+  "title": zod.string(),
+  "description": zod.string(),
+  "terms": zod.string(),
+  "points": zod.number().int(),
+  "status": zod.enum(['draft', 'approved', 'rejected']),
+  "createdAt": zod.coerce.date(),
+  "destinationUrl": zod.string().url(),
+  "partnerLogoUrl": zod.string().url().nullable(),
+  "category": zod.string(),
+  "requirements": zod.string(),
+  "completionSteps": zod.string(),
+  "estimatedMinutes": zod.number().int(),
+  "approvalDays": zod.number().int(),
+  "expiresAt": zod.coerce.date().nullable()
+})),
+  "earnEnabled": zod.boolean()
+})
+
+
+export const createV2OfferBodyPartnerIdRegExp = new RegExp('^[a-z0-9-]{3,40}$');
+export const createV2OfferBodyTitleMin = 3;
+export const createV2OfferBodyTitleMax = 120;
+
+export const createV2OfferBodyDescriptionMin = 10;
+export const createV2OfferBodyDescriptionMax = 2000;
+
+export const createV2OfferBodyTermsMin = 10;
+export const createV2OfferBodyTermsMax = 4000;
+
+export const createV2OfferBodyPointsMax = 1000000;
+
+export const createV2OfferBodyDestinationUrlMax = 2000;
+
+export const createV2OfferBodyRequirementsMin = 10;
+export const createV2OfferBodyRequirementsMax = 2000;
+
+export const createV2OfferBodyCompletionStepsMin = 10;
+export const createV2OfferBodyCompletionStepsMax = 2000;
+
+export const createV2OfferBodyEstimatedMinutesMax = 10080;
+
+export const createV2OfferBodyApprovalDaysMax = 365;
+
+
+
+export const CreateV2OfferBody = zod.object({
+  "partnerId": zod.string().regex(createV2OfferBodyPartnerIdRegExp),
+  "title": zod.string().min(createV2OfferBodyTitleMin).max(createV2OfferBodyTitleMax),
+  "description": zod.string().min(createV2OfferBodyDescriptionMin).max(createV2OfferBodyDescriptionMax),
+  "terms": zod.string().min(createV2OfferBodyTermsMin).max(createV2OfferBodyTermsMax),
+  "points": zod.number().int().min(1).max(createV2OfferBodyPointsMax),
+  "destinationUrl": zod.string().url().max(createV2OfferBodyDestinationUrlMax),
+  "category": zod.enum(['shopping', 'subscriptions', 'surveys', 'apps', 'services', 'finance', 'travel', 'food', 'entertainment', 'other']),
+  "requirements": zod.string().min(createV2OfferBodyRequirementsMin).max(createV2OfferBodyRequirementsMax),
+  "completionSteps": zod.string().min(createV2OfferBodyCompletionStepsMin).max(createV2OfferBodyCompletionStepsMax),
+  "estimatedMinutes": zod.number().int().min(1).max(createV2OfferBodyEstimatedMinutesMax),
+  "approvalDays": zod.number().int().min(1).max(createV2OfferBodyApprovalDaysMax),
+  "expiresAt": zod.coerce.date().nullish()
+})
+
+export const CreateV2OfferResponse = zod.object({
+  "id": zod.string().uuid(),
+  "partnerId": zod.string(),
+  "partnerName": zod.string(),
+  "title": zod.string(),
+  "description": zod.string(),
+  "terms": zod.string(),
+  "points": zod.number().int(),
+  "status": zod.enum(['draft', 'approved', 'rejected']),
+  "createdAt": zod.coerce.date(),
+  "destinationUrl": zod.string().url(),
+  "partnerLogoUrl": zod.string().url().nullable(),
+  "category": zod.string(),
+  "requirements": zod.string(),
+  "completionSteps": zod.string(),
+  "estimatedMinutes": zod.number().int(),
+  "approvalDays": zod.number().int(),
+  "expiresAt": zod.coerce.date().nullable()
+})
+
+
+export const ReviewV2OfferParams = zod.object({
+  "offerId": zod.coerce.string().uuid()
+})
+
+export const reviewV2OfferBodyReasonMin = 10;
+export const reviewV2OfferBodyReasonMax = 500;
+
+
+
+export const ReviewV2OfferBody = zod.object({
+  "status": zod.enum(['approved', 'rejected']),
+  "reason": zod.string().min(reviewV2OfferBodyReasonMin).max(reviewV2OfferBodyReasonMax)
+})
+
+export const ReviewV2OfferResponse = zod.object({
+  "id": zod.string().uuid(),
+  "partnerId": zod.string(),
+  "partnerName": zod.string(),
+  "title": zod.string(),
+  "description": zod.string(),
+  "terms": zod.string(),
+  "points": zod.number().int(),
+  "status": zod.enum(['draft', 'approved', 'rejected']),
+  "createdAt": zod.coerce.date(),
+  "destinationUrl": zod.string().url(),
+  "partnerLogoUrl": zod.string().url().nullable(),
+  "category": zod.string(),
+  "requirements": zod.string(),
+  "completionSteps": zod.string(),
+  "estimatedMinutes": zod.number().int(),
+  "approvalDays": zod.number().int(),
+  "expiresAt": zod.coerce.date().nullable()
+})
+
+
+export const ListV2AdminConversionsResponse = zod.object({
+  "items": zod.array(zod.object({
+  "id": zod.string().uuid(),
+  "offerId": zod.string().uuid(),
+  "offerTitle": zod.string(),
+  "points": zod.number().int(),
+  "status": zod.enum(['pending', 'verified', 'rejected']),
+  "partnerStatus": zod.enum(['pending', 'verified', 'rejected']),
+  "transactionId": zod.string().uuid(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date(),
+  "accountId": zod.string(),
+  "partnerId": zod.string(),
+  "eventId": zod.string(),
+  "clickId": zod.string().uuid()
+}))
+})
+
+
+export const ReviewV2ConversionParams = zod.object({
+  "conversionId": zod.coerce.string().uuid()
+})
+
+export const reviewV2ConversionBodyReasonMin = 10;
+export const reviewV2ConversionBodyReasonMax = 500;
+
+
+
+export const ReviewV2ConversionBody = zod.object({
+  "status": zod.enum(['verified', 'rejected']),
+  "reason": zod.string().min(reviewV2ConversionBodyReasonMin).max(reviewV2ConversionBodyReasonMax)
+})
+
+export const ReviewV2ConversionResponse = zod.object({
+  "id": zod.string().uuid(),
+  "offerId": zod.string().uuid(),
+  "offerTitle": zod.string(),
+  "points": zod.number().int(),
+  "status": zod.enum(['pending', 'verified', 'rejected']),
+  "partnerStatus": zod.enum(['pending', 'verified', 'rejected']),
+  "transactionId": zod.string().uuid(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date(),
+  "accountId": zod.string(),
+  "partnerId": zod.string(),
+  "eventId": zod.string(),
+  "clickId": zod.string().uuid()
+})
+
+
+/**
+ * HMAC-SHA256 hex over timestamp.nonce.rawBody. Five-minute window; each nonce accepted once. No browser amount or account identifier accepted.
+ * @summary Signed server callback, not cookie authenticated
+ */
+export const receiveV2OfferCallbackPathPartnerIdRegExp = new RegExp('^[a-z0-9-]{3,40}$');
+
+
+export const ReceiveV2OfferCallbackParams = zod.object({
+  "partnerId": zod.coerce.string().regex(receiveV2OfferCallbackPathPartnerIdRegExp)
+})
+
+export const ReceiveV2OfferCallbackHeader = zod.object({
+  "X-BP-Timestamp": zod.string(),
+  "X-BP-Nonce": zod.string().uuid(),
+  "X-BP-Signature": zod.string()
+})
+
+export const receiveV2OfferCallbackBodyEventIdRegExp = new RegExp('^[A-Za-z0-9_.:-]{1,100}$');
+
+
+export const ReceiveV2OfferCallbackBody = zod.object({
+  "eventId": zod.string().regex(receiveV2OfferCallbackBodyEventIdRegExp),
+  "clickId": zod.string().uuid(),
+  "status": zod.enum(['pending', 'verified', 'rejected'])
+})
+
+export const ReceiveV2OfferCallbackResponse = zod.object({
+  "id": zod.string().uuid(),
+  "offerId": zod.string().uuid(),
+  "offerTitle": zod.string(),
+  "points": zod.number().int(),
+  "status": zod.enum(['pending', 'verified', 'rejected']),
+  "partnerStatus": zod.enum(['pending', 'verified', 'rejected']),
+  "transactionId": zod.string().uuid(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date(),
+  "accountId": zod.string(),
+  "partnerId": zod.string(),
+  "eventId": zod.string(),
+  "clickId": zod.string().uuid()
+})
+
+
 /**
  * @summary Read own real ledger balance, never demo balances
  */

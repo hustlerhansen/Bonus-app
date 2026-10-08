@@ -7,6 +7,7 @@
     "test:v2": "node --experimental-strip-types --test test/v2-access.test.mts",
     "test:demo-financial": "node --test test/demo-financial.test.mjs",
     "test:v2-points": "node --test test/v2-points.test.mjs",
+    "test:v2-offers": "node --test test/v2-offers.test.mjs",
     "points:reconcile": "node scripts/reconcile-points.mjs",
     "dev": "export NODE_ENV=development && pnpm run build && pnpm run start",
     "build": "node ./build.mjs",

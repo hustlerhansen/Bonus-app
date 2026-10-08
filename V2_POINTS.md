@@ -1,6 +1,6 @@
 # V2 poengbok — fase 2
 
-Gjelder utviklingsmiljøet. Ingen penger, gavekort, Stripe, tilbud, partnerbetalinger eller automatisk verving aktiveres. Demoen og filmen er separate og uendret.
+Gjelder utviklingsmiljøet. Ingen penger, gavekort, Stripe, partnerbetalinger eller automatisk verving aktiveres. Tilbudsmodulen er bygget, men aktiveringsporten er lukket; se `V2_OFFERS.md`. Demoen og filmen er separate og uendret.
 
 ## Regnskapsmodell
 
@@ -50,7 +50,7 @@ Alle ruter ligger under `/api/v2`. Eksisterende V2-grenser gjelder: Clerk-identi
 
 Mutasjoner validerer strengt og avviser ekstra felt. Aktør, rolle, statuskontroll, refusjonsbeløp og saldo er serverstyrte. Bare den uttrykkelige, auditerte administratorjusteringen tillater et administratorangitt beløp; brukeren har ingen poengmutasjon.
 
-`createPointsLedger().execute({kind: "record", ...})` er en **intern serverintegrasjonsgrense**, ikke en HTTP-rute. I denne fasen krever den en aktiv, lagret administratoraktør. Fremtidige verifiserte integrasjoner må hente beløp og kilde-ID fra godkjente serverregler, aldri brukerens forespørsel. EARN/REDEEM/REFERRAL/EXPIRATION finnes i motoren, men det finnes ingen aktive tilbud, butikk, vervekvalifisering eller automatisk utløpspolicy.
+`createPointsLedger().execute({kind: "record", ...})` er en **intern serverintegrasjonsgrense**, ikke en HTTP-rute. Den krever en aktiv, lagret administratoraktør. Fase-3-integrasjonen bruker operatørkonfigurert aktør, serverbestemte beløp og unike partnerkilde-ID-er, aldri brukerens beløp. Den kan dele poengmotorens transaksjon med konverteringsskriving uten å omgå autorisasjon/audit. Kildeprefikset `offer:` krever konverteringskontrollen for beslutninger; generisk admin kan ikke omgå partnerbevis. Tilbudskompensasjon og nøkkelnavnerommet `offer-` er tilsvarende beskyttet. Se `V2_OFFERS.md`. Ingen tilbud er aktivert, og butikk, vervekvalifisering og automatisk utløpspolicy er fortsatt ikke levert.
 
 Historikk bruker nøkkelbasert paginering på monoton sekvens, nyeste først, maks 100 transaksjoner per side. Hendelsesforløpet følger med hver transaksjon. Brukersidene er `/account/points` og administratorens side `/account/points/admin`.
 
