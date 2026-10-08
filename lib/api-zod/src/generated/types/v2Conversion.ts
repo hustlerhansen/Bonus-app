@@ -6,6 +6,7 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { V2ConversionPartnerStatus } from './v2ConversionPartnerStatus';
+import type { V2ConversionReversalEvent } from './v2ConversionReversalEvent';
 import type { V2ConversionStatus } from './v2ConversionStatus';
 
 export interface V2Conversion {
@@ -22,4 +23,5 @@ export interface V2Conversion {
   partnerId: string;
   eventId: string;
   clickId: string;
+  reversalEvents: V2ConversionReversalEvent[];
 }

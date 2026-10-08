@@ -152,6 +152,25 @@ paths:
             application/json:
               schema: { $ref: "#/components/schemas/V2Conversion" }
         default: { $ref: "#/components/responses/V2PointsError" }
+  /v2/admin/conversions/{conversionId}/reverse:
+    post:
+      operationId: reverseV2Conversion
+      tags: [v2]
+      summary: Administrator-only full reversal; preserves terminal partner evidence
+      parameters:
+        - { name: conversionId, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/V2ConversionReversalInput" }
+      responses:
+        "200":
+          description: Atomic compensation and immutable reversed lifecycle event; replay returns current state
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/V2ConversionReversalResult" }
+        default: { $ref: "#/components/responses/V2PointsError" }
   /v2/offer-callbacks/{partnerId}:
     post:
       operationId: receiveV2OfferCallback
@@ -876,6 +895,30 @@ components:
       properties:
         status: { type: string, enum: [verified, rejected] }
         reason: { type: string, minLength: 10, maxLength: 500 }
+    V2ConversionReversalInput:
+      type: object
+      additionalProperties: false
+      required: [reason, idempotencyKey]
+      properties:
+        reason: { type: string, minLength: 10, maxLength: 500 }
+        idempotencyKey: { type: string, pattern: "^[A-Za-z0-9_.:-]{16,128}$" }
+    V2ConversionReversalResult:
+      type: object
+      required: [conversion, compensation, wallet, replayed]
+      properties:
+        conversion: { $ref: "#/components/schemas/V2Conversion" }
+        compensation: { $ref: "#/components/schemas/V2PointsTransaction" }
+        wallet: { $ref: "#/components/schemas/V2Wallet" }
+        replayed: { type: boolean }
+    V2ConversionReversalEvent:
+      type: object
+      required: [status, reason, actorId, compensationTransactionId, createdAt]
+      properties:
+        status: { type: string, enum: [reversed] }
+        reason: { type: string }
+        actorId: { type: string }
+        compensationTransactionId: { type: string, format: uuid }
+        createdAt: { type: string, format: date-time }
     V2OfferCallbackInput:
       type: object
       additionalProperties: false
@@ -886,13 +929,13 @@ components:
         status: { type: string, enum: [pending, verified, rejected] }
     V2Conversion:
       type: object
-      required: [id, offerId, offerTitle, points, status, partnerStatus, transactionId, createdAt, updatedAt, accountId, partnerId, eventId, clickId]
+      required: [id, offerId, offerTitle, points, status, partnerStatus, transactionId, createdAt, updatedAt, accountId, partnerId, eventId, clickId, reversalEvents]
       properties:
         id: { type: string, format: uuid }
         offerId: { type: string, format: uuid }
         offerTitle: { type: string }
         points: { type: integer }
-        status: { type: string, enum: [pending, verified, rejected] }
+        status: { type: string, enum: [pending, verified, rejected, reversed] }
         partnerStatus: { type: string, enum: [pending, verified, rejected] }
         transactionId: { type: string, format: uuid }
         createdAt: { type: string, format: date-time }
@@ -901,6 +944,9 @@ components:
         partnerId: { type: string }
         eventId: { type: string }
         clickId: { type: string, format: uuid }
+        reversalEvents:
+          type: array
+          items: { $ref: "#/components/schemas/V2ConversionReversalEvent" }
     V2ConversionPage:
       type: object
       required: [items]

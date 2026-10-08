@@ -4,6 +4,7 @@ import {
   CreateV2OfferBody, ReviewV2OfferBody, ReviewV2ConversionBody, ReceiveV2OfferCallbackBody,
   StartV2OfferBody, ListV2OffersResponse, GetV2OfferResponse, CreateV2OfferResponse,
   ListV2ConversionsResponse, ReviewV2ConversionResponse,
+  ReverseV2ConversionBody, ReverseV2ConversionResponse,
 } from "@workspace/api-zod";
 import { createPointsLedger, PointsError } from "./points";
 import { verifyOfferSignature } from "./offer-signature";
@@ -16,7 +17,10 @@ const offerProjection = `o.id,o.partner_id AS "partnerId",p.name AS "partnerName
   o.approval_days AS "approvalDays",o.expires_at AS "expiresAt"`;
 const conversionProjection = `v.id,c.offer_id AS "offerId",o.title AS "offerTitle",c.points,v.status,
   v.partner_status AS "partnerStatus",v.transaction_id AS "transactionId",v.created_at AS "createdAt",v.updated_at AS "updatedAt",
-  c.account_id AS "accountId",v.partner_id AS "partnerId",v.event_id AS "eventId",v.click_id AS "clickId"`;
+  c.account_id AS "accountId",v.partner_id AS "partnerId",v.event_id AS "eventId",v.click_id AS "clickId",
+  COALESCE((SELECT jsonb_agg(jsonb_build_object('status',r.status,'reason',r.reason,'actorId',r.actor_id,
+    'compensationTransactionId',r.compensation_transaction_id,'createdAt',r.created_at))
+    FROM v2_offer_reversal_events r WHERE r.conversion_id=v.id),'[]'::jsonb) AS "reversalEvents"`;
 function serialize(row: Record<string, unknown>) {
   return { ...row, createdAt: (row.createdAt as Date).toISOString(),
     ...("expiresAt" in row ? { expiresAt: row.expiresAt ? (row.expiresAt as Date).toISOString() : null } : {}),
@@ -253,6 +257,42 @@ export function createOfferService(database: Database = pool, secretFor = (key: 
       return conversion(id, client);
     });
   }
-  return { listOffers, detail, partners, create, reviewOffer, start, listConversions, callback, reviewConversion };
+  async function reverseConversion(actorId: string, id: string, value: unknown) {
+    const input = validate(ReverseV2ConversionBody.strict(), value);
+    const reason = input.reason.trim();
+    if (reason.length < 10) throw new PointsError(400, "Oppgi en konkret begrunnelse.");
+    return atomic(async client => {
+      // Correct existing liabilities even while new earning is paused.
+      // No gate write, partner activation or fresh callback is required.
+      const initial = (await client.query(`SELECT v.transaction_id,c.account_id FROM v2_offer_conversions v
+        JOIN v2_offer_clicks c ON c.id=v.click_id WHERE v.id=$1`, [id])).rows[0];
+      if (!initial) throw new PointsError(404, "Konverteringen finnes ikke.");
+      const actor = await account(actorId, client, true, initial.account_id);
+      const v = (await client.query("SELECT * FROM v2_offer_conversions WHERE id=$1 FOR UPDATE", [id])).rows[0];
+      if (!["verified", "reversed"].includes(v.status) || v.partner_status !== "verified") {
+        throw new PointsError(409, "Bare allerede verifiserte konverteringer kan reverseres.");
+      }
+      // A disjoint internal namespace prevents generic points requests from
+      // colliding with this flow's account -> conversion -> ledger lock order.
+      const key = `offer-reverse:${createHash("sha256").update(input.idempotencyKey).digest("hex")}`;
+      const beforeWallet = await ledger.wallet(initial.account_id, client);
+      const result = await ledger.reverseOffer(id, { actorId, transactionId: v.transaction_id, reason,
+        idempotencyKey: key }, client);
+      if (!result.replayed) {
+        await client.query(`INSERT INTO v2_offer_reversal_events(conversion_id,compensation_transaction_id,actor_id,reason)
+          VALUES($1,$2,$3,$4)`, [id, result.transaction.id, actorId, reason]);
+        await client.query("UPDATE v2_offer_conversions SET status='reversed',updated_at=now() WHERE id=$1", [id]);
+        await audit(client, actor, "OFFER_CONVERSION_REVERSED", id, {
+          before: "verified", after: "reversed", partnerStatus: v.partner_status, reason,
+          transactionId: v.transaction_id, compensationTransactionId: result.transaction.id,
+          beforeWallet,
+          afterWallet: result.wallet,
+        });
+      }
+      return ReverseV2ConversionResponse.parse({ conversion: await conversion(id, client),
+        compensation: result.transaction, wallet: result.wallet, replayed: result.replayed });
+    });
+  }
+  return { listOffers, detail, partners, create, reviewOffer, start, listConversions, callback, reviewConversion, reverseConversion };
 }
 export const offerService = createOfferService();

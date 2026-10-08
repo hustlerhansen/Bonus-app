@@ -44,7 +44,21 @@ Nonce er unik per partner og oppbevares uforanderlig med payloadhash, ikke rå p
 
 Betrodd aktør er **partnerens eksplisitt operatørkonfigurerte, aktive, lagrede ADMIN/SUPER_ADMIN-konto**. Det finnes ingen skjult systemaktør, browserrolle eller automatisk administrator. Poengmotorens eksisterende autorisasjon kjøres også fra callbacken. Deaktivering eller nedgradering av denne aktøren stanser behandling.
 
-Generisk poengadmin kan ikke godkjenne/avvise tilbudstransaksjoner utenom konverteringskontrollen. Tilbakeføring etter godkjenning er bevisst lukket til en egen konverterings-/kompensasjonsflyt kan håndtere begge livsløp atomisk; ingen `reversed`-funksjon er påstått levert i denne pending/verified/rejected-fasen.
+Generisk poengadmin kan ikke godkjenne/avvise eller kompensere tilbudstransaksjoner utenom konverteringskontrollen. En egen administratorflyt kan nå reversere allerede verifiserte konverteringer; se nedenfor.
+
+## Reversering av godkjente tilbudspoeng
+
+POST `/api/v2/admin/conversions/:conversionId/reverse` krever aktiv ADMIN/SUPER_ADMIN, aktiv mottaker, konkret `reason` (10–500 tegn) og `idempotencyKey` (16–128 tegn, bokstaver/tall/`_ . : -`). Ekstra felt avvises. Beløp, konto, aktør og kompensasjonstype bestemmes på serveren.
+
+- Bare konverteringer med `status=verified` og terminalt `partner_status=verified` kan reverseres. En signert callback som forsøker å endre terminalt bevis til avvist gir fortsatt 409 uten noen økonomisk endring. Partneren kan ikke automatisk trekke tilbake godkjente poeng.
+- Partnerbevis, opprinnelig poengtransaksjon og tidligere audithistorikk beholdes. Original poengtransaksjon får en `reversed`-hendelse med null saldoeffekt, mens en ny godkjent REVERSAL bokfører hele det motsatte beløpet.
+- Konverteringen får status `reversed` og en egen uforanderlig `v2_offer_reversal_events`-hendelse med administrator, begrunnelse, tidspunkt og kompensasjonsreferanse. PostgreSQL beskytter terminalt partnerbevis og livsløp; utsatt konsistenskontroll krever en samsvarende full ledgerkompensasjon ved commit.
+- Poeng, konvertering, begge audits, livsløpshendelse og idempotens lagres i samme transaksjon. Samtidige forsøk låser kontoer i sortert rekkefølge og deretter konverteringen. Én konvertering kan bare reverseres én gang.
+- Samme nøkkel og normaliserte intensjon gir samme kompensasjon, `replayed=true` og **gjeldende** saldo. Endret administrator, konvertering eller begrunnelse med samme nøkkel gir 409. Intern nøkkel bruker et reservert, hashbasert tilbudsnavnerom. Ingen nøkkel eller audit beholdes etter et mislykket forsøk.
+- Tilgjengelig saldo må dekke hele beløpet. Allerede brukte eller reserverte poeng kan ikke skape negativ saldo eller bruke en reservasjon. Handling som ikke kan dekkes avvises i sin helhet; samme nøkkel kan prøves igjen etter at saldo er tilstrekkelig eller reservasjonen er frigitt. Delvis reversering og gjelds-/negativ-saldo-modell støttes ikke.
+- Korrigering av eksisterende økonomisk historikk krever **ikke** åpen opptjeningsport, aktiv partner eller fortsatt godkjent tilbud. Dette åpner ikke ny opptjening og endrer ingen sikkerhetsport. Administrator og mottaker må fortsatt være aktive.
+
+Svaret inneholder `conversion`, `compensation`, `wallet` og `replayed`. Bruker og administrator ser «Tilbakeført», begrunnelsen og tidspunktet; administrator ser også aktør og kompensasjonsreferanse. Begrunnelsen vises til brukeren og må ikke inneholde sensitive personopplysninger. Admin krever eksplisitt bekreftelse av hele beløpet. Mutasjonen oppdaterer konverteringshistorikk og invaliderer både egen og administratorens saldo-/poenghistorikk.
 
 ## Tilgang og UI
 
@@ -59,6 +73,7 @@ Alle ordinære ruter arver Clerk-identitet, same-origin-mutasjoner, rate limitin
 | POST `/api/v2/admin/offers` | ADMIN/SUPER_ADMIN; oppretter utkast |
 | POST `/api/v2/admin/offers/:offerId/review` | ADMIN/SUPER_ADMIN; konkret begrunnelse |
 | POST `/api/v2/admin/conversions/:conversionId/review` | ADMIN/SUPER_ADMIN; konkret begrunnelse |
+| POST `/api/v2/admin/conversions/:conversionId/reverse` | ADMIN/SUPER_ADMIN; konkret begrunnelse og idempotens; kun godkjente konverteringer |
 
 PARTNER-rollen har ingen administrator-/konverterings-/saldoautorisasjon. Selvbetjent partnerportal, selskaps-/kampanjeonboarding og finansiering tilhører senere faser.
 
@@ -70,11 +85,15 @@ Mobil-UI på norsk: `/account/offers`, `/account/offers/:offerId`, `/account/off
 
 En gjennomgått, auditerbar operatørendring må opprette en virkelig avtalt partner i `v2_offer_partners`: stabil ID, navn, valgfri logo, `secret_env_key`, `integration_actor_id`, og `active`. Hemmeligheten lagres gjennom prosjektets sikre hemmelighetsflyt, aldri i SQL-tabellen, dokumentasjon eller chat. Nøkkelnavnet må begynne med `V2_OFFER_CALLBACK_`, og hemmeligheten må være minst 32 tegn. Feltet er bare et nøkkelnavn; aktøren må allerede være en godkjent databaseadministrator. Ingen faktisk partner, hemmelighet eller virkelig aktør er valgt av implementasjonen.
 
-Deaktiver opptjening med `earn_enabled=false` ved hendelser. Det stanser start, callbacks og konverteringsbeslutninger; historikk forsvinner ikke. En partner kan også deaktiveres, og et tilbud avvises fra admin. Ikke slett finansielle records eller gjør negative «saldo-reparasjoner».
+Deaktiver opptjening med `earn_enabled=false` ved hendelser. Det stanser start, callbacks og godkjenning/avvisning av ventende konverteringer; historikk forsvinner ikke. Auditerte reverseringer av allerede godkjent historikk er fortsatt tilgjengelige. En partner kan også deaktiveres, og et tilbud avvises fra admin. Ikke slett finansielle records eller gjør negative «saldo-reparasjoner».
 
 ## Migrasjon og tester
 
-`0003_v2_offers.sql` er additiv og bruker migrasjonsledger/checksum. Ingen oppstarts-DDL eller produksjonsmigrasjon.
+Reverseringstestene dekker callback som forsøker å trekke tilbake godkjent bevis, duplikater, samtidige nøkler/callbacks/reservasjoner, brukte og reserverte kreditter, RBAC/deaktivering, normalisert idempotens, bevarte bevis, auditering, SQL-vern og atomisk rollback etter ledger-skriving. Ingen delvis kreditt eller negativ saldo tillates.
+
+Verifisert i utvikling: typekontroll og tilbuds-, poeng-, tilgangs-, demo-finans- og frontend-cache-tester passerer. Én innlogget mobilnettleserkontroll bekreftet begrunnelse/bekreftelse, vellykket reversering, avvisning ved reserverte poeng, norsk historikk etter omlasting, korrekt poengsaldo og tilgangsavslag etter tilbakeføring av syntetisk testkonto til USER. Testpartneren er inaktiv, og porten forblir `phase1_cleared=false`, `earn_enabled=false`. Syntetisk testhistorikk beholdes som uforanderlig testdata; den er ikke ekte partneraktivitet. Lesende poengavstemming etter nettleserkontrollen rapporterte ingen avvik.
+
+`0003_v2_offers.sql` og `0004_v2_offer_reversals.sql` bruker migrasjonsledger/checksum. Reverseringsmigrasjonen utvider statuskontrollen og legger til uforanderlige livsløpshendelser og konsistensvern; tidligere migrasjoner er uendret. Ingen oppstarts-DDL eller produksjonsmigrasjon.
 
 ```sh
 pnpm --filter @workspace/db run migrate:dev

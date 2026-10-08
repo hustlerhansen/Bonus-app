@@ -45,6 +45,8 @@ import type {
   V2AccountState,
   V2Conversion,
   V2ConversionPage,
+  V2ConversionReversalInput,
+  V2ConversionReversalResult,
   V2ConversionReviewInput,
   V2EnrollmentInput,
   V2Offer,
@@ -848,6 +850,95 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
         TContext
       > => {
       return useMutation(getReviewV2ConversionMutationOptions(options));
+    }
+
+export const getReverseV2ConversionUrl = (conversionId: string,) => {
+
+
+
+
+  return `/api/v2/admin/conversions/${conversionId}/reverse`
+}
+
+/**
+ * @summary Administrator-only full reversal; preserves terminal partner evidence
+ */
+export const reverseV2Conversion = async (conversionId: string,
+    v2ConversionReversalInput: V2ConversionReversalInput, options?: Parameters<typeof customFetch>[1]): Promise<V2ConversionReversalResult> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<V2ConversionReversalResult>(getReverseV2ConversionUrl(conversionId),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(v2ConversionReversalInput)
+  }
+);}
+
+
+
+
+
+export const getReverseV2ConversionMutationKey = () => ['reverseV2Conversion'] as const;
+
+export const getReverseV2ConversionMutationOptions = <TError = ErrorType<V2PointsErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof reverseV2Conversion>>, TError,ReverseV2ConversionMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof reverseV2Conversion>>, TError,ReverseV2ConversionMutationVariables, TContext> => {
+
+const mutationKey = getReverseV2ConversionMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof reverseV2Conversion>>, ReverseV2ConversionMutationVariables> = (props) => {
+          const {conversionId,data} = props ?? {};
+
+          return  reverseV2Conversion(conversionId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ReverseV2ConversionMutationResult = NonNullable<Awaited<ReturnType<typeof reverseV2Conversion>>>
+    export type ReverseV2ConversionMutationBody = BodyType<V2ConversionReversalInput>
+    export type ReverseV2ConversionMutationError = ErrorType<V2PointsErrorResponse>
+    export type ReverseV2ConversionMutationVariables = {conversionId: string;data: BodyType<V2ConversionReversalInput>}
+
+    /**
+ * @summary Administrator-only full reversal; preserves terminal partner evidence
+ */
+export const useReverseV2Conversion = <TError = ErrorType<V2PointsErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof reverseV2Conversion>>, TError,ReverseV2ConversionMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof reverseV2Conversion>>,
+        TError,
+        ReverseV2ConversionMutationVariables,
+        TContext
+      > => {
+      return useMutation(getReverseV2ConversionMutationOptions(options));
     }
 
 export const getReceiveV2OfferCallbackUrl = (partnerId: string,) => {

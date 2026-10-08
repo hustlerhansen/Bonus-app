@@ -50,11 +50,13 @@ Alle ruter ligger under `/api/v2`. Eksisterende V2-grenser gjelder: Clerk-identi
 
 Mutasjoner validerer strengt og avviser ekstra felt. Aktør, rolle, statuskontroll, refusjonsbeløp og saldo er serverstyrte. Bare den uttrykkelige, auditerte administratorjusteringen tillater et administratorangitt beløp; brukeren har ingen poengmutasjon.
 
-`createPointsLedger().execute({kind: "record", ...})` er en **intern serverintegrasjonsgrense**, ikke en HTTP-rute. Den krever en aktiv, lagret administratoraktør. Fase-3-integrasjonen bruker operatørkonfigurert aktør, serverbestemte beløp og unike partnerkilde-ID-er, aldri brukerens beløp. Den kan dele poengmotorens transaksjon med konverteringsskriving uten å omgå autorisasjon/audit. Kildeprefikset `offer:` krever konverteringskontrollen for beslutninger; generisk admin kan ikke omgå partnerbevis. Tilbudskompensasjon og nøkkelnavnerommet `offer-` er tilsvarende beskyttet. Se `V2_OFFERS.md`. Ingen tilbud er aktivert, og butikk, vervekvalifisering og automatisk utløpspolicy er fortsatt ikke levert.
+`createPointsLedger().execute({kind: "record", ...})` er en **intern serverintegrasjonsgrense**, ikke en HTTP-rute. Den krever en aktiv, lagret administratoraktør. Fase-3-integrasjonen bruker operatørkonfigurert aktør, serverbestemte beløp og unike partnerkilde-ID-er, aldri brukerens beløp. Den kan dele poengmotorens transaksjon med konverteringsskriving uten å omgå autorisasjon/audit. Kildeprefikset `offer:` krever konverteringskontrollen for beslutninger; generisk admin kan ikke omgå partnerbevis. Tilbudskompensasjon og nøkkelnavnerommet `offer-` er tilsvarende beskyttet. Den dedikerte konverteringsreverseringen bruker en separat intern ledgergrense som kontrollerer koblingen mellom verifisert konvertering, EARN, mottaker, beløp og partnerkilde. Generisk kompensasjon er fortsatt blokkert, også via den vanlige interne `execute`-grensen. Se `V2_OFFERS.md`. Ingen tilbud er aktivert, og butikk, vervekvalifisering og automatisk utløpspolicy er fortsatt ikke levert.
 
 Historikk bruker nøkkelbasert paginering på monoton sekvens, nyeste først, maks 100 transaksjoner per side. Hendelsesforløpet følger med hver transaksjon. Brukersidene er `/account/points` og administratorens side `/account/points/admin`.
 
 ## Migrasjon og verifikasjon
+
+`0004_v2_offer_reversals.sql` legger til egen reversed-livsløpshendelse for tilbud og kobler den til poengbokens fulle REVERSAL. Poengbokens eksisterende saldo-, reservasjon-, audit- og kompensasjonsregler er uendret. Historiske korrigeringer kan gjennomføres mens ny opptjening er stengt, uten å endre porten.
 
 ```sh
 pnpm --filter @workspace/db run migrate:dev

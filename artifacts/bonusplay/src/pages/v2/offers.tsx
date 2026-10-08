@@ -14,14 +14,15 @@ import { Btn, Card, Empty, ErrorState, PageHead, Skel } from '@/components/bp';
 import { errMsg } from '@/hooks/use-bp';
 import { cn } from '@/lib/utils';
 import { fmtDate, ScrollTop, SignedInOnly, useV2State, V2Frame } from './shared';
+import { ReversalHistory, ReverseConversionForm } from './offer-reversal';
 
 const nf = new Intl.NumberFormat('nb-NO');
 const inputCls = 'mt-1 w-full rounded-xl border border-white/15 bg-white/5 px-3 py-3 text-base outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/40 sm:text-sm';
-const CONV: Record<string, string> = { pending: 'Venter på vurdering', verified: 'Verifisert', rejected: 'Avvist' };
+const CONV: Record<string, string> = { pending: 'Venter på vurdering', verified: 'Verifisert', rejected: 'Avvist', reversed: 'Tilbakeført' };
 const PARTNER: Record<string, string> = { pending: 'Partner: ingen bekreftelse ennå', verified: 'Partner: bekreftet', rejected: 'Partner: avvist' };
 const OFFER: Record<string, string> = { draft: 'Utkast', approved: 'Godkjent', rejected: 'Avvist / pauset' };
 const CATEGORIES: Record<V2OfferInput['category'], string> = { shopping: 'Shopping', subscriptions: 'Abonnementer', surveys: 'Undersøkelser', apps: 'Apper', services: 'Tjenester', finance: 'Finans', travel: 'Reise', food: 'Mat', entertainment: 'Underholdning', other: 'Annet' };
-const tone: Record<string, string> = { pending: 'bg-amber-400/10 text-amber-200', verified: 'bg-emerald-400/10 text-emerald-300', approved: 'bg-emerald-400/10 text-emerald-300', rejected: 'bg-red-400/10 text-red-300', draft: 'bg-sky-400/10 text-sky-200' };
+const tone: Record<string, string> = { pending: 'bg-amber-400/10 text-amber-200', verified: 'bg-emerald-400/10 text-emerald-300', approved: 'bg-emerald-400/10 text-emerald-300', rejected: 'bg-red-400/10 text-red-300', reversed: 'bg-red-400/10 text-red-300', draft: 'bg-sky-400/10 text-sky-200' };
 
 function useGate() {
   const { isLoaded, isSignedIn } = useAuth();
@@ -84,6 +85,7 @@ function ConvRow({ c }: { c: V2Conversion }) {
         <Chip k={c.status}>{CONV[c.status]}</Chip>
       </div>
       <div className="mt-1 text-xs text-muted-foreground">{PARTNER[c.partnerStatus]}{c.partnerStatus === 'verified' && c.status === 'pending' ? ' - venter på manuell vurdering' : ''}</div>
+      <ReversalHistory conversion={c} />
     </li>
   );
 }
@@ -344,6 +346,10 @@ function AdminConversions() {
           <li key={c.id} className="rounded-2xl bg-white/5 p-4" data-testid={`row-admin-conversion-${c.id}`}>
             <div className="flex items-start justify-between gap-2"><div><div className="font-bold">{c.offerTitle}</div><div className="text-xs text-muted-foreground">{fmtDate(c.createdAt)} · {nf.format(c.points)} poeng</div><div className="mt-1 text-xs text-muted-foreground">{PARTNER[c.partnerStatus]}</div></div><Chip k={c.status}>{CONV[c.status]}</Chip></div>
             <details className="mt-2 text-xs"><summary className="cursor-pointer text-primary">Kontroller mottaker og partnerreferanser</summary><p className="mt-2 break-all">Konto: {c.accountId}<br />Partner: {c.partnerId}<br />Hendelse: {c.eventId}<br />Klikk: {c.clickId}<br />Poengtransaksjon: {c.transactionId}</p></details>
+            <ReversalHistory conversion={c} admin />
+            {c.status === 'verified' && <ReverseConversionForm conversion={c} onDone={() => {
+              void inv.conversions(); setMsg(`Konverteringen er tilbakeført. ${nf.format(c.points)} poeng er trukket tilbake.`);
+            }} />}
             {c.status === 'pending' && <>
               {c.partnerStatus !== 'verified' && <p className="mt-2 text-xs text-amber-200">Verifisering er låst til partneren har bekreftet via signert callback. En bekreftelse fra partner krever fortsatt manuell vurdering.</p>}
               <ReasonBox testid={`verify-${c.id}`} label="Verifiser" pending={review.isPending} disabled={c.partnerStatus !== 'verified'} onSubmit={act(c, 'verified')} />

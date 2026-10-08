@@ -13,4 +13,5 @@ export const V2ConversionStatus = {
   pending: 'pending',
   verified: 'verified',
   rejected: 'rejected',
+  reversed: 'reversed',
 } as const;

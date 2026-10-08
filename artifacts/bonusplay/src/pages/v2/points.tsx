@@ -204,7 +204,7 @@ function TxActions({ t }: { t: V2PointsTransaction }) {
   const [act, setAct] = useState<Act | null>(null);
   const comp = t.type === 'REFUND' || t.type === 'REVERSAL';
   const acts: Act[] = [];
-  if (t.source.startsWith('offer:')) return <div className="text-xs text-muted-foreground">Tilbudspoeng behandles i <Link href="/account/offers/admin" className="text-primary underline">tilbudskontrollen</Link>. Tilbakeføring etter godkjenning er ikke aktivert i denne fasen.</div>;
+  if (t.source.startsWith('offer:')) return <div className="text-xs text-muted-foreground">Tilbudspoeng vurderes og reverseres i <Link href="/account/offers/admin" className="text-primary underline">tilbudskontrollen</Link>, slik at partnerbevis og konverteringshistorikk beholdes.</div>;
   if (t.status === 'pending') acts.push({ kind: 'approved', label: 'Godkjenn transaksjon' }, { kind: 'rejected', label: 'Avvis transaksjon' });
   if (t.status === 'approved' && t.amount < 0 && !comp) acts.push({ kind: 'REFUND', label: 'Full refusjon' });
   if (t.status === 'approved' && !comp) acts.push({ kind: 'REVERSAL', label: 'Full reversering' });

@@ -160,20 +160,14 @@ export interface V2ConversionReviewInput {
   reason: string;
 }
 
-export type V2OfferCallbackInputStatus = typeof V2OfferCallbackInputStatus[keyof typeof V2OfferCallbackInputStatus];
-
-
-export const V2OfferCallbackInputStatus = {
-  pending: 'pending',
-  verified: 'verified',
-  rejected: 'rejected',
-} as const;
-
-export interface V2OfferCallbackInput {
-  /** @pattern ^[A-Za-z0-9_.:-]{1,100}$ */
-  eventId: string;
-  clickId: string;
-  status: V2OfferCallbackInputStatus;
+export interface V2ConversionReversalInput {
+  /**
+     * @minLength 10
+     * @maxLength 500
+     */
+  reason: string;
+  /** @pattern ^[A-Za-z0-9_.:-]{16,128}$ */
+  idempotencyKey: string;
 }
 
 export type V2ConversionStatus = typeof V2ConversionStatus[keyof typeof V2ConversionStatus];
@@ -183,6 +177,7 @@ export const V2ConversionStatus = {
   pending: 'pending',
   verified: 'verified',
   rejected: 'rejected',
+  reversed: 'reversed',
 } as const;
 
 export type V2ConversionPartnerStatus = typeof V2ConversionPartnerStatus[keyof typeof V2ConversionPartnerStatus];
@@ -193,6 +188,21 @@ export const V2ConversionPartnerStatus = {
   verified: 'verified',
   rejected: 'rejected',
 } as const;
+
+export type V2ConversionReversalEventStatus = typeof V2ConversionReversalEventStatus[keyof typeof V2ConversionReversalEventStatus];
+
+
+export const V2ConversionReversalEventStatus = {
+  reversed: 'reversed',
+} as const;
+
+export interface V2ConversionReversalEvent {
+  status: V2ConversionReversalEventStatus;
+  reason: string;
+  actorId: string;
+  compensationTransactionId: string;
+  createdAt: string;
+}
 
 export interface V2Conversion {
   id: string;
@@ -208,10 +218,7 @@ export interface V2Conversion {
   partnerId: string;
   eventId: string;
   clickId: string;
-}
-
-export interface V2ConversionPage {
-  items: V2Conversion[];
+  reversalEvents: V2ConversionReversalEvent[];
 }
 
 export type V2PointsType = typeof V2PointsType[keyof typeof V2PointsType];
@@ -237,22 +244,6 @@ export const V2PointsStatus = {
   rejected: 'rejected',
   reversed: 'reversed',
 } as const;
-
-export interface V2Wallet {
-  accountId: string;
-  /** @minimum 0 */
-  available: number;
-  /** @minimum 0 */
-  pending: number;
-  /** @minimum 0 */
-  reserved: number;
-  /** @minimum 0 */
-  balance: number;
-  /** @minimum 0 */
-  lifetimeEarned: number;
-  /** @minimum 0 */
-  lifetimeRedeemed: number;
-}
 
 export interface V2PointsEvent {
   status: V2PointsStatus;
@@ -280,6 +271,49 @@ export interface V2PointsTransaction {
   createdAt: string;
   updatedAt: string;
   events: V2PointsEvent[];
+}
+
+export interface V2Wallet {
+  accountId: string;
+  /** @minimum 0 */
+  available: number;
+  /** @minimum 0 */
+  pending: number;
+  /** @minimum 0 */
+  reserved: number;
+  /** @minimum 0 */
+  balance: number;
+  /** @minimum 0 */
+  lifetimeEarned: number;
+  /** @minimum 0 */
+  lifetimeRedeemed: number;
+}
+
+export interface V2ConversionReversalResult {
+  conversion: V2Conversion;
+  compensation: V2PointsTransaction;
+  wallet: V2Wallet;
+  replayed: boolean;
+}
+
+export type V2OfferCallbackInputStatus = typeof V2OfferCallbackInputStatus[keyof typeof V2OfferCallbackInputStatus];
+
+
+export const V2OfferCallbackInputStatus = {
+  pending: 'pending',
+  verified: 'verified',
+  rejected: 'rejected',
+} as const;
+
+export interface V2OfferCallbackInput {
+  /** @pattern ^[A-Za-z0-9_.:-]{1,100}$ */
+  eventId: string;
+  clickId: string;
+  status: V2OfferCallbackInputStatus;
+}
+
+export interface V2ConversionPage {
+  items: V2Conversion[];
 }
 
 export interface V2TransactionPage {

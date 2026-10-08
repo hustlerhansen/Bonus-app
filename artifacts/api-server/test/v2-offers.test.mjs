@@ -55,7 +55,7 @@ async function review(id, status = "verified", actor = admin) {
 }
 before(async () => {
   await pool.query(`CREATE SCHEMA ${schema}`);
-  for (const name of ["0001_v2_identity.sql", "0002_v2_points.sql", "0003_v2_offers.sql"]) {
+  for (const name of ["0001_v2_identity.sql", "0002_v2_points.sql", "0003_v2_offers.sql", "0004_v2_offer_reversals.sql"]) {
     await isolated.query(await readFile(new URL(`../../../lib/db/migrations/${name}`, import.meta.url), "utf8"));
   }
   admin = await account("ADMIN");
@@ -316,4 +316,180 @@ test("expired offers disappear and cannot start, but timely attributed clicks ca
   const v = await send({ user, offer, start });
   await review(v.id);
   assert.equal((await ledger.wallet(user)).balance, 37);
+});
+
+async function approvedFixture() {
+  const f = await fixture(), eventId = randomUUID(), v = await send(f, "verified", eventId);
+  await review(v.id);
+  return { ...f, eventId, v };
+}
+const reverse = (id, key = randomUUID(), actor = admin, why = reason) =>
+  offers.reverseConversion(actor, id, { idempotencyKey: key, reason: why });
+
+test("signed withdrawal cannot rewrite already approved terminal evidence or its ledger", async () => {
+  const f = await approvedFixture();
+  const request = signed({ clickId: f.start.clickId, eventId: f.eventId, status: "rejected" });
+  const before = await ledger.history(f.user);
+  await assert.rejects(offers.callback("test-partner", request.raw, request.headers), denied(409));
+  assert.deepEqual(await ledger.history(f.user), before);
+  assert.equal((await ledger.wallet(f.user)).balance, 37);
+  assert.equal((await offers.listConversions(f.user)).items[0].partnerStatus, "verified");
+  assert.equal((await isolated.query("SELECT 1 FROM v2_offer_callback_receipts WHERE nonce=$1", [request.headers.nonce])).rowCount, 0);
+  await assert.rejects(isolated.query("UPDATE v2_offer_conversions SET partner_status='rejected' WHERE id=$1", [f.v.id]), /Terminal partner evidence/);
+});
+
+test("full reversal preserves signed proof and records immutable linked events and both audits", async () => {
+  const f = await approvedFixture(), key = randomUUID(), result = await reverse(f.v.id, key);
+  assert.equal(result.replayed, false);
+  assert.equal(result.conversion.status, "reversed");
+  assert.equal(result.conversion.partnerStatus, "verified");
+  assert.equal(result.conversion.transactionId, f.v.transactionId);
+  assert.equal(result.compensation.type, "REVERSAL");
+  assert.equal(result.compensation.amount, -37);
+  assert.equal(result.compensation.relatedTransactionId, f.v.transactionId);
+  assert.equal(result.wallet.balance, 0);
+  assert.equal(result.wallet.available, 0);
+  assert.equal(result.wallet.lifetimeEarned, 0);
+  assert.equal(result.conversion.reversalEvents.length, 1);
+  assert.equal(result.conversion.reversalEvents[0].compensationTransactionId, result.compensation.id);
+  assert.equal(result.conversion.reversalEvents[0].reason, reason);
+  const original = (await ledger.history(f.user)).items.find(t => t.id === f.v.transactionId);
+  assert.deepEqual(original.events.map(e => e.status), ["pending", "approved", "reversed"]);
+  assert.equal(original.events.at(-1).delta, 0);
+  const audits = (await isolated.query(`SELECT action,metadata FROM v2_audit_logs
+    WHERE (entity_id=$1 AND action='OFFER_CONVERSION_REVERSED') OR (entity_id=$2 AND action='POINTS_COMPENSATE')`,
+    [f.v.id, result.compensation.id])).rows;
+  assert.equal(audits.length, 2);
+  const audit = audits.find(a => a.action === "OFFER_CONVERSION_REVERSED").metadata;
+  assert.equal(audit.beforeWallet.balance, 37);
+  assert.equal(audit.afterWallet.balance, 0);
+  const dup = await send(f, "verified", f.eventId);
+  assert.equal(dup.status, "reversed");
+  await assert.rejects(send(f, "rejected", f.eventId), denied(409));
+  await assert.rejects(review(f.v.id), denied(409));
+  await assert.rejects(reverse(f.v.id), denied(409));
+  await assert.rejects(ledger.execute({ kind: "compensate", actorId: admin, transactionId: result.compensation.id,
+    type: "REVERSAL", reason, idempotencyKey: randomUUID() }), denied(409));
+  assert.equal((await ledger.history(f.user)).items.length, 2);
+  await assert.rejects(isolated.query("UPDATE v2_offer_reversal_events SET reason=$2 WHERE conversion_id=$1", [f.v.id, reason]), /append-only/);
+  await assert.rejects(isolated.query("DELETE FROM v2_offer_reversal_events WHERE conversion_id=$1", [f.v.id]), /append-only/);
+  await assert.rejects(isolated.query("UPDATE v2_offer_conversions SET status='verified' WHERE id=$1", [f.v.id]), /lifecycle/);
+  // Idempotent replay returns current wallet, not the original snapshot.
+  await ledger.execute({ kind: "adjust", actorId: admin, accountId: f.user, amount: 5, reason, idempotencyKey: randomUUID() });
+  const replay = await reverse(f.v.id, key, admin, `  ${reason}  `);
+  assert.equal(replay.replayed, true);
+  assert.equal(replay.compensation.id, result.compensation.id);
+  assert.equal(replay.wallet.balance, 5);
+});
+
+test("reversal validates intent, ownership, role and active status, including on replay", async () => {
+  const f = await approvedFixture(), key = randomUUID();
+  for (const role of ["USER", "PARTNER"]) await assert.rejects(reverse(f.v.id, key, await account(role)), denied(403));
+  for (const extra of [{ amount: 1 }, { accountId: f.user }, { type: "REFUND" }, { status: "rejected" }]) {
+    await assert.rejects(offers.reverseConversion(admin, f.v.id, { reason, idempotencyKey: key, ...extra }), denied(400));
+  }
+  await assert.rejects(reverse(f.v.id, key, admin, "          "), denied(400));
+  await assert.rejects(reverse(f.v.id, "short"), denied(400));
+  await assert.rejects(reverse(randomUUID()), denied(404));
+  const pending = await fixture(), pendingV = await send(pending);
+  await assert.rejects(reverse(pendingV.id), denied(409));
+  await review(pendingV.id, "rejected");
+  await assert.rejects(reverse(pendingV.id), denied(409));
+  await isolated.query("UPDATE v2_accounts SET status='SUSPENDED' WHERE id=$1", [f.user]);
+  try { await assert.rejects(reverse(f.v.id, key), denied(403)); }
+  finally { await isolated.query("UPDATE v2_accounts SET status='ACTIVE' WHERE id=$1", [f.user]); }
+  await reverse(f.v.id, key);
+  await assert.rejects(reverse(f.v.id, key, admin, "En helt annen konkret begrunnelse"), denied(409));
+  const otherAdmin = await account("SUPER_ADMIN");
+  await assert.rejects(reverse(f.v.id, key, otherAdmin), denied(409));
+  const other = await approvedFixture();
+  await assert.rejects(reverse(other.v.id, key), denied(409));
+  await isolated.query("UPDATE v2_accounts SET role='USER' WHERE id=$1", [otherAdmin]);
+  await assert.rejects(reverse(f.v.id, key, otherAdmin), denied(403));
+  await isolated.query("UPDATE v2_accounts SET status='SUSPENDED' WHERE id=$1", [admin]);
+  try { await assert.rejects(reverse(f.v.id, key), denied(403)); }
+  finally { await isolated.query("UPDATE v2_accounts SET status='ACTIVE' WHERE id=$1", [admin]); }
+});
+
+test("concurrent duplicate keys replay once, different keys have only one durable reversal", async () => {
+  const f = await approvedFixture(), key = randomUUID();
+  const results = await Promise.all([reverse(f.v.id, key), reverse(f.v.id, key), reverse(f.v.id, key)]);
+  assert.equal(results.filter(r => !r.replayed).length, 1);
+  assert.equal(new Set(results.map(r => r.compensation.id)).size, 1);
+  const g = await approvedFixture();
+  const competing = await Promise.allSettled([reverse(g.v.id), reverse(g.v.id)]);
+  assert.equal(competing.filter(r => r.status === "fulfilled").length, 1);
+  assert.equal(competing.find(r => r.status === "rejected").reason.status, 409);
+  assert.equal((await ledger.history(g.user)).items.length, 2);
+  // A duplicate verified callback racing reversal must not restore approval.
+  const h = await approvedFixture();
+  await Promise.all([reverse(h.v.id), send(h, "verified", h.eventId)]);
+  assert.equal((await offers.listConversions(h.user)).items[0].status, "reversed");
+  assert.equal((await ledger.wallet(h.user)).balance, 0);
+});
+
+async function redeem(f, status) {
+  return ledger.execute({ kind: "record", actorId: admin, accountId: f.user, type: "REDEEM", amount: -20,
+    status, source: "isolated-test-redemption", reference: randomUUID(), description: "Syntetisk poengtrekk",
+    reason, idempotencyKey: randomUUID() });
+}
+test("spent credit cannot make balance negative; failures leave no reversal or request and can retry", async () => {
+  const f = await approvedFixture(), key = randomUUID();
+  await redeem(f, "approved");
+  const before = await ledger.history(f.user);
+  await assert.rejects(reverse(f.v.id, key), denied(409));
+  assert.deepEqual(await ledger.history(f.user), before);
+  assert.equal((await ledger.wallet(f.user)).balance, 17);
+  assert.equal((await offers.listConversions(f.user)).items[0].status, "verified");
+  assert.equal((await isolated.query("SELECT 1 FROM v2_offer_reversal_events WHERE conversion_id=$1", [f.v.id])).rowCount, 0);
+  await ledger.execute({ kind: "adjust", actorId: admin, accountId: f.user, amount: 20, reason, idempotencyKey: randomUUID() });
+  assert.equal((await reverse(f.v.id, key)).wallet.balance, 0);
+});
+test("reserved points cannot be consumed by reversal; releasing reservation allows same-key retry", async () => {
+  const f = await approvedFixture(), key = randomUUID(), debit = await redeem(f, "pending");
+  const before = await ledger.history(f.user);
+  await assert.rejects(reverse(f.v.id, key), denied(409));
+  assert.deepEqual(await ledger.history(f.user), before);
+  assert.equal((await ledger.wallet(f.user)).reserved, 20);
+  assert.equal((await ledger.wallet(f.user)).available, 17);
+  await ledger.execute({ kind: "decide", actorId: admin, transactionId: debit.transaction.id, status: "rejected",
+    reason, idempotencyKey: randomUUID() });
+  assert.equal((await reverse(f.v.id, key)).wallet.reserved, 0);
+});
+test("concurrent reservation and reversal cannot overspend available balance", async () => {
+  const f = await approvedFixture();
+  const results = await Promise.allSettled([reverse(f.v.id), redeem(f, "pending")]);
+  assert.equal(results.filter(r => r.status === "fulfilled").length, 1);
+  assert.equal(results.find(r => r.status === "rejected").reason.status, 409);
+  const wallet = await ledger.wallet(f.user);
+  assert.ok(wallet.balance >= 0 && wallet.reserved >= 0 && wallet.available >= 0);
+});
+test("failure after ledger compensation rolls back conversion, both audits, lifecycle and key", async () => {
+  const f = await approvedFixture(), key = randomUUID(), before = await ledger.history(f.user);
+  const audits = Number((await isolated.query("SELECT count(*) FROM v2_audit_logs")).rows[0].count);
+  const requests = Number((await isolated.query("SELECT count(*) FROM v2_points_requests")).rows[0].count);
+  await isolated.query(`CREATE FUNCTION fail_offer_reversal_test() RETURNS trigger LANGUAGE plpgsql AS $$
+    BEGIN RAISE EXCEPTION 'Synthetic reversal failure after ledger write'; END; $$;
+    CREATE TRIGGER fail_offer_reversal BEFORE INSERT ON v2_offer_reversal_events FOR EACH ROW EXECUTE FUNCTION fail_offer_reversal_test()`);
+  try { await assert.rejects(reverse(f.v.id, key), /Synthetic reversal failure/); }
+  finally { await isolated.query("DROP TRIGGER fail_offer_reversal ON v2_offer_reversal_events; DROP FUNCTION fail_offer_reversal_test()"); }
+  assert.deepEqual(await ledger.history(f.user), before);
+  assert.equal((await offers.listConversions(f.user)).items[0].status, "verified");
+  assert.equal(Number((await isolated.query("SELECT count(*) FROM v2_audit_logs")).rows[0].count), audits);
+  assert.equal(Number((await isolated.query("SELECT count(*) FROM v2_points_requests")).rows[0].count), requests);
+  assert.equal((await reverse(f.v.id, key)).replayed, false);
+});
+test("SQL rejects lifecycle-only reversal; corrections remain possible with earn gate and partner paused", async () => {
+  const f = await approvedFixture();
+  await assert.rejects(isolated.query("UPDATE v2_offer_conversions SET status='reversed' WHERE id=$1", [f.v.id]), /lifecycle event/);
+  await offers.reviewOffer(admin, f.offer.id, { status: "rejected", reason });
+  await isolated.query("UPDATE v2_offer_partners SET active=false WHERE id='test-partner'");
+  await isolated.query("UPDATE v2_earn_gate SET earn_enabled=false");
+  try {
+    assert.equal((await reverse(f.v.id)).conversion.status, "reversed");
+    assert.equal((await offers.listOffers(f.user)).earnEnabled, false);
+  } finally {
+    await isolated.query("UPDATE v2_offer_partners SET active=true WHERE id='test-partner'");
+    await isolated.query("UPDATE v2_earn_gate SET earn_enabled=true");
+  }
 });

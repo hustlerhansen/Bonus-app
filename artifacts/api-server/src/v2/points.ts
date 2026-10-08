@@ -81,7 +81,7 @@ export function createPointsLedger(database: Database = pool) {
 
   // Internal services may compose ledger writes with their own transaction.
   // Authorization, locks, idempotency and audit still run; caller owns rollback.
-  async function execute(input: PointsCommand, existingClient?: PoolClient) {
+  async function executeInternal(input: PointsCommand, existingClient?: PoolClient, offerConversionId?: string) {
     const cmd = { ...input, reason: input.reason.trim() };
     if (!existingClient && cmd.idempotencyKey.startsWith("offer-")) {
       throw new PointsError(400, "Denne forespørselsnøkkelen er reservert for tilbudsintegrasjonen.");
@@ -151,7 +151,17 @@ export function createPointsLedger(database: Database = pool) {
         if (cmd.kind === "compensate") {
           const current = await transaction(cmd.transactionId, client);
           if (current.source.startsWith("offer:")) {
-            throw new PointsError(409, "Tilbudskompensasjon krever en egen konverterings- og tilbakeføringsflyt.");
+            // Only the dedicated conversion flow may compensate offer credit.
+            // Never trust an HTTP-provided source, amount or conversion binding.
+            const binding = existingClient && offerConversionId && cmd.type === "REVERSAL"
+              ? await client.query(`SELECT 1 FROM v2_offer_conversions v JOIN v2_offer_clicks c ON c.id=v.click_id
+                WHERE v.id=$1 AND v.transaction_id=$2 AND v.status='verified' AND v.partner_status='verified'
+                  AND c.account_id=$3 AND c.points=$4 AND 'offer:' || v.partner_id=$5 AND v.event_id=$6`,
+              [offerConversionId, current.id, current.accountId, current.amount, current.source, current.reference])
+              : null;
+            if (!binding?.rowCount || current.type !== "EARN") {
+              throw new PointsError(409, "Tilbudspoeng må reverseres gjennom konverteringskontrollen.");
+            }
           }
           if (current.status !== "approved" || ["REFUND", "REVERSAL"].includes(current.type)) {
             throw new PointsError(409, "Transaksjonen kan ikke tilbakeføres flere ganger.");
@@ -193,7 +203,14 @@ export function createPointsLedger(database: Database = pool) {
       throw error;
     } finally { if (!existingClient) client.release(); }
   }
-  return { wallet, history, execute };
+  async function execute(input: PointsCommand, existingClient?: PoolClient) {
+    return executeInternal(input, existingClient);
+  }
+  // Server-only capability, requiring a conversion and caller-owned transaction.
+  async function reverseOffer(conversionId: string, input: CommandBase & { transactionId: string }, client: PoolClient) {
+    return executeInternal({ ...input, kind: "compensate", type: "REVERSAL" }, client, conversionId);
+  }
+  return { wallet, history, execute, reverseOffer };
 }
 
 export const pointsLedger = createPointsLedger();

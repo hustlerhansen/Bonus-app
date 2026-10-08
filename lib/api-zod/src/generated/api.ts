@@ -80,7 +80,7 @@ export const ListV2ConversionsResponse = zod.object({
   "offerId": zod.string().uuid(),
   "offerTitle": zod.string(),
   "points": zod.number().int(),
-  "status": zod.enum(['pending', 'verified', 'rejected']),
+  "status": zod.enum(['pending', 'verified', 'rejected', 'reversed']),
   "partnerStatus": zod.enum(['pending', 'verified', 'rejected']),
   "transactionId": zod.string().uuid(),
   "createdAt": zod.coerce.date(),
@@ -88,7 +88,14 @@ export const ListV2ConversionsResponse = zod.object({
   "accountId": zod.string(),
   "partnerId": zod.string(),
   "eventId": zod.string(),
-  "clickId": zod.string().uuid()
+  "clickId": zod.string().uuid(),
+  "reversalEvents": zod.array(zod.object({
+  "status": zod.enum(['reversed']),
+  "reason": zod.string(),
+  "actorId": zod.string(),
+  "compensationTransactionId": zod.string().uuid(),
+  "createdAt": zod.coerce.date()
+}))
 }))
 })
 
@@ -227,7 +234,7 @@ export const ListV2AdminConversionsResponse = zod.object({
   "offerId": zod.string().uuid(),
   "offerTitle": zod.string(),
   "points": zod.number().int(),
-  "status": zod.enum(['pending', 'verified', 'rejected']),
+  "status": zod.enum(['pending', 'verified', 'rejected', 'reversed']),
   "partnerStatus": zod.enum(['pending', 'verified', 'rejected']),
   "transactionId": zod.string().uuid(),
   "createdAt": zod.coerce.date(),
@@ -235,7 +242,14 @@ export const ListV2AdminConversionsResponse = zod.object({
   "accountId": zod.string(),
   "partnerId": zod.string(),
   "eventId": zod.string(),
-  "clickId": zod.string().uuid()
+  "clickId": zod.string().uuid(),
+  "reversalEvents": zod.array(zod.object({
+  "status": zod.enum(['reversed']),
+  "reason": zod.string(),
+  "actorId": zod.string(),
+  "compensationTransactionId": zod.string().uuid(),
+  "createdAt": zod.coerce.date()
+}))
 }))
 })
 
@@ -259,7 +273,7 @@ export const ReviewV2ConversionResponse = zod.object({
   "offerId": zod.string().uuid(),
   "offerTitle": zod.string(),
   "points": zod.number().int(),
-  "status": zod.enum(['pending', 'verified', 'rejected']),
+  "status": zod.enum(['pending', 'verified', 'rejected', 'reversed']),
   "partnerStatus": zod.enum(['pending', 'verified', 'rejected']),
   "transactionId": zod.string().uuid(),
   "createdAt": zod.coerce.date(),
@@ -267,7 +281,106 @@ export const ReviewV2ConversionResponse = zod.object({
   "accountId": zod.string(),
   "partnerId": zod.string(),
   "eventId": zod.string(),
-  "clickId": zod.string().uuid()
+  "clickId": zod.string().uuid(),
+  "reversalEvents": zod.array(zod.object({
+  "status": zod.enum(['reversed']),
+  "reason": zod.string(),
+  "actorId": zod.string(),
+  "compensationTransactionId": zod.string().uuid(),
+  "createdAt": zod.coerce.date()
+}))
+})
+
+
+/**
+ * @summary Administrator-only full reversal; preserves terminal partner evidence
+ */
+export const ReverseV2ConversionParams = zod.object({
+  "conversionId": zod.coerce.string().uuid()
+})
+
+export const reverseV2ConversionBodyReasonMin = 10;
+export const reverseV2ConversionBodyReasonMax = 500;
+
+export const reverseV2ConversionBodyIdempotencyKeyRegExp = new RegExp('^[A-Za-z0-9_.:-]{16,128}$');
+
+
+export const ReverseV2ConversionBody = zod.object({
+  "reason": zod.string().min(reverseV2ConversionBodyReasonMin).max(reverseV2ConversionBodyReasonMax),
+  "idempotencyKey": zod.string().regex(reverseV2ConversionBodyIdempotencyKeyRegExp)
+})
+
+export const reverseV2ConversionResponseWalletAvailableMin = 0;
+
+export const reverseV2ConversionResponseWalletPendingMin = 0;
+
+export const reverseV2ConversionResponseWalletReservedMin = 0;
+
+export const reverseV2ConversionResponseWalletBalanceMin = 0;
+
+export const reverseV2ConversionResponseWalletLifetimeEarnedMin = 0;
+
+export const reverseV2ConversionResponseWalletLifetimeRedeemedMin = 0;
+
+
+
+export const ReverseV2ConversionResponse = zod.object({
+  "conversion": zod.object({
+  "id": zod.string().uuid(),
+  "offerId": zod.string().uuid(),
+  "offerTitle": zod.string(),
+  "points": zod.number().int(),
+  "status": zod.enum(['pending', 'verified', 'rejected', 'reversed']),
+  "partnerStatus": zod.enum(['pending', 'verified', 'rejected']),
+  "transactionId": zod.string().uuid(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date(),
+  "accountId": zod.string(),
+  "partnerId": zod.string(),
+  "eventId": zod.string(),
+  "clickId": zod.string().uuid(),
+  "reversalEvents": zod.array(zod.object({
+  "status": zod.enum(['reversed']),
+  "reason": zod.string(),
+  "actorId": zod.string(),
+  "compensationTransactionId": zod.string().uuid(),
+  "createdAt": zod.coerce.date()
+}))
+}),
+  "compensation": zod.object({
+  "id": zod.string().uuid(),
+  "sequence": zod.string(),
+  "accountId": zod.string(),
+  "type": zod.enum(['EARN', 'REDEEM', 'REFERRAL', 'BONUS', 'ADJUSTMENT', 'REFUND', 'REVERSAL', 'EXPIRATION']),
+  "amount": zod.number().int(),
+  "status": zod.enum(['pending', 'approved', 'rejected', 'reversed']),
+  "source": zod.string(),
+  "reference": zod.string(),
+  "description": zod.string(),
+  "reason": zod.string(),
+  "relatedTransactionId": zod.string().nullable(),
+  "actorId": zod.string(),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string(),
+  "events": zod.array(zod.object({
+  "status": zod.enum(['pending', 'approved', 'rejected', 'reversed']),
+  "delta": zod.number().int(),
+  "reservedDelta": zod.number().int(),
+  "reason": zod.string(),
+  "actorId": zod.string(),
+  "createdAt": zod.string()
+}))
+}),
+  "wallet": zod.object({
+  "accountId": zod.string(),
+  "available": zod.number().int().min(reverseV2ConversionResponseWalletAvailableMin),
+  "pending": zod.number().int().min(reverseV2ConversionResponseWalletPendingMin),
+  "reserved": zod.number().int().min(reverseV2ConversionResponseWalletReservedMin),
+  "balance": zod.number().int().min(reverseV2ConversionResponseWalletBalanceMin),
+  "lifetimeEarned": zod.number().int().min(reverseV2ConversionResponseWalletLifetimeEarnedMin),
+  "lifetimeRedeemed": zod.number().int().min(reverseV2ConversionResponseWalletLifetimeRedeemedMin)
+}),
+  "replayed": zod.boolean()
 })
 
 
@@ -302,7 +415,7 @@ export const ReceiveV2OfferCallbackResponse = zod.object({
   "offerId": zod.string().uuid(),
   "offerTitle": zod.string(),
   "points": zod.number().int(),
-  "status": zod.enum(['pending', 'verified', 'rejected']),
+  "status": zod.enum(['pending', 'verified', 'rejected', 'reversed']),
   "partnerStatus": zod.enum(['pending', 'verified', 'rejected']),
   "transactionId": zod.string().uuid(),
   "createdAt": zod.coerce.date(),
@@ -310,7 +423,14 @@ export const ReceiveV2OfferCallbackResponse = zod.object({
   "accountId": zod.string(),
   "partnerId": zod.string(),
   "eventId": zod.string(),
-  "clickId": zod.string().uuid()
+  "clickId": zod.string().uuid(),
+  "reversalEvents": zod.array(zod.object({
+  "status": zod.enum(['reversed']),
+  "reason": zod.string(),
+  "actorId": zod.string(),
+  "compensationTransactionId": zod.string().uuid(),
+  "createdAt": zod.coerce.date()
+}))
 })
 
 

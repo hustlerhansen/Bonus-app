@@ -3,6 +3,14 @@ import { v2AccountsTable } from "./v2-accounts";
 import { v2PointsTransactionsTable } from "./v2-points";
 
 // SQL migrations remain authoritative for checks and history-protection triggers.
+export const v2OfferReversalEventsTable = pgTable("v2_offer_reversal_events", {
+  conversionId: uuid("conversion_id").primaryKey().references(() => v2OfferConversionsTable.id),
+  status: text("status").notNull().default("reversed"),
+  compensationTransactionId: uuid("compensation_transaction_id").notNull().unique().references(() => v2PointsTransactionsTable.id),
+  actorId: text("actor_id").notNull().references(() => v2AccountsTable.id),
+  reason: text("reason").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
 export const v2EarnGateTable = pgTable("v2_earn_gate", {
   singleton: boolean("singleton").primaryKey().default(true),
   phase1Cleared: boolean("phase1_cleared").notNull().default(false),

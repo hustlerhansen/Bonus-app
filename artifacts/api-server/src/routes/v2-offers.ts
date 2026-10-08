@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { GetV2OfferParams, ReviewV2OfferParams, StartV2OfferParams, ReviewV2ConversionParams } from "@workspace/api-zod";
+import { GetV2OfferParams, ReviewV2OfferParams, StartV2OfferParams, ReviewV2ConversionParams, ReverseV2ConversionParams } from "@workspace/api-zod";
 import { requireAccount } from "../v2/accounts";
 import { offerService } from "../v2/offers";
 import { PointsError } from "../v2/points";
@@ -54,5 +54,10 @@ router.post("/admin/conversions/:conversionId/review", async (req, res) => {
   const { userId } = await requireAccount(req, adminRoles);
   const { conversionId } = parse(ReviewV2ConversionParams, req.params);
   res.json(await offerService.reviewConversion(userId, conversionId, req.body));
+});
+router.post("/admin/conversions/:conversionId/reverse", async (req, res): Promise<void> => {
+  const { userId } = await requireAccount(req, adminRoles);
+  const { conversionId } = parse(ReverseV2ConversionParams, req.params);
+  res.json(await offerService.reverseConversion(userId, conversionId, req.body));
 });
 export default router;
