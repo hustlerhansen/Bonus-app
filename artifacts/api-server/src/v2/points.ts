@@ -83,7 +83,7 @@ export function createPointsLedger(database: Database = pool) {
   // Authorization, locks, idempotency and audit still run; caller owns rollback.
   async function executeInternal(input: PointsCommand, existingClient?: PoolClient, offerConversionId?: string) {
     const cmd = { ...input, reason: input.reason.trim() };
-    if (!existingClient && cmd.idempotencyKey.startsWith("offer-")) {
+    if (!existingClient && /^(offer-|reward-)/.test(cmd.idempotencyKey)) {
       throw new PointsError(400, "Denne forespørselsnøkkelen er reservert for tilbudsintegrasjonen.");
     }
     if (cmd.reason.length < 10 || cmd.reason.length > 500 ||
@@ -120,7 +120,11 @@ export function createPointsLedger(database: Database = pool) {
       }
       const target = locked.rows.find(a => a.id === accountId);
       if (!target) throw new PointsError(404, "V2-kontoen finnes ikke.");
-      if (target.status !== "ACTIVE") throw new PointsError(403, "Mottakerkontoen er ikke aktiv.");
+      // Trusted reward cleanup must also refund/release an account suspended after ordering.
+      const rewardCleanup = !!existingClient && cmd.idempotencyKey.startsWith("reward-") &&
+        (cmd.kind === "compensate" || (cmd.kind === "decide" && cmd.status === "rejected")) &&
+        original?.source.startsWith("reward:");
+      if (target.status !== "ACTIVE" && !rewardCleanup) throw new PointsError(403, "Mottakerkontoen er ikke aktiv.");
       const previous = await client.query("SELECT fingerprint,transaction_id FROM v2_points_requests WHERE idempotency_key=$1", [cmd.idempotencyKey]);
       if (previous.rows[0]) {
         if (previous.rows[0].fingerprint !== fingerprint) throw new PointsError(409, "Nøkkelen er allerede brukt til en annen forespørsel.");
@@ -138,7 +142,7 @@ export function createPointsLedger(database: Database = pool) {
       if (cmd.kind === "decide") {
         // Re-read after account lock: another decision can have won during lock acquisition.
         const current = await transaction(cmd.transactionId, client);
-        if (!existingClient && current.source.startsWith("offer:")) {
+        if (!existingClient && /^(offer:|reward:)/.test(current.source)) {
           throw new PointsError(409, "Tilbudspoeng må behandles gjennom konverteringskontrollen.");
         }
         if (current.status !== "pending") throw new PointsError(409, "Bare ventende transaksjoner kan behandles.");
@@ -162,6 +166,9 @@ export function createPointsLedger(database: Database = pool) {
             if (!binding?.rowCount || current.type !== "EARN") {
               throw new PointsError(409, "Tilbudspoeng må reverseres gjennom konverteringskontrollen.");
             }
+          }
+          if (current.source.startsWith("reward:") && !existingClient) {
+            throw new PointsError(409, "Premiekompensasjon krever en egen innløsnings- og tilbakeføringsflyt.");
           }
           if (current.status !== "approved" || ["REFUND", "REVERSAL"].includes(current.type)) {
             throw new PointsError(409, "Transaksjonen kan ikke tilbakeføres flere ganger.");

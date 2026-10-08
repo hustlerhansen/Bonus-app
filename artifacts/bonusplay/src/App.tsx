@@ -5,6 +5,7 @@ import { dark } from '@clerk/themes';
 import { V2Landing, BusinessPage } from '@/pages/v2/public';
 import { PointsAdminPage, PointsPage } from '@/pages/v2/points';
 import { OfferDetailPage, OffersAdminPage, OffersPage } from '@/pages/v2/offers';
+import { OrdersPage, RewardDetailPage, RewardsAdminPage, RewardsPage as V2RewardsPage } from '@/pages/v2/rewards';
 import { SignInPage, SignUpPage } from '@/pages/v2/auth';
 import { AccountPage, AccountProfilePage, AccountSecurityPage } from '@/pages/v2/account';
 import { QueryClient, QueryClientProvider, useQueryClient } from '@tanstack/react-query';
@@ -134,6 +135,10 @@ function Router() {
         <Route path="/account/offers" component={OffersPage} />
         <Route path="/account/offers/admin" component={OffersAdminPage} />
         <Route path="/account/offers/:offerId" component={OfferDetailPage} />
+        <Route path="/account/rewards" component={V2RewardsPage} />
+        <Route path="/account/rewards/admin" component={RewardsAdminPage} />
+        <Route path="/account/rewards/:rewardId" component={RewardDetailPage} />
+        <Route path="/account/orders" component={OrdersPage} />
         <Route path="/account/profile" component={AccountProfilePage} />
         <Route path="/account/security/*?" component={AccountSecurityPage} />
         {wrapped.map(([p, C]) => <Route key={p} path={p} component={C} />)}

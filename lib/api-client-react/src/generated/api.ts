@@ -58,12 +58,23 @@ import type {
   V2OfferReviewInput,
   V2OfferStart,
   V2OfferStartInput,
+  V2OrderActionInput,
+  V2OrderPage,
   V2PointsAdjustment,
   V2PointsCompensation,
   V2PointsDecision,
   V2PointsErrorResponse,
   V2PointsResult,
   V2ProfileInput,
+  V2RedemptionInput,
+  V2Reward,
+  V2RewardDetail,
+  V2RewardInput,
+  V2RewardOrder,
+  V2RewardPage,
+  V2RewardReconciliation,
+  V2RewardReviewInput,
+  V2RewardSupplier,
   V2TransactionPage,
   V2Wallet
 } from './api.schemas';
@@ -94,6 +105,834 @@ const withQueryKey = <T extends object, K>(query: T, queryKey: K): T & { queryKe
   }
   return result;
 };
+
+export const getListV2RewardsUrl = () => {
+
+
+
+
+  return `/api/v2/rewards`
+}
+
+export const listV2Rewards = async ( options?: Parameters<typeof customFetch>[1]): Promise<V2RewardPage> => {
+
+  return customFetch<V2RewardPage>(getListV2RewardsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListV2RewardsQueryKey = () => {
+    return [
+    `/api/v2/rewards`
+    ] as const;
+    }
+
+
+export const getListV2RewardsQueryOptions = <TData = Awaited<ReturnType<typeof listV2Rewards>>, TError = ErrorType<V2PointsErrorResponse>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listV2Rewards>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListV2RewardsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listV2Rewards>>> = ({ signal }) => listV2Rewards({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listV2Rewards>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListV2RewardsQueryResult = NonNullable<Awaited<ReturnType<typeof listV2Rewards>>>
+export type ListV2RewardsQueryError = ErrorType<V2PointsErrorResponse>
+
+
+
+export function useListV2Rewards<TData = Awaited<ReturnType<typeof listV2Rewards>>, TError = ErrorType<V2PointsErrorResponse>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listV2Rewards>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListV2RewardsQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getGetV2RewardUrl = (rewardId: string,) => {
+
+
+
+
+  return `/api/v2/rewards/${rewardId}`
+}
+
+export const getV2Reward = async (rewardId: string, options?: Parameters<typeof customFetch>[1]): Promise<V2RewardDetail> => {
+
+  return customFetch<V2RewardDetail>(getGetV2RewardUrl(rewardId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetV2RewardQueryKey = (rewardId: string,) => {
+    return [
+    `/api/v2/rewards/${rewardId}`
+    ] as const;
+    }
+
+
+export const getGetV2RewardQueryOptions = <TData = Awaited<ReturnType<typeof getV2Reward>>, TError = ErrorType<V2PointsErrorResponse>>(rewardId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getV2Reward>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetV2RewardQueryKey(rewardId);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getV2Reward>>> = ({ signal }) => getV2Reward(rewardId, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: rewardId !== null && rewardId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getV2Reward>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetV2RewardQueryResult = NonNullable<Awaited<ReturnType<typeof getV2Reward>>>
+export type GetV2RewardQueryError = ErrorType<V2PointsErrorResponse>
+
+
+
+export function useGetV2Reward<TData = Awaited<ReturnType<typeof getV2Reward>>, TError = ErrorType<V2PointsErrorResponse>>(
+ rewardId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getV2Reward>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetV2RewardQueryOptions(rewardId,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getRedeemV2RewardUrl = (rewardId: string,) => {
+
+
+
+
+  return `/api/v2/rewards/${rewardId}/redeem`
+}
+
+export const redeemV2Reward = async (rewardId: string,
+    v2RedemptionInput: V2RedemptionInput, options?: Parameters<typeof customFetch>[1]): Promise<V2RewardOrder> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<V2RewardOrder>(getRedeemV2RewardUrl(rewardId),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(v2RedemptionInput)
+  }
+);}
+
+
+
+
+
+export const getRedeemV2RewardMutationKey = () => ['redeemV2Reward'] as const;
+
+export const getRedeemV2RewardMutationOptions = <TError = ErrorType<V2PointsErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof redeemV2Reward>>, TError,RedeemV2RewardMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof redeemV2Reward>>, TError,RedeemV2RewardMutationVariables, TContext> => {
+
+const mutationKey = getRedeemV2RewardMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof redeemV2Reward>>, RedeemV2RewardMutationVariables> = (props) => {
+          const {rewardId,data} = props ?? {};
+
+          return  redeemV2Reward(rewardId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RedeemV2RewardMutationResult = NonNullable<Awaited<ReturnType<typeof redeemV2Reward>>>
+    export type RedeemV2RewardMutationBody = BodyType<V2RedemptionInput>
+    export type RedeemV2RewardMutationError = ErrorType<V2PointsErrorResponse>
+    export type RedeemV2RewardMutationVariables = {rewardId: string;data: BodyType<V2RedemptionInput>}
+
+    export const useRedeemV2Reward = <TError = ErrorType<V2PointsErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof redeemV2Reward>>, TError,RedeemV2RewardMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof redeemV2Reward>>,
+        TError,
+        RedeemV2RewardMutationVariables,
+        TContext
+      > => {
+      return useMutation(getRedeemV2RewardMutationOptions(options));
+    }
+
+export const getListV2OrdersUrl = () => {
+
+
+
+
+  return `/api/v2/orders`
+}
+
+export const listV2Orders = async ( options?: Parameters<typeof customFetch>[1]): Promise<V2OrderPage> => {
+
+  return customFetch<V2OrderPage>(getListV2OrdersUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListV2OrdersQueryKey = () => {
+    return [
+    `/api/v2/orders`
+    ] as const;
+    }
+
+
+export const getListV2OrdersQueryOptions = <TData = Awaited<ReturnType<typeof listV2Orders>>, TError = ErrorType<V2PointsErrorResponse>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listV2Orders>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListV2OrdersQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listV2Orders>>> = ({ signal }) => listV2Orders({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listV2Orders>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListV2OrdersQueryResult = NonNullable<Awaited<ReturnType<typeof listV2Orders>>>
+export type ListV2OrdersQueryError = ErrorType<V2PointsErrorResponse>
+
+
+
+export function useListV2Orders<TData = Awaited<ReturnType<typeof listV2Orders>>, TError = ErrorType<V2PointsErrorResponse>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listV2Orders>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListV2OrdersQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getListV2RewardSuppliersUrl = () => {
+
+
+
+
+  return `/api/v2/admin/reward-suppliers`
+}
+
+export const listV2RewardSuppliers = async ( options?: Parameters<typeof customFetch>[1]): Promise<V2RewardSupplier[]> => {
+
+  return customFetch<V2RewardSupplier[]>(getListV2RewardSuppliersUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListV2RewardSuppliersQueryKey = () => {
+    return [
+    `/api/v2/admin/reward-suppliers`
+    ] as const;
+    }
+
+
+export const getListV2RewardSuppliersQueryOptions = <TData = Awaited<ReturnType<typeof listV2RewardSuppliers>>, TError = ErrorType<V2PointsErrorResponse>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listV2RewardSuppliers>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListV2RewardSuppliersQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listV2RewardSuppliers>>> = ({ signal }) => listV2RewardSuppliers({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listV2RewardSuppliers>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListV2RewardSuppliersQueryResult = NonNullable<Awaited<ReturnType<typeof listV2RewardSuppliers>>>
+export type ListV2RewardSuppliersQueryError = ErrorType<V2PointsErrorResponse>
+
+
+
+export function useListV2RewardSuppliers<TData = Awaited<ReturnType<typeof listV2RewardSuppliers>>, TError = ErrorType<V2PointsErrorResponse>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listV2RewardSuppliers>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListV2RewardSuppliersQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getListV2AdminRewardsUrl = () => {
+
+
+
+
+  return `/api/v2/admin/rewards`
+}
+
+export const listV2AdminRewards = async ( options?: Parameters<typeof customFetch>[1]): Promise<V2RewardPage> => {
+
+  return customFetch<V2RewardPage>(getListV2AdminRewardsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListV2AdminRewardsQueryKey = () => {
+    return [
+    `/api/v2/admin/rewards`
+    ] as const;
+    }
+
+
+export const getListV2AdminRewardsQueryOptions = <TData = Awaited<ReturnType<typeof listV2AdminRewards>>, TError = ErrorType<V2PointsErrorResponse>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listV2AdminRewards>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListV2AdminRewardsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listV2AdminRewards>>> = ({ signal }) => listV2AdminRewards({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listV2AdminRewards>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListV2AdminRewardsQueryResult = NonNullable<Awaited<ReturnType<typeof listV2AdminRewards>>>
+export type ListV2AdminRewardsQueryError = ErrorType<V2PointsErrorResponse>
+
+
+
+export function useListV2AdminRewards<TData = Awaited<ReturnType<typeof listV2AdminRewards>>, TError = ErrorType<V2PointsErrorResponse>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listV2AdminRewards>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListV2AdminRewardsQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getCreateV2RewardUrl = () => {
+
+
+
+
+  return `/api/v2/admin/rewards`
+}
+
+export const createV2Reward = async (v2RewardInput: V2RewardInput, options?: Parameters<typeof customFetch>[1]): Promise<V2Reward> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<V2Reward>(getCreateV2RewardUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(v2RewardInput)
+  }
+);}
+
+
+
+
+
+export const getCreateV2RewardMutationKey = () => ['createV2Reward'] as const;
+
+export const getCreateV2RewardMutationOptions = <TError = ErrorType<V2PointsErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createV2Reward>>, TError,CreateV2RewardMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createV2Reward>>, TError,CreateV2RewardMutationVariables, TContext> => {
+
+const mutationKey = getCreateV2RewardMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createV2Reward>>, CreateV2RewardMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  createV2Reward(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateV2RewardMutationResult = NonNullable<Awaited<ReturnType<typeof createV2Reward>>>
+    export type CreateV2RewardMutationBody = BodyType<V2RewardInput>
+    export type CreateV2RewardMutationError = ErrorType<V2PointsErrorResponse>
+    export type CreateV2RewardMutationVariables = {data: BodyType<V2RewardInput>}
+
+    export const useCreateV2Reward = <TError = ErrorType<V2PointsErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createV2Reward>>, TError,CreateV2RewardMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createV2Reward>>,
+        TError,
+        CreateV2RewardMutationVariables,
+        TContext
+      > => {
+      return useMutation(getCreateV2RewardMutationOptions(options));
+    }
+
+export const getReviewV2RewardUrl = (rewardId: string,) => {
+
+
+
+
+  return `/api/v2/admin/rewards/${rewardId}/review`
+}
+
+export const reviewV2Reward = async (rewardId: string,
+    v2RewardReviewInput: V2RewardReviewInput, options?: Parameters<typeof customFetch>[1]): Promise<V2Reward> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<V2Reward>(getReviewV2RewardUrl(rewardId),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(v2RewardReviewInput)
+  }
+);}
+
+
+
+
+
+export const getReviewV2RewardMutationKey = () => ['reviewV2Reward'] as const;
+
+export const getReviewV2RewardMutationOptions = <TError = ErrorType<V2PointsErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof reviewV2Reward>>, TError,ReviewV2RewardMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof reviewV2Reward>>, TError,ReviewV2RewardMutationVariables, TContext> => {
+
+const mutationKey = getReviewV2RewardMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof reviewV2Reward>>, ReviewV2RewardMutationVariables> = (props) => {
+          const {rewardId,data} = props ?? {};
+
+          return  reviewV2Reward(rewardId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ReviewV2RewardMutationResult = NonNullable<Awaited<ReturnType<typeof reviewV2Reward>>>
+    export type ReviewV2RewardMutationBody = BodyType<V2RewardReviewInput>
+    export type ReviewV2RewardMutationError = ErrorType<V2PointsErrorResponse>
+    export type ReviewV2RewardMutationVariables = {rewardId: string;data: BodyType<V2RewardReviewInput>}
+
+    export const useReviewV2Reward = <TError = ErrorType<V2PointsErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof reviewV2Reward>>, TError,ReviewV2RewardMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof reviewV2Reward>>,
+        TError,
+        ReviewV2RewardMutationVariables,
+        TContext
+      > => {
+      return useMutation(getReviewV2RewardMutationOptions(options));
+    }
+
+export const getListV2AdminOrdersUrl = () => {
+
+
+
+
+  return `/api/v2/admin/orders`
+}
+
+export const listV2AdminOrders = async ( options?: Parameters<typeof customFetch>[1]): Promise<V2OrderPage> => {
+
+  return customFetch<V2OrderPage>(getListV2AdminOrdersUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListV2AdminOrdersQueryKey = () => {
+    return [
+    `/api/v2/admin/orders`
+    ] as const;
+    }
+
+
+export const getListV2AdminOrdersQueryOptions = <TData = Awaited<ReturnType<typeof listV2AdminOrders>>, TError = ErrorType<V2PointsErrorResponse>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listV2AdminOrders>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListV2AdminOrdersQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listV2AdminOrders>>> = ({ signal }) => listV2AdminOrders({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listV2AdminOrders>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListV2AdminOrdersQueryResult = NonNullable<Awaited<ReturnType<typeof listV2AdminOrders>>>
+export type ListV2AdminOrdersQueryError = ErrorType<V2PointsErrorResponse>
+
+
+
+export function useListV2AdminOrders<TData = Awaited<ReturnType<typeof listV2AdminOrders>>, TError = ErrorType<V2PointsErrorResponse>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listV2AdminOrders>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListV2AdminOrdersQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getActionV2OrderUrl = (orderId: string,) => {
+
+
+
+
+  return `/api/v2/admin/orders/${orderId}/action`
+}
+
+export const actionV2Order = async (orderId: string,
+    v2OrderActionInput: V2OrderActionInput, options?: Parameters<typeof customFetch>[1]): Promise<V2RewardOrder> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<V2RewardOrder>(getActionV2OrderUrl(orderId),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(v2OrderActionInput)
+  }
+);}
+
+
+
+
+
+export const getActionV2OrderMutationKey = () => ['actionV2Order'] as const;
+
+export const getActionV2OrderMutationOptions = <TError = ErrorType<V2PointsErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof actionV2Order>>, TError,ActionV2OrderMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof actionV2Order>>, TError,ActionV2OrderMutationVariables, TContext> => {
+
+const mutationKey = getActionV2OrderMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof actionV2Order>>, ActionV2OrderMutationVariables> = (props) => {
+          const {orderId,data} = props ?? {};
+
+          return  actionV2Order(orderId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ActionV2OrderMutationResult = NonNullable<Awaited<ReturnType<typeof actionV2Order>>>
+    export type ActionV2OrderMutationBody = BodyType<V2OrderActionInput>
+    export type ActionV2OrderMutationError = ErrorType<V2PointsErrorResponse>
+    export type ActionV2OrderMutationVariables = {orderId: string;data: BodyType<V2OrderActionInput>}
+
+    export const useActionV2Order = <TError = ErrorType<V2PointsErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof actionV2Order>>, TError,ActionV2OrderMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof actionV2Order>>,
+        TError,
+        ActionV2OrderMutationVariables,
+        TContext
+      > => {
+      return useMutation(getActionV2OrderMutationOptions(options));
+    }
+
+export const getReconcileV2RewardsUrl = () => {
+
+
+
+
+  return `/api/v2/admin/rewards/reconciliation`
+}
+
+export const reconcileV2Rewards = async ( options?: Parameters<typeof customFetch>[1]): Promise<V2RewardReconciliation> => {
+
+  return customFetch<V2RewardReconciliation>(getReconcileV2RewardsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getReconcileV2RewardsQueryKey = () => {
+    return [
+    `/api/v2/admin/rewards/reconciliation`
+    ] as const;
+    }
+
+
+export const getReconcileV2RewardsQueryOptions = <TData = Awaited<ReturnType<typeof reconcileV2Rewards>>, TError = ErrorType<V2PointsErrorResponse>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof reconcileV2Rewards>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getReconcileV2RewardsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof reconcileV2Rewards>>> = ({ signal }) => reconcileV2Rewards({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof reconcileV2Rewards>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ReconcileV2RewardsQueryResult = NonNullable<Awaited<ReturnType<typeof reconcileV2Rewards>>>
+export type ReconcileV2RewardsQueryError = ErrorType<V2PointsErrorResponse>
+
+
+
+export function useReconcileV2Rewards<TData = Awaited<ReturnType<typeof reconcileV2Rewards>>, TError = ErrorType<V2PointsErrorResponse>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof reconcileV2Rewards>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getReconcileV2RewardsQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
 
 export const getListV2OffersUrl = () => {
 

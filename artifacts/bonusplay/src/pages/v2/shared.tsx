@@ -47,7 +47,7 @@ export function V2Frame({ children, title, desc, nav }: { children: ReactNode; t
   const qc = useQueryClient();
   const out = () => clerk.signOut({ redirectUrl: `${basePath}/v2` }).then(() => qc.clear());
   const isAdmin = useIsAdmin();
-  const links: [string, string][] = [['/account', 'Oversikt'], ['/account/points', 'Poeng'], ['/account/offers', 'Tilbud'], ...(isAdmin ? [['/account/points/admin', 'Poengadmin'] as [string, string]] : []), ['/account/profile', 'Profil'], ['/account/security', 'Sikkerhet']];
+  const links: [string, string][] = [['/account', 'Oversikt'], ['/account/points', 'Poeng'], ['/account/offers', 'Tilbud'], ['/account/rewards', 'Premier'], ['/account/orders', 'Bestillinger'], ...(isAdmin ? [['/account/points/admin', 'Poengadmin'] as [string, string]] : []), ['/account/profile', 'Profil'], ['/account/security', 'Sikkerhet']];
   return (
     <div className="mx-auto min-h-[100dvh] max-w-3xl px-4 pb-16 pt-5">
       <header className="mb-6 flex flex-wrap items-center justify-between gap-3">

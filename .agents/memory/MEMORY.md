@@ -5,3 +5,4 @@
 - [Points reconciliation boundaries](points-reconciliation-boundaries.md) — detection stays read-only; use technical/hashed references and operator-approved corrections only.
 - [Earn activation](earn-activation.md) — feature delivery must not clear separate authentication/security gates; settlement tests belong in isolated databases.
 - [Clerk test addresses](clerk-test-addresses.md) — the approved browser-login helper rejects .invalid; use unique reserved example.com identities without sending email.
+- [Reward settlement boundaries](reward-settlement-boundaries.md) — uncertain delivery retains debit/stock; closed gates and suspended recipients must not strand approved cleanup.

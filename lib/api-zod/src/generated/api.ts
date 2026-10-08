@@ -8,6 +8,241 @@
 import * as zod from 'zod';
 
 
+export const ListV2RewardsResponse = zod.object({
+  "items": zod.array(zod.object({
+  "id": zod.string().uuid(),
+  "supplierId": zod.string(),
+  "supplierName": zod.string(),
+  "title": zod.string(),
+  "description": zod.string(),
+  "terms": zod.string(),
+  "points": zod.number().int(),
+  "stock": zod.number().int(),
+  "status": zod.enum(['draft', 'approved', 'disabled'])
+})),
+  "redeemEnabled": zod.boolean()
+})
+
+
+export const GetV2RewardParams = zod.object({
+  "rewardId": zod.coerce.string().uuid()
+})
+
+export const GetV2RewardResponse = zod.object({
+  "reward": zod.object({
+  "id": zod.string().uuid(),
+  "supplierId": zod.string(),
+  "supplierName": zod.string(),
+  "title": zod.string(),
+  "description": zod.string(),
+  "terms": zod.string(),
+  "points": zod.number().int(),
+  "stock": zod.number().int(),
+  "status": zod.enum(['draft', 'approved', 'disabled'])
+}),
+  "redeemEnabled": zod.boolean()
+})
+
+
+export const RedeemV2RewardParams = zod.object({
+  "rewardId": zod.coerce.string().uuid()
+})
+
+export const RedeemV2RewardBody = zod.object({
+  "idempotencyKey": zod.string().uuid()
+})
+
+export const RedeemV2RewardResponse = zod.object({
+  "accountId": zod.string().optional(),
+  "supplierId": zod.string().optional(),
+  "supplierSku": zod.string().optional(),
+  "id": zod.string().uuid(),
+  "rewardId": zod.string().uuid(),
+  "title": zod.string(),
+  "points": zod.number().int(),
+  "status": zod.enum(['reserved', 'delivering', 'uncertain', 'delivered', 'refunded']),
+  "transactionId": zod.string().uuid(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})
+
+
+export const ListV2OrdersResponse = zod.object({
+  "items": zod.array(zod.object({
+  "accountId": zod.string().optional(),
+  "supplierId": zod.string().optional(),
+  "supplierSku": zod.string().optional(),
+  "id": zod.string().uuid(),
+  "rewardId": zod.string().uuid(),
+  "title": zod.string(),
+  "points": zod.number().int(),
+  "status": zod.enum(['reserved', 'delivering', 'uncertain', 'delivered', 'refunded']),
+  "transactionId": zod.string().uuid(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+}))
+})
+
+
+export const ListV2RewardSuppliersResponseItem = zod.object({
+  "id": zod.string(),
+  "name": zod.string()
+})
+export const ListV2RewardSuppliersResponse = zod.array(ListV2RewardSuppliersResponseItem)
+
+
+export const ListV2AdminRewardsResponse = zod.object({
+  "items": zod.array(zod.object({
+  "id": zod.string().uuid(),
+  "supplierId": zod.string(),
+  "supplierName": zod.string(),
+  "title": zod.string(),
+  "description": zod.string(),
+  "terms": zod.string(),
+  "points": zod.number().int(),
+  "stock": zod.number().int(),
+  "status": zod.enum(['draft', 'approved', 'disabled'])
+})),
+  "redeemEnabled": zod.boolean()
+})
+
+
+export const createV2RewardBodySupplierIdMin = 3;
+export const createV2RewardBodySupplierIdMax = 40;
+
+export const createV2RewardBodyTitleMin = 3;
+export const createV2RewardBodyTitleMax = 120;
+
+export const createV2RewardBodyDescriptionMin = 10;
+export const createV2RewardBodyDescriptionMax = 2000;
+
+export const createV2RewardBodyTermsMin = 10;
+export const createV2RewardBodyTermsMax = 2000;
+
+export const createV2RewardBodyPointsMax = 1000000;
+
+export const createV2RewardBodyStockMin = 0;
+export const createV2RewardBodyStockMax = 1000000;
+
+export const createV2RewardBodySupplierSkuMax = 128;
+
+export const createV2RewardBodyApprovalReferenceMin = 10;
+export const createV2RewardBodyApprovalReferenceMax = 200;
+
+
+
+export const CreateV2RewardBody = zod.object({
+  "supplierId": zod.string().min(createV2RewardBodySupplierIdMin).max(createV2RewardBodySupplierIdMax),
+  "title": zod.string().min(createV2RewardBodyTitleMin).max(createV2RewardBodyTitleMax),
+  "description": zod.string().min(createV2RewardBodyDescriptionMin).max(createV2RewardBodyDescriptionMax),
+  "terms": zod.string().min(createV2RewardBodyTermsMin).max(createV2RewardBodyTermsMax),
+  "points": zod.number().int().min(1).max(createV2RewardBodyPointsMax),
+  "stock": zod.number().int().min(createV2RewardBodyStockMin).max(createV2RewardBodyStockMax),
+  "supplierSku": zod.string().min(1).max(createV2RewardBodySupplierSkuMax),
+  "approvalReference": zod.string().min(createV2RewardBodyApprovalReferenceMin).max(createV2RewardBodyApprovalReferenceMax)
+})
+
+export const CreateV2RewardResponse = zod.object({
+  "id": zod.string().uuid(),
+  "supplierId": zod.string(),
+  "supplierName": zod.string(),
+  "title": zod.string(),
+  "description": zod.string(),
+  "terms": zod.string(),
+  "points": zod.number().int(),
+  "stock": zod.number().int(),
+  "status": zod.enum(['draft', 'approved', 'disabled'])
+})
+
+
+export const ReviewV2RewardParams = zod.object({
+  "rewardId": zod.coerce.string().uuid()
+})
+
+export const reviewV2RewardBodyReasonMin = 10;
+export const reviewV2RewardBodyReasonMax = 500;
+
+
+
+export const ReviewV2RewardBody = zod.object({
+  "status": zod.enum(['approved', 'disabled']),
+  "reason": zod.string().min(reviewV2RewardBodyReasonMin).max(reviewV2RewardBodyReasonMax)
+})
+
+export const ReviewV2RewardResponse = zod.object({
+  "id": zod.string().uuid(),
+  "supplierId": zod.string(),
+  "supplierName": zod.string(),
+  "title": zod.string(),
+  "description": zod.string(),
+  "terms": zod.string(),
+  "points": zod.number().int(),
+  "stock": zod.number().int(),
+  "status": zod.enum(['draft', 'approved', 'disabled'])
+})
+
+
+export const ListV2AdminOrdersResponse = zod.object({
+  "items": zod.array(zod.object({
+  "accountId": zod.string().optional(),
+  "supplierId": zod.string().optional(),
+  "supplierSku": zod.string().optional(),
+  "id": zod.string().uuid(),
+  "rewardId": zod.string().uuid(),
+  "title": zod.string(),
+  "points": zod.number().int(),
+  "status": zod.enum(['reserved', 'delivering', 'uncertain', 'delivered', 'refunded']),
+  "transactionId": zod.string().uuid(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+}))
+})
+
+
+export const ActionV2OrderParams = zod.object({
+  "orderId": zod.coerce.string().uuid()
+})
+
+export const actionV2OrderBodyReasonMin = 10;
+export const actionV2OrderBodyReasonMax = 500;
+
+export const actionV2OrderBodyEvidenceReferenceMin = 10;
+export const actionV2OrderBodyEvidenceReferenceMax = 200;
+
+
+
+export const ActionV2OrderBody = zod.object({
+  "confirmedNotDelivered": zod.boolean().optional(),
+  "action": zod.enum(['dispatch', 'delivered', 'uncertain', 'refund']),
+  "reason": zod.string().min(actionV2OrderBodyReasonMin).max(actionV2OrderBodyReasonMax),
+  "evidenceReference": zod.string().min(actionV2OrderBodyEvidenceReferenceMin).max(actionV2OrderBodyEvidenceReferenceMax),
+  "idempotencyKey": zod.string().uuid()
+})
+
+export const ActionV2OrderResponse = zod.object({
+  "accountId": zod.string().optional(),
+  "supplierId": zod.string().optional(),
+  "supplierSku": zod.string().optional(),
+  "id": zod.string().uuid(),
+  "rewardId": zod.string().uuid(),
+  "title": zod.string(),
+  "points": zod.number().int(),
+  "status": zod.enum(['reserved', 'delivering', 'uncertain', 'delivered', 'refunded']),
+  "transactionId": zod.string().uuid(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})
+
+
+export const ReconcileV2RewardsResponse = zod.object({
+  "ok": zod.boolean(),
+  "issues": zod.array(zod.object({
+  "code": zod.string(),
+  "reference": zod.string()
+}))
+})
+
+
 export const ListV2OffersResponse = zod.object({
   "items": zod.array(zod.object({
   "id": zod.string().uuid(),

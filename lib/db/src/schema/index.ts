@@ -1,6 +1,7 @@
 export * from "./v2-accounts";
 export * from "./v2-points";
 export * from "./v2-offers";
+export * from "./v2-rewards";
 // Export your models here. Add one export per file
 // export * from "./posts";
 //

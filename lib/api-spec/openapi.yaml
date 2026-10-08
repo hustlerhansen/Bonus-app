@@ -13,6 +13,145 @@ tags:
   - name: bonusplay
     description: BONUSPLAY demo account, game and rewards operations
 paths:
+  /v2/rewards:
+    get:
+      operationId: listV2Rewards
+      responses:
+        "200":
+          description: Approved rewards and closed activation gate
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/V2RewardPage" }
+        default: { $ref: "#/components/responses/V2PointsError" }
+  /v2/rewards/{rewardId}:
+    get:
+      operationId: getV2Reward
+      parameters:
+        - { name: rewardId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        "200":
+          description: Reward detail
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/V2RewardDetail" }
+        default: { $ref: "#/components/responses/V2PointsError" }
+  /v2/rewards/{rewardId}/redeem:
+    post:
+      operationId: redeemV2Reward
+      parameters:
+        - { name: rewardId, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/V2RedemptionInput" }
+      responses:
+        "200":
+          description: Reserved order or current replay
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/V2RewardOrder" }
+        default: { $ref: "#/components/responses/V2PointsError" }
+  /v2/orders:
+    get:
+      operationId: listV2Orders
+      responses:
+        "200":
+          description: Own orders
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/V2OrderPage" }
+        default: { $ref: "#/components/responses/V2PointsError" }
+  /v2/admin/reward-suppliers:
+    get:
+      operationId: listV2RewardSuppliers
+      responses:
+        "200":
+          description: Operator configured approved suppliers
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/V2RewardSupplier" }
+        default: { $ref: "#/components/responses/V2PointsError" }
+  /v2/admin/rewards:
+    get:
+      operationId: listV2AdminRewards
+      responses:
+        "200":
+          description: All reward definitions
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/V2RewardPage" }
+        default: { $ref: "#/components/responses/V2PointsError" }
+    post:
+      operationId: createV2Reward
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/V2RewardInput" }
+      responses:
+        "201":
+          description: Immutable draft
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/V2Reward" }
+        default: { $ref: "#/components/responses/V2PointsError" }
+  /v2/admin/rewards/{rewardId}/review:
+    post:
+      operationId: reviewV2Reward
+      parameters:
+        - { name: rewardId, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/V2RewardReviewInput" }
+      responses:
+        "200":
+          description: Reviewed reward
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/V2Reward" }
+        default: { $ref: "#/components/responses/V2PointsError" }
+  /v2/admin/orders:
+    get:
+      operationId: listV2AdminOrders
+      responses:
+        "200":
+          description: Delivery queue and history
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/V2OrderPage" }
+        default: { $ref: "#/components/responses/V2PointsError" }
+  /v2/admin/orders/{orderId}/action:
+    post:
+      operationId: actionV2Order
+      parameters:
+        - { name: orderId, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/V2OrderActionInput" }
+      responses:
+        "200":
+          description: Delivery action or current replay
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/V2RewardOrder" }
+        default: { $ref: "#/components/responses/V2PointsError" }
+  /v2/admin/rewards/reconciliation:
+    get:
+      operationId: reconcileV2Rewards
+      responses:
+        "200":
+          description: Read only stock and ledger reconciliation
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/V2RewardReconciliation" }
+        default: { $ref: "#/components/responses/V2PointsError" }
   /v2/offers:
     get:
       operationId: listV2Offers
@@ -811,6 +950,102 @@ components:
       in: query
       schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
   schemas:
+    V2RewardSupplier:
+      type: object
+      required: [id, name]
+      properties:
+        id: { type: string }
+        name: { type: string }
+    V2RewardInput:
+      type: object
+      required: [supplierId, title, description, terms, points, stock, supplierSku, approvalReference]
+      properties:
+        supplierId: { type: string, minLength: 3, maxLength: 40 }
+        title: { type: string, minLength: 3, maxLength: 120 }
+        description: { type: string, minLength: 10, maxLength: 2000 }
+        terms: { type: string, minLength: 10, maxLength: 2000 }
+        points: { type: integer, minimum: 1, maximum: 1000000 }
+        stock: { type: integer, minimum: 0, maximum: 1000000 }
+        supplierSku: { type: string, minLength: 1, maxLength: 128 }
+        approvalReference: { type: string, minLength: 10, maxLength: 200 }
+    V2Reward:
+      type: object
+      required: [id, supplierId, supplierName, title, description, terms, points, stock, status]
+      properties:
+        id: { type: string, format: uuid }
+        supplierId: { type: string }
+        supplierName: { type: string }
+        title: { type: string }
+        description: { type: string }
+        terms: { type: string }
+        points: { type: integer }
+        stock: { type: integer }
+        status: { type: string, enum: [draft, approved, disabled] }
+    V2RewardPage:
+      type: object
+      required: [items, redeemEnabled]
+      properties:
+        items: { type: array, items: { $ref: "#/components/schemas/V2Reward" } }
+        redeemEnabled: { type: boolean }
+    V2RewardDetail:
+      type: object
+      required: [reward, redeemEnabled]
+      properties:
+        reward: { $ref: "#/components/schemas/V2Reward" }
+        redeemEnabled: { type: boolean }
+    V2RedemptionInput:
+      type: object
+      required: [idempotencyKey]
+      properties:
+        idempotencyKey: { type: string, format: uuid }
+    V2RewardReviewInput:
+      type: object
+      required: [status, reason]
+      properties:
+        status: { type: string, enum: [approved, disabled] }
+        reason: { type: string, minLength: 10, maxLength: 500 }
+    V2RewardOrder:
+      type: object
+      required: [id, rewardId, title, points, status, transactionId, createdAt, updatedAt]
+      properties:
+        accountId: { type: string }
+        supplierId: { type: string }
+        supplierSku: { type: string }
+        id: { type: string, format: uuid }
+        rewardId: { type: string, format: uuid }
+        title: { type: string }
+        points: { type: integer }
+        status: { type: string, enum: [reserved, delivering, uncertain, delivered, refunded] }
+        transactionId: { type: string, format: uuid }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+    V2OrderPage:
+      type: object
+      required: [items]
+      properties:
+        items: { type: array, items: { $ref: "#/components/schemas/V2RewardOrder" } }
+    V2OrderActionInput:
+      type: object
+      required: [action, reason, evidenceReference, idempotencyKey]
+      properties:
+        confirmedNotDelivered: { type: boolean }
+        action: { type: string, enum: [dispatch, delivered, uncertain, refund] }
+        reason: { type: string, minLength: 10, maxLength: 500 }
+        evidenceReference: { type: string, minLength: 10, maxLength: 200 }
+        idempotencyKey: { type: string, format: uuid }
+    V2RewardReconciliation:
+      type: object
+      required: [ok, issues]
+      properties:
+        ok: { type: boolean }
+        issues:
+          type: array
+          items:
+            type: object
+            required: [code, reference]
+            properties:
+              code: { type: string }
+              reference: { type: string }
     V2OfferPartner:
       type: object
       required: [id, name]
@@ -1614,4 +1849,3 @@ components:
         contributionNok: { type: number }
         createdAt: { type: string, format: date-time }
       required: [id, sourceId, grossRevenueNok, providerCostNok, rewardCostNok, contributionNok, createdAt]
-

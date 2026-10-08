@@ -5,6 +5,171 @@
  * API for the BONUSPLAY demo rewards platform
  * OpenAPI spec version: 0.1.0
  */
+export interface V2RewardSupplier {
+  id: string;
+  name: string;
+}
+
+export interface V2RewardInput {
+  /**
+     * @minLength 3
+     * @maxLength 40
+     */
+  supplierId: string;
+  /**
+     * @minLength 3
+     * @maxLength 120
+     */
+  title: string;
+  /**
+     * @minLength 10
+     * @maxLength 2000
+     */
+  description: string;
+  /**
+     * @minLength 10
+     * @maxLength 2000
+     */
+  terms: string;
+  /**
+     * @minimum 1
+     * @maximum 1000000
+     */
+  points: number;
+  /**
+     * @minimum 0
+     * @maximum 1000000
+     */
+  stock: number;
+  /**
+     * @minLength 1
+     * @maxLength 128
+     */
+  supplierSku: string;
+  /**
+     * @minLength 10
+     * @maxLength 200
+     */
+  approvalReference: string;
+}
+
+export type V2RewardStatus = typeof V2RewardStatus[keyof typeof V2RewardStatus];
+
+
+export const V2RewardStatus = {
+  draft: 'draft',
+  approved: 'approved',
+  disabled: 'disabled',
+} as const;
+
+export interface V2Reward {
+  id: string;
+  supplierId: string;
+  supplierName: string;
+  title: string;
+  description: string;
+  terms: string;
+  points: number;
+  stock: number;
+  status: V2RewardStatus;
+}
+
+export interface V2RewardPage {
+  items: V2Reward[];
+  redeemEnabled: boolean;
+}
+
+export interface V2RewardDetail {
+  reward: V2Reward;
+  redeemEnabled: boolean;
+}
+
+export interface V2RedemptionInput {
+  idempotencyKey: string;
+}
+
+export type V2RewardReviewInputStatus = typeof V2RewardReviewInputStatus[keyof typeof V2RewardReviewInputStatus];
+
+
+export const V2RewardReviewInputStatus = {
+  approved: 'approved',
+  disabled: 'disabled',
+} as const;
+
+export interface V2RewardReviewInput {
+  status: V2RewardReviewInputStatus;
+  /**
+     * @minLength 10
+     * @maxLength 500
+     */
+  reason: string;
+}
+
+export type V2RewardOrderStatus = typeof V2RewardOrderStatus[keyof typeof V2RewardOrderStatus];
+
+
+export const V2RewardOrderStatus = {
+  reserved: 'reserved',
+  delivering: 'delivering',
+  uncertain: 'uncertain',
+  delivered: 'delivered',
+  refunded: 'refunded',
+} as const;
+
+export interface V2RewardOrder {
+  accountId?: string;
+  supplierId?: string;
+  supplierSku?: string;
+  id: string;
+  rewardId: string;
+  title: string;
+  points: number;
+  status: V2RewardOrderStatus;
+  transactionId: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface V2OrderPage {
+  items: V2RewardOrder[];
+}
+
+export type V2OrderActionInputAction = typeof V2OrderActionInputAction[keyof typeof V2OrderActionInputAction];
+
+
+export const V2OrderActionInputAction = {
+  dispatch: 'dispatch',
+  delivered: 'delivered',
+  uncertain: 'uncertain',
+  refund: 'refund',
+} as const;
+
+export interface V2OrderActionInput {
+  confirmedNotDelivered?: boolean;
+  action: V2OrderActionInputAction;
+  /**
+     * @minLength 10
+     * @maxLength 500
+     */
+  reason: string;
+  /**
+     * @minLength 10
+     * @maxLength 200
+     */
+  evidenceReference: string;
+  idempotencyKey: string;
+}
+
+export type V2RewardReconciliationIssuesItem = {
+  code: string;
+  reference: string;
+};
+
+export interface V2RewardReconciliation {
+  ok: boolean;
+  issues: V2RewardReconciliationIssuesItem[];
+}
+
 export interface V2OfferPartner {
   id: string;
   name: string;

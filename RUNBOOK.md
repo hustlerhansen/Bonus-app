@@ -2,6 +2,18 @@
 
 Status: draft, before commercial launch. Existing published product is a demo.
 
+## V2 reward delivery and recovery
+
+See `V2_REWARDS.md` for the state machine and operator prerequisites. The redemption gate stays closed pending separate security clearance, approved supplier agreements and commercial economics. There is no supplier/provider seed, automated payout or Stripe flow.
+
+1. Configure only an actually approved supplier, its agreement reference and an active stored V2 administrator integration actor. Review actual SKU, terms, inventory and point price before approving a draft. Never import demo economics.
+2. Use `/account/rewards/admin` to inspect the delivery queue. Record dispatch before making the supplier request; use the order UUID as the stable external reference. The app records the action but does not perform fulfillment.
+3. Unknown supplier outcome: mark `uncertain`, retain the debit/inventory allocation and investigate using order UUID. Do not resend or refund merely because a request timed out.
+4. Confirm `delivered` only against actual supplier evidence. Refund only after confirmed non-delivery and inventory release eligibility; record a technical evidence reference, explicit non-delivery confirmation and a reason. Do not put voucher codes, tokens or personal details in evidence references.
+5. Reuse the same UUID, actor, reason and evidence for a retry whose response was lost. A new key cannot produce a second dispatch/refund. Customer retries use the persisted recovery button or their own order history.
+6. The reward reconciliation tab is read-only. Investigate stock mismatch, order/ledger mismatch and orphan redemption against the ledger monitor and supplier records. Do not edit immutable points/events/history, force-reset inventory or use generic ledger compensation to resolve an order.
+7. Closing the activation gate stops new redemptions and dispatches, but already-started delivery confirmation/refund remains available to active administrators, including refunds to subsequently suspended recipients. Escalate suspected abuse through operator-controlled risk blocks.
+
 ## Environments and releases
 
 Tilbud/konverteringer har egen lukket port og signert callbackgrense. Se `V2_OFFERS.md` for protokoll, betrodd aktør, operatørkonfigurasjon og hendelsesstans. Ikke klarer tidligere sikkerhets-/innloggingsporter som en sideeffekt av å levere tilbudskode.

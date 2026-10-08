@@ -11,6 +11,8 @@ Unchecked means unverified or not implemented. A demo or passing typecheck is no
 - [ ] Outstanding phase-1 identity/email/production and real-administrator gates resolved
 
 ## Product
+Phase-4 development evidence is documented in `V2_REWARDS.md` and `CURRENT_STATE.md`: 13 isolated redemption/inventory/refund tests and the protected 390px user/admin journey pass behind closed shared gates. This does **not** clear real-supplier fulfillment, commercial launch or the separate security/login checks below.
+
 - [ ] Real signup, email verification, login and logout verified
 - [ ] Password reset and session handling verified
 - [ ] Offers and signed verified conversions work
