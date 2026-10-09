@@ -14,6 +14,14 @@ See `V2_REWARDS.md` for the state machine and operator prerequisites. The redemp
 6. The reward reconciliation tab is read-only. Investigate stock mismatch, order/ledger mismatch and orphan redemption against the ledger monitor and supplier records. Do not edit immutable points/events/history, force-reset inventory or use generic ledger compensation to resolve an order.
 7. Closing the activation gate stops new redemptions and dispatches, but already-started delivery confirmation/refund remains available to active administrators, including refunds to subsequently suspended recipients. Escalate suspected abuse through operator-controlled risk blocks.
 
+### Manual gift-card delivery (MVP)
+
+1. Approve or dispatch only from `/account/rewards/admin`. Orders at or above the high-value threshold (default 50 000 BP = 500 kr) are dispatched through the approval queue (`/account/admin`), which needs a cooldown of at least 60 minutes and a fresh MFA confirmation.
+2. Buy the gift card in the supplier portal using the order UUID as reference.
+3. Mark the order delivered and paste the code or HTTPS link. It is encrypted with `V2_VOUCHER_KEY` (AES-256-GCM) and shown only to the owner. Each reveal is audited as `VOUCHER_VIEWED`. Never paste codes into reasons, evidence fields, chat or e-mail.
+4. Key rotation: do not change `V2_VOUCHER_KEY` while delivered vouchers exist. Rotation needs a re-encryption job with a new `key_version` (not built yet). Losing the key makes stored codes unreadable; keep it in the platform secret store with backup.
+5. Redemption eligibility (account age, minimum verified earnings, daily limits) is part of the versioned economy rules and changes only through the approval queue.
+
 ## Environments and releases
 
 Tilbud/konverteringer har egen lukket port og signert callbackgrense. Se `V2_OFFERS.md` for protokoll, betrodd aktør, operatørkonfigurasjon og hendelsesstans. Ikke klarer tidligere sikkerhets-/innloggingsporter som en sideeffekt av å levere tilbudskode.

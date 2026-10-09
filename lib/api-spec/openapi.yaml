@@ -13,6 +13,24 @@ tags:
   - name: bonusplay
     description: BONUSPLAY demo account, game and rewards operations
 paths:
+  /v2/orders/{orderId}/voucher:
+    get:
+      operationId: getV2OrderVoucher
+      tags: [v2]
+      summary: Reveal the gift card code or link of the caller's own delivered order (logged)
+      parameters:
+        - name: orderId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Decrypted voucher for the owner
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/V2Voucher" }
+        default:
+          $ref: "#/components/responses/V2PointsError"
   /v2/engagement:
     get:
       operationId: getV2Engagement
@@ -1324,6 +1342,22 @@ components:
         reason: { type: string, minLength: 10, maxLength: 500 }
         evidenceReference: { type: string, minLength: 10, maxLength: 200 }
         idempotencyKey: { type: string, format: uuid }
+        voucher: { $ref: "#/components/schemas/V2VoucherInput" }
+    V2VoucherInput:
+      type: object
+      additionalProperties: false
+      required: [kind, value]
+      properties:
+        kind: { type: string, enum: [code, link] }
+        value: { type: string, minLength: 4, maxLength: 2000 }
+    V2Voucher:
+      type: object
+      required: [orderId, kind, value, deliveredAt]
+      properties:
+        orderId: { type: string }
+        kind: { type: string, enum: [code, link] }
+        value: { type: string }
+        deliveredAt: { type: string }
     V2RewardReconciliation:
       type: object
       required: [ok, issues]

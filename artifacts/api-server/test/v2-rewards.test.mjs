@@ -3,7 +3,8 @@ import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import { readFile, mkdir } from "node:fs/promises";
 import { build } from "esbuild";
-import { applyV2Migrations, createTestBudget } from "./fixtures.mjs";
+import { applyV2Migrations, createTestBudget, setTestEconomy } from "./fixtures.mjs";
+import { randomBytes } from "node:crypto";
 
 const out = new URL("../.cache/v2-rewards-test.mjs", import.meta.url);
 await mkdir(new URL("../.cache/", import.meta.url), { recursive: true });
@@ -16,7 +17,7 @@ await build({
 const { pool, createRewardService, createPointsLedger, createPointsReconciler } = await import(out.href);
 const schema = `rewards_test_${randomUUID().replaceAll("-", "")}`;
 const isolated = new pool.constructor({ ...pool.options, options: `-c search_path=${schema}`, max: 12 });
-const service = createRewardService(isolated), ledger = createPointsLedger(isolated);
+const service = createRewardService(isolated, { voucherKey: randomBytes(32) }), ledger = createPointsLedger(isolated);
 const reason = "Isolert test av kontrollert premieinnløsning";
 const denied = status => e => e.status === status;
 let admin, budget;
@@ -32,7 +33,8 @@ const input = (stock = 3) => ({ supplierId: "test-supplier", title: "Isolert syn
   approvalReference: "Kun isolert godkjenningsfixture" });
 const request = () => ({ idempotencyKey: randomUUID() });
 const action = (a, key = randomUUID()) => ({ action: a, reason, evidenceReference: "Isolert bekreftet leveringsutfall",
-  idempotencyKey: key, ...(a === "refund" ? { confirmedNotDelivered: true } : {}) });
+  idempotencyKey: key, ...(a === "refund" ? { confirmedNotDelivered: true } : {}),
+  ...(a === "delivered" ? { voucher: { kind: "code", value: "ISOLATED-TEST-CODE" } } : {}) });
 async function fixture(stock = 3, balance = 10000) {
   const user = await account(), reward = await service.create(admin, input(stock));
   await service.review(admin, reward.id, { status: "approved", reason });
@@ -44,6 +46,8 @@ before(async () => {
   await applyV2Migrations(isolated);
   admin = await account("ADMIN");
   budget = await createTestBudget(isolated, admin);
+  // Existing suite covers inventory/ledger mechanics; eligibility rules are tested in v2-fulfillment.
+  await setTestEconomy(isolated, { min_account_age_days: 0, min_verified_points_before_redeem: 0, max_redemptions_per_day: 100, max_redeem_points_per_day: 1000000 });
   await isolated.query(`INSERT INTO v2_reward_suppliers(id,name,agreement_reference,integration_actor_id,active)
     VALUES('test-supplier','Kun isolert syntetisk leverandør','Isolert avtaledokument',$1,true)`, [admin]);
 });

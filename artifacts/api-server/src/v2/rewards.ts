@@ -7,6 +7,7 @@ import {
 } from "@workspace/api-zod";
 import { createPointsLedger, PointsError } from "./points";
 import { currentEconomy } from "./economy";
+import { decryptVoucher, encryptVoucher, fulfillmentProvider, validateVoucher, voucherKeyFromEnv } from "./fulfillment";
 
 type Database = Pick<typeof pool, "query" | "connect">;
 const rewardProjection = `r.id,r.supplier_id AS "supplierId",s.name AS "supplierName",
@@ -22,7 +23,8 @@ function dates(row: Record<string, unknown>) {
   return { ...row, createdAt: (row.createdAt as Date).toISOString(), updatedAt: (row.updatedAt as Date).toISOString() };
 }
 
-export function createRewardService(database: Database = pool) {
+export function createRewardService(database: Database = pool, opts: { voucherKey?: Buffer } = {}) {
+  const voucherKey = () => opts.voucherKey ?? voucherKeyFromEnv();
   const ledger = createPointsLedger(database);
   // Caller-owned transaction (approved request queue): same commercial lock, caller commits.
   async function within<T>(existing: PoolClient | undefined, run: (c: PoolClient) => Promise<T>) {
@@ -160,6 +162,22 @@ export function createRewardService(database: Database = pool) {
         throw new PointsError(409, "Premien eller leverandøren er ikke aktiv.");
       }
       if (r.stock_available < 1) throw new PointsError(409, "Premien er utsolgt.");
+      // Redemption eligibility (owner-approved fraud controls), all from the active economy rules.
+      const rules = await currentEconomy(c);
+      const owner = (await c.query(`SELECT created_at<=now()-make_interval(days=>$2) AS old_enough FROM v2_accounts WHERE id=$1`,
+        [actorId, rules.minAccountAgeDays])).rows[0];
+      if (!owner?.old_enough) throw new PointsError(409, `Kontoen må være minst ${rules.minAccountAgeDays} dager gammel før første innløsning.`);
+      const verified = Number((await c.query(`SELECT COALESCE(sum(t.amount),0)::bigint AS n FROM v2_points_transactions t
+        JOIN LATERAL (SELECT status FROM v2_points_events WHERE transaction_id=t.id ORDER BY sequence DESC LIMIT 1) s ON true
+        WHERE t.account_id=$1 AND t.type='EARN' AND t.funding_kind='conversion' AND s.status='approved'`, [actorId])).rows[0].n);
+      if (verified < rules.minVerifiedPointsBeforeRedeem) {
+        throw new PointsError(409, `Du må ha minst ${rules.minVerifiedPointsBeforeRedeem.toLocaleString("nb-NO")} poeng fra verifiserte tilbud før du kan løse inn.`);
+      }
+      const today = (await c.query(`SELECT count(*)::int AS n,COALESCE(sum(points),0)::bigint AS p FROM v2_reward_orders
+        WHERE account_id=$1 AND status<>'refunded' AND created_at>now()-interval '24 hours'`, [actorId])).rows[0];
+      if (today.n >= rules.maxRedemptionsPerDay || Number(today.p) + r.points > rules.maxRedeemPointsPerDay) {
+        throw new PointsError(409, "Du har nådd grensen for innløsninger det siste døgnet. Prøv igjen senere.");
+      }
       const orderId = randomUUID();
       const result = await ledger.execute({ kind: "record", actorId: r.integration_actor_id, accountId: actorId,
         type: "REDEEM", amount: -r.points, status: "pending", source: `reward:${r.supplier_id}`, reference: orderId,
@@ -214,6 +232,9 @@ export function createRewardService(database: Database = pool) {
         // Settlement starts exactly once; supplier receives order UUID as delivery reference outside this API.
         await ledger.execute({ kind: "decide", actorId, transactionId: o.transaction_id, status: "approved",
           reason, idempotencyKey: `reward-dispatch:${id}` }, c);
+        const mode = (await c.query(`SELECT s.fulfillment_mode FROM v2_rewards r JOIN v2_reward_suppliers s ON s.id=r.supplier_id
+          WHERE r.id=$1`, [o.reward_id])).rows[0].fulfillment_mode as string;
+        await fulfillmentProvider(mode).afterDispatch(id);
         status = "delivering";
       } else if (input.action === "refund") {
         if (!["reserved", "delivering", "uncertain"].includes(o.status)) throw new PointsError(409, "Bestillingen kan ikke refunderes.");
@@ -228,6 +249,11 @@ export function createRewardService(database: Database = pool) {
         status = "uncertain";
       } else {
         if (!["delivering", "uncertain"].includes(o.status)) throw new PointsError(409, "Levering må være påbegynt før den bekreftes.");
+        // The voucher from the supplier is stored encrypted and only shown to the order owner.
+        const voucher = validateVoucher(input.voucher);
+        const sealed = encryptVoucher(voucherKey(), id, voucher);
+        await c.query(`INSERT INTO v2_reward_deliveries(order_id,kind,ciphertext,iv,tag,key_version,entered_by)
+          VALUES($1,$2,$3,$4,$5,$6,$7)`, [id, voucher.kind, sealed.ciphertext, sealed.iv, sealed.tag, sealed.keyVersion, actorId]);
         status = "delivered";
       }
       await c.query("UPDATE v2_reward_orders SET status=$2,refund_transaction_id=$3,updated_at=now() WHERE id=$1", [id, status, refundId]);
@@ -262,6 +288,19 @@ export function createRewardService(database: Database = pool) {
       return ReconcileV2RewardsResponse.parse({ ok: issues.length === 0, issues });
     }, true);
   }
-  return { list, detail, suppliers, create, review, redeem, orders, action, reconcile };
+  async function voucher(actorId: string, orderId: string) {
+    return atomic(async c => {
+      const actor = await account(c, actorId, false, undefined, false);
+      const row = (await c.query(`SELECT o.account_id,o.status,d.kind,d.ciphertext,d.iv,d.tag,d.created_at FROM v2_reward_orders o
+        LEFT JOIN v2_reward_deliveries d ON d.order_id=o.id WHERE o.id=$1`, [orderId])).rows[0];
+      // Same answer for missing and foreign orders: no enumeration of other users' orders.
+      if (!row || row.account_id !== actorId) throw new PointsError(404, "Bestillingen finnes ikke.");
+      if (row.status !== "delivered" || !row.ciphertext) throw new PointsError(409, "Gavekortet er ikke levert ennå.");
+      const value = decryptVoucher(voucherKey(), orderId, row);
+      await audit(c, actor, "VOUCHER_VIEWED", orderId, { kind: row.kind });
+      return { orderId, kind: row.kind, value, deliveredAt: (row.created_at as Date).toISOString() };
+    });
+  }
+  return { list, detail, suppliers, create, review, redeem, orders, action, reconcile, voucher };
 }
 export const rewardService = createRewardService();

@@ -7,8 +7,8 @@ import {
   getGetV2RewardQueryKey, getGetV2WalletQueryKey, getListV2AdminOrdersQueryKey, getListV2AdminRewardsQueryKey, getListV2OrdersQueryKey,
   getListV2RewardsQueryKey, getReconcileV2RewardsQueryKey, getListV2RewardSuppliersQueryKey,
   useActionV2Order, useCreateV2Reward, useGetV2Reward, useGetV2Wallet, useListV2AdminOrders, useListV2AdminRewards, useListV2Orders,
-  useListV2RewardSuppliers, useListV2Rewards, useReconcileV2Rewards, useRedeemV2Reward, useReviewV2Reward,
-  type V2Reward, type V2RewardOrder,
+  useListV2RewardSuppliers, useListV2Rewards, useReconcileV2Rewards, useRedeemV2Reward, useReviewV2Reward, useGetV2OrderVoucher, getGetV2OrderVoucherQueryKey,
+  type V2Reward, type V2RewardOrder, type V2VoucherInput,
 } from '@workspace/api-client-react';
 import { Btn, Card, Empty, ErrorState, PageHead, Skel } from '@/components/bp';
 import { errMsg } from '@/hooks/use-bp';
@@ -122,7 +122,29 @@ function OrderRow({ o }: { o: V2RewardOrder }) {
       </div>
       <div className="mt-1 break-all text-[11px] text-muted-foreground">Transaksjon {o.transactionId} · oppdatert {fmtDate(o.updatedAt)}</div>
       {o.status === 'uncertain' && <p className="mt-1 text-xs text-amber-200">Leveringsstatus er uavklart. Operatøren avklarer og leverer eller refunderer poengene.</p>}
+      {o.status === 'delivered' && <VoucherReveal orderId={o.id} />}
     </li>
+  );
+}
+
+/** Fetches the decrypted gift card only on explicit request; every reveal is logged on the server. */
+function VoucherReveal({ orderId }: { orderId: string }) {
+  const [shown, setShown] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const q = useGetV2OrderVoucher(orderId, { query: { enabled: shown, queryKey: getGetV2OrderVoucherQueryKey(orderId), staleTime: 0, gcTime: 0 } });
+  if (!shown) return <Btn size="sm" variant="gold" className="mt-2" onClick={() => setShown(true)} data-testid={`button-voucher-${orderId}`}>Vis gavekort</Btn>;
+  if (q.isLoading) return <Skel className="mt-2 h-12" />;
+  if (q.isError || !q.data) return <p className="mt-2 text-xs text-red-300">{errMsg(q.error)}</p>;
+  const v = q.data;
+  const copy = async () => { try { await navigator.clipboard.writeText(v.value); setCopied(true); setTimeout(() => setCopied(false), 1500); } catch { setCopied(false); } };
+  return (
+    <div className="mt-2 rounded-xl border border-amber-300/25 bg-amber-400/10 p-3 text-sm" data-testid={`panel-voucher-${orderId}`}>
+      <div className="text-xs text-muted-foreground">{v.kind === 'code' ? 'Gavekortkode' : 'Gavekortlenke'}</div>
+      {v.kind === 'code' ? <div className="select-all break-all font-mono text-lg font-bold tracking-wider">{v.value}</div>
+        : <a href={v.value} target="_blank" rel="noopener noreferrer" className="break-all font-bold text-primary underline">Åpne gavekortet</a>}
+      <div className="mt-2 flex gap-2"><Btn size="sm" variant="ghost" onClick={copy}>{copied ? 'Kopiert' : 'Kopier'}</Btn><Btn size="sm" variant="ghost" onClick={() => setShown(false)}>Skjul</Btn></div>
+      <p className="mt-1 text-[11px] text-muted-foreground">Del ikke koden med andre. Gavekortet følger leverandørens vilkår og gyldighet.</p>
+    </div>
   );
 }
 
@@ -295,6 +317,21 @@ function CreateForm({ onDone }: { onDone: () => void }) {
   );
 }
 
+function DeliverBox({ o, pending, onSubmit }: { o: V2RewardOrder; pending: boolean; onSubmit: (reason: string, evidence: string, voucher: V2VoucherInput) => void }) {
+  const [r, setR] = useState(''), [ev, setEv] = useState(''), [kind, setKind] = useState<'code' | 'link'>('code'), [value, setValue] = useState('');
+  const ok = r.trim().length >= 10 && ev.trim().length >= 10 && value.trim().length >= 4 && (kind === 'code' || value.trim().startsWith('https://'));
+  return (
+    <form className="mt-2 space-y-2" onSubmit={(e: FormEvent) => { e.preventDefault(); if (ok) onSubmit(r.trim(), ev.trim(), { kind, value: value.trim() }); }}>
+      <p className="text-xs text-muted-foreground">Kjøp gavekortet i leverandørens portal med ordre-ID <span className="select-all font-mono">{o.id}</span> som referanse. Lim inn koden eller lenken. Den lagres kryptert og vises bare for brukeren.</p>
+      <div className="flex gap-2 text-xs">{(['code', 'link'] as const).map(k => <label key={k} className="flex items-center gap-1"><input type="radio" checked={kind === k} onChange={() => setKind(k)} />{k === 'code' ? 'Kode' : 'Lenke (HTTPS)'}</label>)}</div>
+      <input className={cn(inputCls, 'mt-0 font-mono')} aria-label="Gavekortkode eller lenke" autoComplete="off" placeholder={kind === 'code' ? 'Gavekortkode' : 'https://...'} value={value} maxLength={2000} onChange={e => setValue(e.target.value)} data-testid={`input-voucher-${o.id}`} />
+      <input className={cn(inputCls, 'mt-0')} aria-label="Begrunnelse" placeholder="Begrunnelse, minst 10 tegn" value={r} maxLength={500} onChange={e => setR(e.target.value)} />
+      <input className={cn(inputCls, 'mt-0')} aria-label="Leverandørens ordrereferanse" placeholder="Leverandørens ordrereferanse, minst 10 tegn" value={ev} maxLength={200} onChange={e => setEv(e.target.value)} />
+      <Btn type="submit" size="sm" variant="gold" loading={pending} disabled={!ok || pending} data-testid={`button-deliver-${o.id}`}>Bekreft levert</Btn>
+    </form>
+  );
+}
+
 function ReasonBox({ onSubmit, label, pending, danger, testid, children }: { onSubmit: (r: string, ev: string) => void; label: string; pending: boolean; danger?: boolean; testid: string; children?: ReactNode }) {
   const [r, setR] = useState('');
   const [ev, setEv] = useState('');
@@ -352,13 +389,13 @@ function AdminOrders() {
   const [msg, setMsg] = useState<string | null>(null);
   const keys = useRef<Record<string, string>>({});
   const gate = rw.data?.redeemEnabled === true;
-  const run = (o: V2RewardOrder, action: 'dispatch' | 'delivered' | 'uncertain' | 'refund') => (reason: string, evidenceReference: string) => {
+  const run = (o: V2RewardOrder, action: 'dispatch' | 'delivered' | 'uncertain' | 'refund', voucher?: V2VoucherInput) => (reason: string, evidenceReference: string) => {
     setMsg(null);
     const kk = `bp.v2.order.${actorId}.${o.id}.${action}`;
     const idempotencyKey = keys.current[kk] ?? (keys.current[kk] = sessionStorage.getItem(kk) ?? crypto.randomUUID());
     sessionStorage.setItem(kk, idempotencyKey);
     act.mutate({ orderId: o.id, data: { action, reason, evidenceReference, idempotencyKey,
-      ...(action === 'refund' ? { confirmedNotDelivered: true } : {}) } }, {
+      ...(action === 'refund' ? { confirmedNotDelivered: true } : {}), ...(voucher ? { voucher } : {}) } }, {
       onSuccess: () => { delete keys.current[kk]; sessionStorage.removeItem(kk); void refresh(o.rewardId); setMsg('Handlingen er registrert.'); },
       onError: x => {
         // High-value dispatch must go through the approval queue.
@@ -387,6 +424,7 @@ function AdminOrders() {
               return (
                 <details key={a.action} className="mt-2 text-sm"><summary className="cursor-pointer text-primary">{a.label}</summary>
                   {blocked ? <p className="mt-2 text-xs text-amber-200">Utsending er låst fordi innløsning er stengt.</p>
+                    : a.action === 'delivered' ? <DeliverBox o={o} pending={act.isPending} onSubmit={(reason, ev, voucher) => run(o, 'delivered', voucher)(reason, ev)} />
                     : <ReasonBox testid={`ord-${a.action}-${o.id}`} label={a.label} danger={a.action === 'refund'} pending={act.isPending} onSubmit={run(o, a.action)}>{a.action === 'refund' ? 'Jeg bekrefter at premien ikke er levert til brukeren.' : undefined}</ReasonBox>}
                 </details>
               );

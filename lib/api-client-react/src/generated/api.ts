@@ -86,6 +86,7 @@ import type {
   V2RewardReviewInput,
   V2RewardSupplier,
   V2TransactionPage,
+  V2Voucher,
   V2Wallet
 } from './api.schemas';
 
@@ -115,6 +116,83 @@ const withQueryKey = <T extends object, K>(query: T, queryKey: K): T & { queryKe
   }
   return result;
 };
+
+export const getGetV2OrderVoucherUrl = (orderId: string,) => {
+
+
+
+
+  return `/api/v2/orders/${orderId}/voucher`
+}
+
+/**
+ * @summary Reveal the gift card code or link of the caller's own delivered order (logged)
+ */
+export const getV2OrderVoucher = async (orderId: string, options?: Parameters<typeof customFetch>[1]): Promise<V2Voucher> => {
+
+  return customFetch<V2Voucher>(getGetV2OrderVoucherUrl(orderId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetV2OrderVoucherQueryKey = (orderId: string,) => {
+    return [
+    `/api/v2/orders/${orderId}/voucher`
+    ] as const;
+    }
+
+
+export const getGetV2OrderVoucherQueryOptions = <TData = Awaited<ReturnType<typeof getV2OrderVoucher>>, TError = ErrorType<V2PointsErrorResponse>>(orderId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getV2OrderVoucher>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetV2OrderVoucherQueryKey(orderId);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getV2OrderVoucher>>> = ({ signal }) => getV2OrderVoucher(orderId, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: orderId !== null && orderId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getV2OrderVoucher>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetV2OrderVoucherQueryResult = NonNullable<Awaited<ReturnType<typeof getV2OrderVoucher>>>
+export type GetV2OrderVoucherQueryError = ErrorType<V2PointsErrorResponse>
+
+
+/**
+ * @summary Reveal the gift card code or link of the caller's own delivered order (logged)
+ */
+
+export function useGetV2OrderVoucher<TData = Awaited<ReturnType<typeof getV2OrderVoucher>>, TError = ErrorType<V2PointsErrorResponse>>(
+ orderId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getV2OrderVoucher>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetV2OrderVoucherQueryOptions(orderId,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
 
 export const getGetV2EngagementUrl = () => {
 

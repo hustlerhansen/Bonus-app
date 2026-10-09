@@ -6,6 +6,7 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { V2OrderActionInputAction } from './v2OrderActionInputAction';
+import type { V2VoucherInput } from './v2VoucherInput';
 
 export interface V2OrderActionInput {
   confirmedNotDelivered?: boolean;
@@ -21,4 +22,5 @@ export interface V2OrderActionInput {
      */
   evidenceReference: string;
   idempotencyKey: string;
+  voucher?: V2VoucherInput;
 }

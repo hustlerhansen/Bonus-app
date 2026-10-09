@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { GetV2RewardParams, RedeemV2RewardParams, ReviewV2RewardParams, ActionV2OrderParams } from "@workspace/api-zod";
+import { GetV2OrderVoucherParams, GetV2RewardParams, RedeemV2RewardParams, ReviewV2RewardParams, ActionV2OrderParams } from "@workspace/api-zod";
 import { requireAccount, requireAdmin } from "../v2/accounts";
 import { rewardService } from "../v2/rewards";
 import { PointsError } from "../v2/points";
@@ -17,6 +17,11 @@ router.get("/rewards/:rewardId", async (req, res) => {
 });
 router.post("/rewards/:rewardId/redeem", async (req, res) => {
   res.json(await rewardService.redeem((await requireAccount(req)).userId, params(RedeemV2RewardParams, req.params).rewardId, req.body));
+});
+router.get("/orders/:orderId/voucher", async (req, res) => {
+  const { userId } = await requireAccount(req);
+  const { orderId } = params(GetV2OrderVoucherParams, req.params);
+  res.json(await rewardService.voucher(userId, orderId));
 });
 router.get("/orders", async (req, res) => {
   res.json(await rewardService.orders((await requireAccount(req)).userId));

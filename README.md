@@ -63,6 +63,8 @@ The explicit admin-demo login is on the onboarding/login screen and the protecte
 | `DATABASE_URL` | Managed PostgreSQL connection; server only |
 | `SESSION_SECRET` | Secret used to sign HttpOnly demo sessions; never exposed to clients |
 | `DEMO_MODE=true` | Required to enable the demo API |
+| `V2_VOUCHER_KEY` | 32-byte base64 key (`openssl rand -base64 32`) for encrypting gift-card codes at rest; secret, never logged. Without it gift cards cannot be marked delivered |
+| `V2_ADMIN_MFA=off` | Development only: disables the administrator MFA requirement. Ignored when `NODE_ENV=production` |
 | `PORT`, `BASE_PATH` | Injected by managed artifact workflows |
 
 Never commit secrets. Real provider keys are not required. Setting `DEMO_MODE=false` disables demo operations; it does not enable real providers.

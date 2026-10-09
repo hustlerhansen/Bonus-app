@@ -9,6 +9,21 @@ import * as zod from 'zod';
 
 
 /**
+ * @summary Reveal the gift card code or link of the caller's own delivered order (logged)
+ */
+export const GetV2OrderVoucherParams = zod.object({
+  "orderId": zod.coerce.string().uuid()
+})
+
+export const GetV2OrderVoucherResponse = zod.object({
+  "orderId": zod.string(),
+  "kind": zod.enum(['code', 'link']),
+  "value": zod.string(),
+  "deliveredAt": zod.string()
+})
+
+
+/**
  * @summary XP, level, streak and badges (non-monetary, separate from BonusPoints)
  */
 export const GetV2EngagementResponse = zod.object({
@@ -529,6 +544,9 @@ export const actionV2OrderBodyReasonMax = 500;
 export const actionV2OrderBodyEvidenceReferenceMin = 10;
 export const actionV2OrderBodyEvidenceReferenceMax = 200;
 
+export const actionV2OrderBodyVoucherValueMin = 4;
+export const actionV2OrderBodyVoucherValueMax = 2000;
+
 
 
 export const ActionV2OrderBody = zod.object({
@@ -536,7 +554,11 @@ export const ActionV2OrderBody = zod.object({
   "action": zod.enum(['dispatch', 'delivered', 'uncertain', 'refund']),
   "reason": zod.string().min(actionV2OrderBodyReasonMin).max(actionV2OrderBodyReasonMax),
   "evidenceReference": zod.string().min(actionV2OrderBodyEvidenceReferenceMin).max(actionV2OrderBodyEvidenceReferenceMax),
-  "idempotencyKey": zod.string().uuid()
+  "idempotencyKey": zod.string().uuid(),
+  "voucher": zod.object({
+  "kind": zod.enum(['code', 'link']),
+  "value": zod.string().min(actionV2OrderBodyVoucherValueMin).max(actionV2OrderBodyVoucherValueMax)
+}).optional()
 })
 
 export const ActionV2OrderResponse = zod.object({

@@ -343,6 +343,23 @@ export const V2OrderActionInputAction = {
   refund: 'refund',
 } as const;
 
+export type V2VoucherInputKind = typeof V2VoucherInputKind[keyof typeof V2VoucherInputKind];
+
+
+export const V2VoucherInputKind = {
+  code: 'code',
+  link: 'link',
+} as const;
+
+export interface V2VoucherInput {
+  kind: V2VoucherInputKind;
+  /**
+     * @minLength 4
+     * @maxLength 2000
+     */
+  value: string;
+}
+
 export interface V2OrderActionInput {
   confirmedNotDelivered?: boolean;
   action: V2OrderActionInputAction;
@@ -357,6 +374,22 @@ export interface V2OrderActionInput {
      */
   evidenceReference: string;
   idempotencyKey: string;
+  voucher?: V2VoucherInput;
+}
+
+export type V2VoucherKind = typeof V2VoucherKind[keyof typeof V2VoucherKind];
+
+
+export const V2VoucherKind = {
+  code: 'code',
+  link: 'link',
+} as const;
+
+export interface V2Voucher {
+  orderId: string;
+  kind: V2VoucherKind;
+  value: string;
+  deliveredAt: string;
 }
 
 export type V2RewardReconciliationIssuesItem = {
