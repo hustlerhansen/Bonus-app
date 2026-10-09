@@ -183,7 +183,7 @@ Tegnforklaring: ✅ fungerer · 🟡 uferdig / delvis · ❌ mangler
 | S5 | Middels | `drizzle-kit push`/`push-force` ligger ved siden av SQL-migrasjonene. Drizzle-skjemaet avviker fra SQL (navn på indekser og constraints, CHECK-regler, triggere). En «push» kan derfor endre eller fjerne V2-vern. Det finnes heller ingen prosedyre for produksjonsmigrering (`migrate.mjs` godtar bare `--development`). | `lib/db/package.json`, `lib/db/src/schema/v2-*.ts` |
 | S6 | Middels | Rate limiting lagres i minnet per prosess, både med `express-rate-limit` og et eget `Map` i demoen. Grensen gjelder derfor ikke på tvers av replikaer. | `routes/v2.ts`, `routes/bonusplay.ts:21` |
 | S7 | Middels | Global `cors()` med jokertegn. V2 fjerner hodene, og demoen er bare beskyttet av `sec-fetch-site`. | `app.ts:38` |
-| S8 | Middels | Avhengighet med kjent sårbarhet (high): `braces` via `http-proxy-middleware`. `SECURITY_AUDIT.md` er nevnt i planen, men **finnes ikke i repoet**. | `pnpm audit` |
+| S8 | Middels | Avhengighet med kjent sårbarhet (high): `braces` via `http-proxy-middleware`. `SECURITY_AUDIT.md` (2026-10-07) lister flere åpne avhengighetsfunn. | `pnpm audit` |
 | S9 | Middels | En bruker kan starte samme tilbud ubegrenset mange ganger, og hvert klikk kan gi én konvertering. Hvis en partner rapporterer feil, kan brukeren få dobbel opptjening på «kun nye kunder»-tilbud. | `v2/offers.ts:151` |
 | S10 | Middels | Ingen automatisk svindeldeteksjon i V2. Risikosperrer settes bare manuelt via SQL, og det finnes ingen hastighetsgrenser for innløsning. | `v2/rewards.ts` |
 | S11 | Lav (demo) | Spill- og aktivitetsbelønninger kan hentes med et direkte API-kall uten bevis (dette er dokumentert). Verving kan hentes daglig uten venner. | `bonusplay/service.ts:153` |
@@ -248,7 +248,7 @@ Konsekvenser:
 - **Lister uten paginering** i admin (ordre, premier). Tilbud og konverteringer er kuttet ved 100.
 - **Drift:** Ingen ekstern varsling, ingen «dead-man»-alarm, ingen feilsporing og ingen verifisert backup- og gjenopprettingsøvelse (dokumentert som åpne punkter i `LAUNCH_CHECKLIST.md`).
 - **Avhengighet til Replit:** `.replit`, `@replit/connectors-sdk`, Replit-spesifikke Vite-plugins og en gateway som forutsetter samme opprinnelse for `/` og `/api`. Når prosjektet flyttes fra Replit trengs en reverse proxy og en ny driftsplattform.
-- **Dokumentasjon:** Dokumentasjonen er grundig og ærlig (`CURRENT_STATE.md`, `V2_*.md`, `RUNBOOK.md`), men `SECURITY_AUDIT.md` mangler.
+- **Dokumentasjon:** Dokumentasjonen er grundig og ærlig (`CURRENT_STATE.md`, `V2_*.md`, `RUNBOOK.md`, `SECURITY_AUDIT.md`).
 
 ---
 
@@ -265,7 +265,7 @@ Innsats: S = liten (≤ 2 dager), M = middels (≤ 1 uke), L = stor (> 1 uke).
 | 3 | **Økonomifelt og marginregel:** CPA per tilbud, pålydende og innkjøpspris per premie, regnskapsverdi per BP, marginkontroll ved godkjenning og rapport over poenggjeld. Gjøres med additive migrasjoner. | M |
 | 4 | **CI** (GitHub Actions med en PostgreSQL-tjeneste): typecheck og alle V2-tester på hver push og PR. | S |
 | 5 | **Trygg migrasjonsprosess:** fjern eller sperr `drizzle push` for V2-tabeller, og lag en gjennomgått prosedyre for produksjonsmigrering. | S–M |
-| 6 | **Sårbarheter:** oppgrader eller overstyr `braces`/`http-proxy-middleware`, og opprett `SECURITY_AUDIT.md` på nytt. | S |
+| 6 | **Sårbarheter:** oppgrader eller overstyr `braces`/`http-proxy-middleware`, og oppdater `SECURITY_AUDIT.md`. | S |
 | 7 | **Fullfør fase-1-portene:** produksjonsoppsett av Clerk, verifisert levering av e-post for verifisering og tilbakestilling, og Clerk-webhooks for sletting, utestengning og e-postendring. | M |
 
 ### P1 — minimumsprodukt for kommersiell lansering med gavekort
@@ -315,3 +315,6 @@ Innsats: S = liten (≤ 2 dager), M = middels (≤ 1 uke), L = stor (> 1 uke).
 ---
 
 *Dette dokumentet er en analyse. Ingen eksisterende kode, migrasjoner, data eller konfigurasjon er endret.*
+
+
+> **Rettelse 2026-10-09:** Analysen sa først at `SECURITY_AUDIT.md` manglet. Det var feil: filen fantes (fundamentgjennomgang 2026-10-07). Den er nå utvidet, og originalinnholdet er beholdt.

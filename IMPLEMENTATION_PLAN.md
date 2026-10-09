@@ -29,7 +29,7 @@ Målet er en komplett, sikker og lønnsom MVP som kan lanseres raskt. Eksisteren
 | A4 | MFA for administratorer | Alle `/v2/admin/*` krever aktiv andrefaktor (Clerk). Bekreftelse av høyrisiko krever ny MFA (≤ 10 min). Policytester. |
 | A5 | Logg over administrativ tilgang | Hvert kall til `/v2/admin/*`, også lesing, gir en audit-rad med aktør, metode, rute og status |
 | A6 | Godkjenningskø for høyrisiko | Justeringer, generiske beslutninger og kompensasjoner, godkjenning av tilbud og premier, økonomikonfigurasjon, markedsbudsjett og utsending av dyre ordre går via kø. Kan ikke utføres før ventetiden er ute. Utføres maks én gang. Innholdet kan ikke endres. Kansellering er mulig. Med `dual_control` må en annen administrator bekrefte. Tester for alt dette. |
-| A7 | `SECURITY_AUDIT.md` | Avhengighetsfunn vurdert og dokumentert |
+| A7 | Oppdatere `SECURITY_AUDIT.md` | Nye tiltak og avhengighetsfunn dokumentert. Originalinnholdet beholdes. |
 
 ## Fase B — Bærekraftig poengøkonomi
 
