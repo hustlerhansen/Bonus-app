@@ -7,12 +7,16 @@ export class PointsError extends Error {
 }
 
 type PointsType = "EARN" | "REDEEM" | "REFERRAL" | "BONUS" | "ADJUSTMENT" | "REFUND" | "REVERSAL" | "EXPIRATION";
+export type Funding = { kind: "conversion" | "budget"; reference: string };
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 type CommandBase = { actorId: string; idempotencyKey: string; reason: string };
 export type PointsCommand = CommandBase & (
   | { kind: "adjust"; accountId: string; amount: number; fundingBudgetId?: string }
   // Trusted server integration seam only; deliberately has no public HTTP route.
   | { kind: "record"; accountId: string; type: Exclude<PointsType, "REFUND" | "REVERSAL" | "ADJUSTMENT">;
-      amount: number; status: "pending" | "approved"; source: string; reference: string; description: string }
+      amount: number; status: "pending" | "approved"; source: string; reference: string; description: string;
+      // Required for credits (EARN/REFERRAL/BONUS): verified partner revenue or an approved marketing budget.
+      funding?: Funding }
   | { kind: "decide"; transactionId: string; status: "approved" | "rejected" }
   | { kind: "compensate"; transactionId: string; type: "REFUND" | "REVERSAL" }
 );
@@ -97,6 +101,27 @@ export function createPointsLedger(database: Database = pool) {
         !["pending", "approved"].includes(cmd.status) || (credit ? cmd.amount < 0 : cmd.amount > 0) ||
         !cmd.source.trim() || cmd.source.length > 128 || !cmd.reference.trim() || cmd.reference.length > 128 ||
         !cmd.description.trim() || cmd.description.length > 500) throw new PointsError(400, "Ugyldig servertransaksjon.");
+    }
+    // No point with monetary value without documented funding.
+    let funding: Funding | null = null;
+    if (cmd.kind === "record") {
+      const credit = ["EARN", "REFERRAL", "BONUS"].includes(cmd.type);
+      if (credit) {
+        const f = cmd.funding;
+        if (!f || !["conversion", "budget"].includes(f.kind) || typeof f.reference !== "string" || !UUID.test(f.reference) ||
+          (f.kind === "conversion" && !cmd.source.startsWith("offer:"))) {
+          throw new PointsError(400, "Opptjening krever dokumentert finansiering (verifisert konvertering eller godkjent markedsbudsjett).");
+        }
+        funding = { kind: f.kind, reference: f.reference.toLowerCase() };
+      } else if (cmd.funding) throw new PointsError(400, "Trekk har ingen finansieringskilde.");
+    }
+    if (cmd.kind === "adjust") {
+      if (cmd.amount > 0) {
+        if (typeof cmd.fundingBudgetId !== "string" || !UUID.test(cmd.fundingBudgetId)) {
+          throw new PointsError(400, "Positive justeringer må finansieres av et godkjent markedsbudsjett.");
+        }
+        funding = { kind: "budget", reference: cmd.fundingBudgetId.toLowerCase() };
+      } else if (cmd.fundingBudgetId !== undefined) throw new PointsError(400, "Negative justeringer har ingen finansieringskilde.");
     }
     if (cmd.kind === "decide" && !["approved", "rejected"].includes(cmd.status)) throw new PointsError(400, "Ugyldig beslutning.");
     if (cmd.kind === "compensate" && !["REFUND", "REVERSAL"].includes(cmd.type)) throw new PointsError(400, "Ugyldig tilbakeføring.");
@@ -189,14 +214,25 @@ export function createPointsLedger(database: Database = pool) {
         } else {
           ({ type, amount, status, source, reference, description } = cmd);
         }
+        if (funding?.kind === "budget") {
+          // Same rule as the database trigger, checked here for a clear message. The trigger locks the budget.
+          const b = (await client.query(`SELECT points_total,valid_until>now() AS valid,(SELECT COALESCE(sum(t.amount),0)::bigint
+            FROM v2_points_transactions t WHERE t.funding_kind='budget' AND t.funding_reference=$1
+              AND NOT EXISTS (SELECT 1 FROM v2_points_events e WHERE e.transaction_id=t.id AND e.status='rejected')) AS used
+            FROM v2_marketing_budgets WHERE id::text=$1`, [funding.reference])).rows[0];
+          if (!b) throw new PointsError(409, "Markedsbudsjettet finnes ikke.");
+          if (!b.valid) throw new PointsError(409, "Markedsbudsjettet er utløpt.");
+          if (Number(b.used) + amount > b.points_total) throw new PointsError(409, "Markedsbudsjettet har ikke nok poeng igjen.");
+        }
         const reserve = status === "pending" && amount < 0 ? -amount : 0;
         if ((status === "approved" && amount < 0 && before.available < -amount) || reserve > before.available) {
           throw new PointsError(409, "Ikke nok tilgjengelige BonusPoints.");
         }
         await client.query(`INSERT INTO v2_points_transactions
-          (id,account_id,type,amount,source,reference,description,reason,related_transaction_id,actor_id)
-          VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)`,
-          [id, accountId, type, amount, source, reference, description, cmd.reason, related, cmd.actorId]);
+          (id,account_id,type,amount,source,reference,description,reason,related_transaction_id,actor_id,funding_kind,funding_reference)
+          VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)`,
+          [id, accountId, type, amount, source, reference, description, cmd.reason, related, cmd.actorId,
+            funding?.kind ?? null, funding?.reference ?? null]);
         await event(id, status, status === "approved" ? amount : 0, reserve);
       }
       const after = await wallet(accountId, client);
@@ -212,6 +248,9 @@ export function createPointsLedger(database: Database = pool) {
     } catch (error) {
       if (!existingClient) await client.query("ROLLBACK");
       if ((error as { code?: string }).code === "23505") throw new PointsError(409, "Kilden eller transaksjonen er allerede bokført.");
+      if (["23514", "23503"].includes((error as { code?: string }).code ?? "")) {
+        throw new PointsError(409, "Finansieringen dekker ikke denne transaksjonen.");
+      }
       throw error;
     } finally { if (!existingClient) client.release(); }
   }

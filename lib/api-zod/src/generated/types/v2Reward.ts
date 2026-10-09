@@ -17,4 +17,8 @@ export interface V2Reward {
   points: number;
   stock: number;
   status: V2RewardStatus;
+  /** @nullable */
+  faceValueOre?: number | null;
+  /** @nullable */
+  costOre?: number | null;
 }

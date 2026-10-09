@@ -12,6 +12,7 @@ import pointsRouter from "./v2-points";
 import offersRouter from "./v2-offers";
 import rewardsRouter from "./v2-rewards";
 import adminRouter from "./v2-admin";
+import { engagement } from "../v2/engagement";
 
 const router: IRouter = Router();
 router.use("/v2", rateLimit({
@@ -83,6 +84,14 @@ router.patch("/v2/me", async (req, res) => {
     return;
   }
   res.json(await updateProfile(req, input.data));
+});
+router.get("/v2/engagement", async (req, res) => {
+  const { userId } = await requireAccount(req);
+  res.json(await engagement.get(userId));
+});
+router.post("/v2/engagement/check-in", async (req, res) => {
+  const { userId } = await requireAccount(req);
+  res.json(await engagement.checkIn(userId));
 });
 router.get("/v2/admin/access", async (req, res) => {
   const identity = await requireAdmin(req);

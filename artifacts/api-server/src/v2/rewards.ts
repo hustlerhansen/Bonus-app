@@ -10,7 +10,7 @@ import { currentEconomy } from "./economy";
 
 type Database = Pick<typeof pool, "query" | "connect">;
 const rewardProjection = `r.id,r.supplier_id AS "supplierId",s.name AS "supplierName",
-  r.title,r.description,r.terms,r.points,r.stock_available AS stock,r.status`;
+  r.title,r.description,r.terms,r.points,r.stock_available AS stock,r.status,r.face_value_ore AS "faceValueOre",r.cost_ore AS "costOre"`;
 const orderProjection = `o.id,o.reward_id AS "rewardId",r.title,o.points,o.status,
   o.transaction_id AS "transactionId",o.created_at AS "createdAt",o.updated_at AS "updatedAt"`;
 function validate<T>(schema: { safeParse: (v: unknown) => { success: boolean; data?: T } }, value: unknown): T {
@@ -113,9 +113,11 @@ export function createRewardService(database: Database = pool) {
         throw new PointsError(409, "Leverandøren må først godkjennes og konfigureres av operatøren.");
       }
       const id = randomUUID();
-      await c.query(`INSERT INTO v2_rewards(id,supplier_id,supplier_sku,approval_reference,title,description,terms,points,stock_total,stock_available,created_by)
-        VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$9,$10)`, [id, input.supplierId, input.supplierSku.trim(), input.approvalReference.trim(),
-        input.title.trim(), input.description.trim(), input.terms.trim(), input.points, input.stock, actorId]);
+      // 100 BP = 1 kr gift-card value: the points price is the face value in øre, never typed in.
+      const faceValueOre = input.faceValueNok * 100;
+      await c.query(`INSERT INTO v2_rewards(id,supplier_id,supplier_sku,approval_reference,title,description,terms,points,stock_total,stock_available,created_by,face_value_ore,cost_ore)
+        VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$9,$10,$8,$11)`, [id, input.supplierId, input.supplierSku.trim(), input.approvalReference.trim(),
+        input.title.trim(), input.description.trim(), input.terms.trim(), faceValueOre, input.stock, actorId, input.costOre]);
       await audit(c, actor, "REWARD_CREATED", id, input);
       return reward(c, id);
     });
@@ -128,6 +130,9 @@ export function createRewardService(database: Database = pool) {
       const current = await reward(c, id);
       if (current.status === input.status) return current;
       if (input.status === "approved" && current.status !== "draft") throw new PointsError(409, "Opprett en ny definisjon for ny godkjenning.");
+      if (input.status === "approved" && (current.faceValueOre == null || current.points !== current.faceValueOre)) {
+        throw new PointsError(409, "Premien må ha pålydende og innkjøpspris, og poengprisen må være pålydende × 100.");
+      }
       if (input.status === "approved" && !(await c.query("SELECT id FROM v2_reward_suppliers WHERE id=$1 AND active FOR SHARE", [current.supplierId])).rowCount) {
         throw new PointsError(409, "Leverandøren er ikke aktiv.");
       }

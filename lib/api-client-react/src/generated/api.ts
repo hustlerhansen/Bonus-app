@@ -50,12 +50,15 @@ import type {
   V2AdminRequestInput,
   V2AdminRequestPage,
   V2AuditPage,
+  V2CampaignEconomics,
+  V2CampaignEconomicsInput,
   V2Conversion,
   V2ConversionPage,
   V2ConversionReversalInput,
   V2ConversionReversalResult,
   V2ConversionReviewInput,
   V2EconomyOverview,
+  V2Engagement,
   V2EnrollmentInput,
   V2Offer,
   V2OfferCallbackInput,
@@ -112,6 +115,245 @@ const withQueryKey = <T extends object, K>(query: T, queryKey: K): T & { queryKe
   }
   return result;
 };
+
+export const getGetV2EngagementUrl = () => {
+
+
+
+
+  return `/api/v2/engagement`
+}
+
+/**
+ * @summary XP, level, streak and badges (non-monetary, separate from BonusPoints)
+ */
+export const getV2Engagement = async ( options?: Parameters<typeof customFetch>[1]): Promise<V2Engagement> => {
+
+  return customFetch<V2Engagement>(getGetV2EngagementUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetV2EngagementQueryKey = () => {
+    return [
+    `/api/v2/engagement`
+    ] as const;
+    }
+
+
+export const getGetV2EngagementQueryOptions = <TData = Awaited<ReturnType<typeof getV2Engagement>>, TError = ErrorType<V2PointsErrorResponse>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getV2Engagement>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetV2EngagementQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getV2Engagement>>> = ({ signal }) => getV2Engagement({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getV2Engagement>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetV2EngagementQueryResult = NonNullable<Awaited<ReturnType<typeof getV2Engagement>>>
+export type GetV2EngagementQueryError = ErrorType<V2PointsErrorResponse>
+
+
+/**
+ * @summary XP, level, streak and badges (non-monetary, separate from BonusPoints)
+ */
+
+export function useGetV2Engagement<TData = Awaited<ReturnType<typeof getV2Engagement>>, TError = ErrorType<V2PointsErrorResponse>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getV2Engagement>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetV2EngagementQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getCheckInV2EngagementUrl = () => {
+
+
+
+
+  return `/api/v2/engagement/check-in`
+}
+
+/**
+ * @summary Daily check-in (once per Oslo day); awards XP only, never BonusPoints
+ */
+export const checkInV2Engagement = async ( options?: Parameters<typeof customFetch>[1]): Promise<V2Engagement> => {
+
+  return customFetch<V2Engagement>(getCheckInV2EngagementUrl(),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+
+export const getCheckInV2EngagementMutationKey = () => ['checkInV2Engagement'] as const;
+
+export const getCheckInV2EngagementMutationOptions = <TError = ErrorType<V2PointsErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof checkInV2Engagement>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof checkInV2Engagement>>, TError,void, TContext> => {
+
+const mutationKey = getCheckInV2EngagementMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof checkInV2Engagement>>, void> = () => {
+
+
+          return  checkInV2Engagement(requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CheckInV2EngagementMutationResult = NonNullable<Awaited<ReturnType<typeof checkInV2Engagement>>>
+
+    export type CheckInV2EngagementMutationError = ErrorType<V2PointsErrorResponse>
+
+
+    /**
+ * @summary Daily check-in (once per Oslo day); awards XP only, never BonusPoints
+ */
+export const useCheckInV2Engagement = <TError = ErrorType<V2PointsErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof checkInV2Engagement>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof checkInV2Engagement>>,
+        TError,
+        void,
+        TContext
+      > => {
+      return useMutation(getCheckInV2EngagementMutationOptions(options));
+    }
+
+export const getPreviewV2CampaignEconomicsUrl = () => {
+
+
+
+
+  return `/api/v2/admin/offers/economics`
+}
+
+/**
+ * @summary Compute campaign profitability with the active economy rules (no write)
+ */
+export const previewV2CampaignEconomics = async (v2CampaignEconomicsInput: V2CampaignEconomicsInput, options?: Parameters<typeof customFetch>[1]): Promise<V2CampaignEconomics> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<V2CampaignEconomics>(getPreviewV2CampaignEconomicsUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(v2CampaignEconomicsInput)
+  }
+);}
+
+
+
+
+
+export const getPreviewV2CampaignEconomicsMutationKey = () => ['previewV2CampaignEconomics'] as const;
+
+export const getPreviewV2CampaignEconomicsMutationOptions = <TError = ErrorType<V2PointsErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof previewV2CampaignEconomics>>, TError,PreviewV2CampaignEconomicsMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof previewV2CampaignEconomics>>, TError,PreviewV2CampaignEconomicsMutationVariables, TContext> => {
+
+const mutationKey = getPreviewV2CampaignEconomicsMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof previewV2CampaignEconomics>>, PreviewV2CampaignEconomicsMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  previewV2CampaignEconomics(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PreviewV2CampaignEconomicsMutationResult = NonNullable<Awaited<ReturnType<typeof previewV2CampaignEconomics>>>
+    export type PreviewV2CampaignEconomicsMutationBody = BodyType<V2CampaignEconomicsInput>
+    export type PreviewV2CampaignEconomicsMutationError = ErrorType<V2PointsErrorResponse>
+    export type PreviewV2CampaignEconomicsMutationVariables = {data: BodyType<V2CampaignEconomicsInput>}
+
+    /**
+ * @summary Compute campaign profitability with the active economy rules (no write)
+ */
+export const usePreviewV2CampaignEconomics = <TError = ErrorType<V2PointsErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof previewV2CampaignEconomics>>, TError,PreviewV2CampaignEconomicsMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof previewV2CampaignEconomics>>,
+        TError,
+        PreviewV2CampaignEconomicsMutationVariables,
+        TContext
+      > => {
+      return useMutation(getPreviewV2CampaignEconomicsMutationOptions(options));
+    }
 
 export const getListV2AdminRequestsUrl = (params?: ListV2AdminRequestsParams,) => {
   const normalizedParams = new URLSearchParams();

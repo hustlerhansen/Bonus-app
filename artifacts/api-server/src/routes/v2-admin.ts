@@ -46,9 +46,23 @@ router.get("/admin/economy", async (req, res) => {
       JOIN LATERAL (SELECT status FROM v2_points_events WHERE transaction_id=t.id ORDER BY sequence DESC LIMIT 1) s ON true
       WHERE s.status='pending' AND t.amount>0`)).rows[0];
     const admins = (await client.query(`SELECT count(*)::int AS n FROM v2_accounts WHERE role IN ('ADMIN','SUPER_ADMIN') AND status='ACTIVE'`)).rows[0];
+    const notRejected = `NOT EXISTS (SELECT 1 FROM v2_points_events e WHERE e.transaction_id=t.id AND e.status='rejected')`;
+    const funding = (await client.query(`SELECT
+      COALESCE(sum(t.amount) FILTER (WHERE t.funding_kind='conversion'),0)::bigint AS conversion,
+      COALESCE(sum(t.amount) FILTER (WHERE t.funding_kind='budget'),0)::bigint AS budget
+      FROM v2_points_transactions t WHERE t.funding_kind IS NOT NULL AND ${notRejected}`)).rows[0];
+    const budgets = (await client.query(`SELECT b.id,b.name,b.purpose,b.points_total AS "pointsTotal",b.valid_until AS "validUntil",
+      b.approved_by AS "approvedBy",b.created_at AS "createdAt",
+      (SELECT COALESCE(sum(t.amount),0)::bigint FROM v2_points_transactions t WHERE t.funding_kind='budget'
+        AND t.funding_reference=b.id::text AND ${notRejected}) AS "pointsUsed"
+      FROM v2_marketing_budgets b ORDER BY b.created_at DESC LIMIT 50`)).rows;
     await client.query("COMMIT");
     const balance = Number(totals.balance), reserved = Number(totals.reserved), pendingCredit = Number(pending.pending);
-    res.json({ config, admins: admins.n, liability: {
+    res.json({ config, admins: admins.n,
+      funding: { conversionPoints: Number(funding.conversion), budgetPoints: Number(funding.budget) },
+      budgets: budgets.map(b => ({ ...b, pointsUsed: Number(b.pointsUsed), validUntil: (b.validUntil as Date).toISOString(),
+        createdAt: (b.createdAt as Date).toISOString() })),
+      liability: {
       balancePoints: balance, reservedPoints: reserved, availablePoints: balance - reserved, pendingCreditPoints: pendingCredit,
       balanceNok: balance / config.pointsPerNok, pendingCreditNok: pendingCredit / config.pointsPerNok,
     } });

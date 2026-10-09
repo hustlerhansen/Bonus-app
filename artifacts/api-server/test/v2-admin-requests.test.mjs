@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import { readFile, mkdir } from "node:fs/promises";
 import { build } from "esbuild";
+import { applyV2Migrations, createTestBudget } from "./fixtures.mjs";
 
 // Isolated PostgreSQL schema. Verifies the high-risk request queue: cooldown, single execution,
 // immutability, self-benefit protection and dual control.
@@ -24,7 +25,7 @@ const later = () => { now = Date.now() + 61 * 60 * 1000; };
 const reset = () => { now = Date.now(); };
 const reason = "Kontrollert høyrisikohandling i isolert test";
 const denied = status => e => e.status === status;
-let admin, second;
+let admin, second, budget;
 async function account(role = "USER") {
   const id = `test_${randomUUID()}`;
   await isolated.query(`INSERT INTO v2_accounts(id,email,first_name,last_name,role,referral_code,
@@ -39,11 +40,9 @@ const economy = (change = {}) => ({ defaultShareBp: 3000, maxShareBp: 4000, minM
 
 before(async () => {
   await pool.query(`CREATE SCHEMA ${schema}`);
-  for (const name of ["0001_v2_identity.sql", "0002_v2_points.sql", "0003_v2_offers.sql", "0004_v2_offer_reversals.sql",
-    "0004_v2_rewards.sql", "0005_v2_controls.sql"]) {
-    await isolated.query(await readFile(new URL(`../../../lib/db/migrations/${name}`, import.meta.url), "utf8"));
-  }
+  await applyV2Migrations(isolated);
   admin = await account("SUPER_ADMIN");
+  budget = await createTestBudget(isolated, admin);
   second = await account("ADMIN");
 });
 after(async () => {
@@ -73,7 +72,7 @@ test("owner-approved economy defaults are seeded and bounded by the database", a
 test("a high-risk request waits at least 60 minutes and executes exactly once", async () => {
   reset();
   const user = await account();
-  const r = await ask(admin, "POINTS_ADJUSTMENT", { accountId: user, amount: 250 });
+  const r = await ask(admin, "POINTS_ADJUSTMENT", { accountId: user, amount: 250, fundingBudgetId: budget });
   assert.equal(r.status, "pending");
   assert.ok(new Date(r.notBefore) - new Date(r.requestedAt) >= 60 * 60 * 1000);
   assert.equal(r.canConfirm, false);
@@ -88,7 +87,7 @@ test("a high-risk request waits at least 60 minutes and executes exactly once", 
   assert.equal((await ledger.wallet(user)).balance, 250);
   // Concurrent confirmations of a fresh request still execute once.
   reset();
-  const r2 = await ask(admin, "POINTS_ADJUSTMENT", { accountId: user, amount: 10 });
+  const r2 = await ask(admin, "POINTS_ADJUSTMENT", { accountId: user, amount: 10, fundingBudgetId: budget });
   later();
   const results = await Promise.allSettled([queue.confirm(admin, r2.id), queue.confirm(second, r2.id), queue.confirm(admin, r2.id)]);
   assert.equal(results.filter(x => x.status === "fulfilled").length, 1);
@@ -99,11 +98,11 @@ test("requests are immutable, idempotent and cannot be tampered with", async () 
   reset();
   const user = await account();
   const key = randomUUID();
-  const a = await ask(admin, "POINTS_ADJUSTMENT", { accountId: user, amount: 5 }, { requestKey: key });
-  const b = await ask(admin, "POINTS_ADJUSTMENT", { accountId: user, amount: 5 }, { requestKey: key });
+  const a = await ask(admin, "POINTS_ADJUSTMENT", { accountId: user, amount: 5, fundingBudgetId: budget }, { requestKey: key });
+  const b = await ask(admin, "POINTS_ADJUSTMENT", { accountId: user, amount: 5, fundingBudgetId: budget }, { requestKey: key });
   assert.equal(a.id, b.id);
-  await assert.rejects(ask(admin, "POINTS_ADJUSTMENT", { accountId: user, amount: 6 }, { requestKey: key }), denied(409));
-  await assert.rejects(ask(second, "POINTS_ADJUSTMENT", { accountId: user, amount: 5 }, { requestKey: key }), denied(409));
+  await assert.rejects(ask(admin, "POINTS_ADJUSTMENT", { accountId: user, amount: 6, fundingBudgetId: budget }, { requestKey: key }), denied(409));
+  await assert.rejects(ask(second, "POINTS_ADJUSTMENT", { accountId: user, amount: 5, fundingBudgetId: budget }, { requestKey: key }), denied(409));
   await assert.rejects(isolated.query("UPDATE v2_admin_requests SET payload='{\"amount\":999999}'::jsonb WHERE id=$1", [a.id]), /append-only/);
   await assert.rejects(isolated.query("UPDATE v2_admin_requests SET not_before=now() WHERE id=$1", [a.id]), /append-only/);
   await assert.rejects(isolated.query("DELETE FROM v2_admin_request_events WHERE request_id=$1", [a.id]), /append-only/);
@@ -114,30 +113,30 @@ test("requests are immutable, idempotent and cannot be tampered with", async () 
     await assert.rejects(ask(admin, "POINTS_ADJUSTMENT", payload), denied(400));
   }
   await assert.rejects(ask(admin, "UNKNOWN", {}), denied(400));
-  await assert.rejects(ask(admin, "POINTS_ADJUSTMENT", { accountId: user, amount: 5 }, { reason: "kort" }), denied(400));
+  await assert.rejects(ask(admin, "POINTS_ADJUSTMENT", { accountId: user, amount: 5, fundingBudgetId: budget }, { reason: "kort" }), denied(400));
 });
 
 test("administrators can never request or approve their own financial benefit", async () => {
   reset();
-  await assert.rejects(ask(admin, "POINTS_ADJUSTMENT", { accountId: admin, amount: 1000 }), denied(403));
+  await assert.rejects(ask(admin, "POINTS_ADJUSTMENT", { accountId: admin, amount: 1000, fundingBudgetId: budget }), denied(403));
   await assert.rejects(isolated.query(`INSERT INTO v2_admin_requests(id,action,payload,payload_hash,target_account_id,reason,requested_by,request_key,not_before)
     VALUES($1,'POINTS_ADJUSTMENT','{}',repeat('a',64),$2,$3,$2,$4,now()+interval '2 hours')`,
   [randomUUID(), admin, reason, randomUUID()]), e => e.code === "23514");
   // Second admin asks for a credit to the first admin; the first admin cannot confirm it.
-  const r = await ask(second, "POINTS_ADJUSTMENT", { accountId: admin, amount: 1000 });
+  const r = await ask(second, "POINTS_ADJUSTMENT", { accountId: admin, amount: 1000, fundingBudgetId: budget });
   later();
   await assert.rejects(queue.confirm(admin, r.id), denied(403));
   assert.equal((await ledger.wallet(admin)).balance, 0);
   // The ledger itself also blocks direct self-adjustment, decisions and compensation.
-  await assert.rejects(ledger.execute({ kind: "adjust", accountId: admin, amount: 5, actorId: admin, reason,
+  await assert.rejects(ledger.execute({ kind: "adjust", accountId: admin, amount: 5, fundingBudgetId: budget, actorId: admin, reason,
     idempotencyKey: randomUUID() }), denied(403));
 });
 
 test("ordinary users cannot create, confirm or list requests", async () => {
   reset();
   const user = await account(), other = await account();
-  await assert.rejects(ask(user, "POINTS_ADJUSTMENT", { accountId: other, amount: 5 }), denied(403));
-  const r = await ask(admin, "POINTS_ADJUSTMENT", { accountId: other, amount: 5 });
+  await assert.rejects(ask(user, "POINTS_ADJUSTMENT", { accountId: other, amount: 5, fundingBudgetId: budget }), denied(403));
+  const r = await ask(admin, "POINTS_ADJUSTMENT", { accountId: other, amount: 5, fundingBudgetId: budget });
   later();
   await assert.rejects(queue.confirm(user, r.id), denied(403));
   await assert.rejects(queue.list(user), denied(403));
@@ -146,9 +145,9 @@ test("ordinary users cannot create, confirm or list requests", async () => {
 test("cancelled and rejected requests can never execute", async () => {
   reset();
   const user = await account();
-  const a = await ask(admin, "POINTS_ADJUSTMENT", { accountId: user, amount: 5 });
+  const a = await ask(admin, "POINTS_ADJUSTMENT", { accountId: user, amount: 5, fundingBudgetId: budget });
   assert.equal((await queue.reject(admin, a.id, { note: "Trukket tilbake av den som ba om det" })).status, "cancelled");
-  const b = await ask(admin, "POINTS_ADJUSTMENT", { accountId: user, amount: 5 });
+  const b = await ask(admin, "POINTS_ADJUSTMENT", { accountId: user, amount: 5, fundingBudgetId: budget });
   assert.equal((await queue.reject(second, b.id, { note: "Avvist av annen administrator" })).status, "rejected");
   later();
   await assert.rejects(queue.confirm(admin, a.id), denied(409));
@@ -170,10 +169,10 @@ test("a failing execution rolls back and leaves the request pending", async () =
 test("generic decisions cannot touch offer or reward money", async () => {
   reset();
   const user = await account();
-  const t = await ledger.execute({ kind: "record", accountId: user, type: "EARN", amount: 40, status: "pending", actorId: admin, reason,
+  const t = await ledger.execute({ kind: "record", accountId: user, type: "EARN", amount: 40, status: "pending", actorId: admin, reason, funding: { kind: "budget", reference: budget },
     source: "offer:test-partner", reference: randomUUID(), description: "Tilbudspoeng", idempotencyKey: randomUUID() });
   await assert.rejects(ask(admin, "POINTS_DECISION", { transactionId: t.transaction.id, status: "approved" }), denied(409));
-  const generic = await ledger.execute({ kind: "record", accountId: user, type: "BONUS", amount: 40, status: "pending", actorId: admin, reason,
+  const generic = await ledger.execute({ kind: "record", accountId: user, type: "BONUS", amount: 40, status: "pending", actorId: admin, reason, funding: { kind: "budget", reference: budget },
     source: "verified-test", reference: randomUUID(), description: "Testbonus", idempotencyKey: randomUUID() });
   const r = await ask(admin, "POINTS_DECISION", { transactionId: generic.transaction.id, status: "approved" });
   later();
@@ -197,7 +196,7 @@ test("economy changes go through the queue, stay within limits and can enable du
   // With dual control, the requester cannot confirm their own request.
   reset();
   const user = await account();
-  const q = await ask(admin, "POINTS_ADJUSTMENT", { accountId: user, amount: 7 });
+  const q = await ask(admin, "POINTS_ADJUSTMENT", { accountId: user, amount: 7, fundingBudgetId: budget });
   later();
   assert.equal((await queue.view(admin, q.id)).canConfirm, false);
   await assert.rejects(queue.confirm(admin, q.id), denied(403));

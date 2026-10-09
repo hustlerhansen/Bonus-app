@@ -6,12 +6,12 @@ import { CheckCircle2, ChevronDown, ChevronLeft, ChevronRight, Search } from 'lu
 import {
   getGetV2AdminWalletQueryKey, getGetV2WalletQueryKey, getListV2AdminTransactionsQueryKey, getListV2TransactionsQueryKey,
   useAdjustV2Points, useCompensateV2Points, useDecideV2Points, useGetV2AdminWallet, useGetV2Wallet, useListV2AdminTransactions, useListV2Transactions,
-  type V2AdminRequest, getListV2AdminRequestsQueryKey, type V2PointsTransaction, type V2Wallet,
+  type V2AdminRequest, getListV2AdminRequestsQueryKey, getGetV2AdminEconomyQueryKey, useGetV2AdminEconomy, type V2PointsTransaction, type V2Wallet,
 } from '@workspace/api-client-react';
 import { AnimatedNumber, Btn, Card, Empty, ErrorState, PageHead, PageSkeleton, Skel } from '@/components/bp';
 import { errMsg } from '@/hooks/use-bp';
 import { cn } from '@/lib/utils';
-import { SignedInOnly, useV2State, V2Frame } from './shared';
+import { SignedInOnly, useApprovalRequest, useV2State, V2Frame } from './shared';
 import { updatePointsCaches } from './points-cache';
 
 const PAGE = 20;
@@ -221,18 +221,30 @@ function TxActions({ t }: { t: V2PointsTransaction }) {
 function Adjust({ accountId }: { accountId: string }) {
   const qc = useQueryClient();
   const adj = useAdjustV2Points();
+  const approval = useApprovalRequest();
+  const [budgetErr, setBudgetErr] = useState<string | null>(null);
   const idem = useIdemKey();
   const [amount, setAmount] = useState('');
   const [reason, setReason] = useState('');
+  const [budgetId, setBudgetId] = useState('');
+  const econ = useGetV2AdminEconomy({ query: { queryKey: getGetV2AdminEconomyQueryKey() } });
+  const budgets = (econ.data?.budgets ?? []).filter(b => new Date(b.validUntil).getTime() > Date.now() && b.pointsUsed < b.pointsTotal);
   const [done, setDone] = useState<V2AdminRequest | null>(null);
   const n = Number(amount);
   const amtOk = amount.trim() !== '' && Number.isInteger(n) && n !== 0 && Math.abs(n) <= 1000000;
   const r = reason.trim();
-  const valid = amtOk && r.length >= 10 && r.length <= 500;
+  const needsBudget = amtOk && n > 0;
+  const valid = amtOk && r.length >= 10 && r.length <= 500 && (!needsBudget || !!budgetId);
   const submit = (e: FormEvent) => {
     e.preventDefault();
     if (!valid || adj.isPending) return;
     setDone(null);
+    if (needsBudget) {
+      // Positive adjustments carry monetary value and must be funded by an approved marketing budget.
+      approval.send('POINTS_ADJUSTMENT', { accountId, amount: n, fundingBudgetId: budgetId }, r, {
+        onQueued: res => { setDone(res); setAmount(''); setReason(''); }, onError: x => setBudgetErr(errMsg(x)) });
+      return;
+    }
     adj.mutate({ accountId, data: { amount: n, reason: r, idempotencyKey: idem.get(`${accountId}:${n}:${r}`) } }, {
       onSuccess: async (res) => {
         await qc.invalidateQueries({ queryKey: getListV2AdminRequestsQueryKey() });
@@ -247,6 +259,16 @@ function Adjust({ accountId }: { accountId: string }) {
         <label className="block text-sm font-bold">Beløp (heltall, positivt eller negativt, maks 1 000 000)
           <input className={inputCls} inputMode="numeric" value={amount} disabled={adj.isPending} onChange={(e) => setAmount(e.target.value)} aria-invalid={amount !== '' && !amtOk} data-testid="input-amount" /></label>
         {amount !== '' && !amtOk && <p className="text-xs text-destructive">Oppgi et heltall som ikke er 0, mellom -1 000 000 og 1 000 000.</p>}
+        {needsBudget && (
+          <label className="block text-sm font-bold">Finansiering (godkjent markedsbudsjett)
+            <select className={inputCls} value={budgetId} onChange={e => setBudgetId(e.target.value)} data-testid="select-adjust-budget">
+              <option value="">Velg budsjett</option>
+              {budgets.map(b => <option key={b.id} value={b.id}>{b.name} – {nf.format(b.pointsTotal - b.pointsUsed)} BP igjen</option>)}
+            </select>
+            {budgets.length === 0 && <span className="text-[11px] font-normal text-amber-200">Ingen aktive budsjetter. Opprett et under Admin → Økonomi. Positive poeng kan ikke gis uten finansiering.</span>}
+            {budgetErr && <span role="alert" className="block text-xs text-destructive">{budgetErr}</span>}
+          </label>
+        )}
         <label className="block text-sm font-bold">Begrunnelse (10-500 tegn)
           <textarea className={inputCls} rows={3} maxLength={500} value={reason} disabled={adj.isPending} onChange={(e) => setReason(e.target.value)} data-testid="input-adjust-reason" /></label>
         <div className="text-[11px] text-muted-foreground">{r.length}/500</div>

@@ -28,10 +28,17 @@ export interface V2RewardInput {
      */
   terms: string;
   /**
+     * Gavekortets pålydende i kr; poengprisen blir pålydende × 100
      * @minimum 1
-     * @maximum 1000000
+     * @maximum 10000
      */
-  points: number;
+  faceValueNok: number;
+  /**
+     * Innkjøpspris inkl. gebyr i øre
+     * @minimum 0
+     * @maximum 2000000
+     */
+  costOre: number;
   /**
      * @minimum 0
      * @maximum 1000000

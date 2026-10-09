@@ -5,6 +5,7 @@
  * API for the BONUSPLAY demo rewards platform
  * OpenAPI spec version: 0.1.0
  */
+import type { V2CampaignEconomicsInput } from './v2CampaignEconomicsInput';
 import type { V2OfferInputCategory } from './v2OfferInputCategory';
 
 export interface V2OfferInput {
@@ -25,11 +26,7 @@ export interface V2OfferInput {
      * @maxLength 4000
      */
   terms: string;
-  /**
-     * @minimum 1
-     * @maximum 1000000
-     */
-  points: number;
+  economics: V2CampaignEconomicsInput;
   /** @maxLength 2000 */
   destinationUrl: string;
   category: V2OfferInputCategory;

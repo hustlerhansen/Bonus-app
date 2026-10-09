@@ -69,7 +69,13 @@ export function createAdminRequestService(database: Database = pool, deps: Deps 
       if (!Number.isInteger(p.amount) || p.amount === 0 || Math.abs(p.amount as number) > 1_000_000) {
         throw new PointsError(400, "Poeng må være et heltall fra -1 000 000 til 1 000 000, ulik null.");
       }
-      if (p.fundingBudgetId !== undefined) p.fundingBudgetId = uuid(p.fundingBudgetId, "budsjett");
+      // Positive adjustments have monetary value and must be funded by an approved marketing budget.
+      if ((p.amount as number) > 0) {
+        p.fundingBudgetId = uuid(p.fundingBudgetId, "markedsbudsjett (påkrevd for positive justeringer)");
+        const b = (await client.query("SELECT valid_until>now() AS valid FROM v2_marketing_budgets WHERE id=$1", [p.fundingBudgetId])).rows[0];
+        if (!b) throw new PointsError(404, "Markedsbudsjettet finnes ikke.");
+        if (!b.valid) throw new PointsError(409, "Markedsbudsjettet er utløpt.");
+      } else if (p.fundingBudgetId !== undefined) throw new PointsError(400, "Negative justeringer har ingen finansieringskilde.");
       if (p.accountId === actorId) throw new PointsError(403, "Administratorer kan ikke be om justering av egen konto.");
       if (!(await client.query("SELECT 1 FROM v2_accounts WHERE id=$1", [p.accountId])).rows.length) {
         throw new PointsError(404, "V2-kontoen finnes ikke.");
@@ -122,8 +128,20 @@ export function createAdminRequestService(database: Database = pool, deps: Deps 
     async ECONOMY_CONFIG(_client, raw) {
       return { payload: validateEconomyChange(raw) as unknown as Payload, target: null };
     },
-    async MARKETING_BUDGET() {
-      throw new PointsError(503, "Markedsbudsjetter er ikke aktivert ennå.");
+    async MARKETING_BUDGET(_client, raw) {
+      const p = exact(raw, ["name", "purpose", "pointsTotal", "validUntil"]);
+      const name = typeof p.name === "string" ? p.name.trim() : "", purpose = typeof p.purpose === "string" ? p.purpose.trim() : "";
+      if (name.length < 3 || name.length > 120 || purpose.length < 10 || purpose.length > 500) {
+        throw new PointsError(400, "Oppgi navn (3–120 tegn) og formål (10–500 tegn).");
+      }
+      if (!Number.isInteger(p.pointsTotal) || (p.pointsTotal as number) < 1 || (p.pointsTotal as number) > 10_000_000) {
+        throw new PointsError(400, "Budsjettet må være mellom 1 og 10 000 000 BP.");
+      }
+      const until = new Date(String(p.validUntil));
+      if (Number.isNaN(until.getTime()) || until.getTime() <= clock() || until.getTime() > clock() + 2 * 366 * 86400000) {
+        throw new PointsError(400, "Gyldig til må være en fremtidig dato innen to år.");
+      }
+      return { payload: { name, purpose, pointsTotal: p.pointsTotal, validUntil: until.toISOString() }, target: null };
     },
     ...deps.extraValidators,
   };
@@ -163,8 +181,11 @@ export function createAdminRequestService(database: Database = pool, deps: Deps 
     async ECONOMY_CONFIG(client, r, actorId) {
       return appendEconomyVersion(client, validateEconomyChange(r.payload), actorId, r.id);
     },
-    async MARKETING_BUDGET() {
-      throw new PointsError(503, "Markedsbudsjetter er ikke aktivert ennå.");
+    async MARKETING_BUDGET(client, r, actorId) {
+      const id = randomUUID();
+      await client.query(`INSERT INTO v2_marketing_budgets(id,name,purpose,points_total,valid_until,approved_by,request_id)
+        VALUES($1,$2,$3,$4,$5,$6,$7)`, [id, r.payload.name, r.payload.purpose, r.payload.pointsTotal, r.payload.validUntil, actorId, r.id]);
+      return { budgetId: id };
     },
     ...deps.extraExecutors,
   };

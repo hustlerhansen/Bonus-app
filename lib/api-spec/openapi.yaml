@@ -13,6 +13,50 @@ tags:
   - name: bonusplay
     description: BONUSPLAY demo account, game and rewards operations
 paths:
+  /v2/engagement:
+    get:
+      operationId: getV2Engagement
+      tags: [v2]
+      summary: XP, level, streak and badges (non-monetary, separate from BonusPoints)
+      responses:
+        "200":
+          description: Engagement state
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/V2Engagement" }
+        default:
+          $ref: "#/components/responses/V2PointsError"
+  /v2/engagement/check-in:
+    post:
+      operationId: checkInV2Engagement
+      tags: [v2]
+      summary: Daily check-in (once per Oslo day); awards XP only, never BonusPoints
+      responses:
+        "200":
+          description: Engagement state after check-in
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/V2Engagement" }
+        default:
+          $ref: "#/components/responses/V2PointsError"
+  /v2/admin/offers/economics:
+    post:
+      operationId: previewV2CampaignEconomics
+      tags: [v2]
+      summary: Compute campaign profitability with the active economy rules (no write)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/V2CampaignEconomicsInput" }
+      responses:
+        "200":
+          description: Computed economics and whether activation would be allowed
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/V2CampaignEconomics" }
+        default:
+          $ref: "#/components/responses/V2PointsError"
   /v2/admin/requests:
     get:
       operationId: listV2AdminRequests
@@ -1129,11 +1173,51 @@ components:
         pendingCreditNok: { type: number }
     V2EconomyOverview:
       type: object
-      required: [config, liability, admins]
+      required: [config, liability, admins, budgets, funding]
       properties:
         config: { $ref: "#/components/schemas/V2EconomyConfig" }
         liability: { $ref: "#/components/schemas/V2Liability" }
         admins: { type: integer }
+        budgets: { type: array, items: { $ref: "#/components/schemas/V2MarketingBudget" } }
+        funding:
+          type: object
+          required: [conversionPoints, budgetPoints]
+          properties:
+            conversionPoints: { type: integer }
+            budgetPoints: { type: integer }
+    V2MarketingBudget:
+      type: object
+      required: [id, name, purpose, pointsTotal, pointsUsed, validUntil, approvedBy, createdAt]
+      properties:
+        id: { type: string }
+        name: { type: string }
+        purpose: { type: string }
+        pointsTotal: { type: integer }
+        pointsUsed: { type: integer }
+        validUntil: { type: string }
+        approvedBy: { type: string }
+        createdAt: { type: string }
+    V2Badge:
+      type: object
+      required: [id, title, description, earned]
+      properties:
+        id: { type: string }
+        title: { type: string }
+        description: { type: string }
+        earned: { type: boolean }
+    V2Engagement:
+      type: object
+      required: [xp, level, levelName, levelFloorXp, nextLevelXp, streak, checkedInToday, badges, xpAwarded]
+      properties:
+        xp: { type: integer }
+        level: { type: integer }
+        levelName: { type: string }
+        levelFloorXp: { type: integer }
+        nextLevelXp: { type: integer }
+        streak: { type: integer }
+        checkedInToday: { type: boolean }
+        badges: { type: array, items: { $ref: "#/components/schemas/V2Badge" } }
+        xpAwarded: { type: integer }
     V2AuditEntry:
       type: object
       required: [id, actorId, actorRole, action, entityType, entityId, metadata, createdAt]
@@ -1162,13 +1246,14 @@ components:
         name: { type: string }
     V2RewardInput:
       type: object
-      required: [supplierId, title, description, terms, points, stock, supplierSku, approvalReference]
+      required: [supplierId, title, description, terms, faceValueNok, costOre, stock, supplierSku, approvalReference]
       properties:
         supplierId: { type: string, minLength: 3, maxLength: 40 }
         title: { type: string, minLength: 3, maxLength: 120 }
         description: { type: string, minLength: 10, maxLength: 2000 }
         terms: { type: string, minLength: 10, maxLength: 2000 }
-        points: { type: integer, minimum: 1, maximum: 1000000 }
+        faceValueNok: { type: integer, minimum: 1, maximum: 10000, description: "Gavekortets pålydende i kr; poengprisen blir pålydende × 100" }
+        costOre: { type: integer, minimum: 0, maximum: 2000000, description: "Innkjøpspris inkl. gebyr i øre" }
         stock: { type: integer, minimum: 0, maximum: 1000000 }
         supplierSku: { type: string, minLength: 1, maxLength: 128 }
         approvalReference: { type: string, minLength: 10, maxLength: 200 }
@@ -1185,6 +1270,8 @@ components:
         points: { type: integer }
         stock: { type: integer }
         status: { type: string, enum: [draft, approved, disabled] }
+        faceValueOre: { type: [integer, "null"] }
+        costOre: { type: [integer, "null"] }
     V2RewardPage:
       type: object
       required: [items, redeemEnabled]
@@ -1259,13 +1346,13 @@ components:
     V2OfferInput:
       type: object
       additionalProperties: false
-      required: [partnerId, title, description, terms, points, destinationUrl, category, requirements, completionSteps, estimatedMinutes, approvalDays]
+      required: [partnerId, title, description, terms, destinationUrl, category, requirements, completionSteps, estimatedMinutes, approvalDays, economics]
       properties:
         partnerId: { type: string, pattern: "^[a-z0-9-]{3,40}$" }
         title: { type: string, minLength: 3, maxLength: 120 }
         description: { type: string, minLength: 10, maxLength: 2000 }
         terms: { type: string, minLength: 10, maxLength: 4000 }
-        points: { type: integer, minimum: 1, maximum: 1000000 }
+        economics: { $ref: "#/components/schemas/V2CampaignEconomicsInput" }
         destinationUrl: { type: string, format: uri, maxLength: 2000 }
         category: { type: string, enum: [shopping, subscriptions, surveys, apps, services, finance, travel, food, entertainment, other] }
         requirements: { type: string, minLength: 10, maxLength: 2000 }
@@ -1273,10 +1360,44 @@ components:
         estimatedMinutes: { type: integer, minimum: 1, maximum: 10080 }
         approvalDays: { type: integer, minimum: 1, maximum: 365 }
         expiresAt: { type: [string, "null"], format: date-time }
+    V2CampaignEconomicsInput:
+      type: object
+      additionalProperties: false
+      required: [grossCpaOre, networkFeeBp, expectedReversalBp, giftcardFeeBp, maxConversions, paymentTermsDays, agreementReference]
+      properties:
+        grossCpaOre: { type: integer, minimum: 100, maximum: 100000000, description: "Partnerens betaling per verifisert konvertering, i øre" }
+        networkFeeBp: { type: integer, minimum: 0, maximum: 9000, description: "Nettverksgebyr i basispunkter (100 = 1 %)" }
+        expectedReversalBp: { type: integer, minimum: 0, maximum: 9000 }
+        giftcardFeeBp: { type: integer, minimum: 0, maximum: 2000 }
+        userShareBp: { type: integer, minimum: 1, maximum: 4000, description: "Valgfri; standard fra økonomireglene" }
+        maxConversions: { type: integer, minimum: 1, maximum: 1000000 }
+        paymentTermsDays: { type: integer, minimum: 0, maximum: 365 }
+        agreementReference: { type: string, minLength: 10, maxLength: 200 }
+    V2CampaignEconomics:
+      type: object
+      required: [configVersion, grossCpaOre, networkFeeBp, expectedReversalBp, giftcardFeeBp, userShareBp, netOre, points, expectedMarginBp, marginOre, maxConversions, maxLiabilityOre, paymentTermsDays, agreementReference, ok, problems]
+      properties:
+        configVersion: { type: integer }
+        grossCpaOre: { type: integer }
+        networkFeeBp: { type: integer }
+        expectedReversalBp: { type: integer }
+        giftcardFeeBp: { type: integer }
+        userShareBp: { type: integer }
+        netOre: { type: integer }
+        points: { type: integer }
+        expectedMarginBp: { type: integer }
+        marginOre: { type: integer }
+        maxConversions: { type: integer }
+        maxLiabilityOre: { type: integer }
+        paymentTermsDays: { type: integer }
+        agreementReference: { type: string }
+        ok: { type: boolean }
+        problems: { type: array, items: { type: string } }
     V2Offer:
       type: object
       required: [id, partnerId, partnerName, partnerLogoUrl, title, description, terms, points, status, createdAt, destinationUrl, category, requirements, completionSteps, estimatedMinutes, approvalDays, expiresAt]
       properties:
+        economics: { oneOf: [{ $ref: "#/components/schemas/V2CampaignEconomics" }, { type: "null" }] }
         id: { type: string, format: uuid }
         partnerId: { type: string }
         partnerName: { type: string }

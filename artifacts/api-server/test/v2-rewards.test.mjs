@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import { readFile, mkdir } from "node:fs/promises";
 import { build } from "esbuild";
+import { applyV2Migrations, createTestBudget } from "./fixtures.mjs";
 
 const out = new URL("../.cache/v2-rewards-test.mjs", import.meta.url);
 await mkdir(new URL("../.cache/", import.meta.url), { recursive: true });
@@ -18,7 +19,7 @@ const isolated = new pool.constructor({ ...pool.options, options: `-c search_pat
 const service = createRewardService(isolated), ledger = createPointsLedger(isolated);
 const reason = "Isolert test av kontrollert premieinnløsning";
 const denied = status => e => e.status === status;
-let admin;
+let admin, budget;
 async function account(role = "USER") {
   const id = `test_${randomUUID()}`;
   await isolated.query(`INSERT INTO v2_accounts(id,email,first_name,last_name,role,referral_code,
@@ -27,23 +28,22 @@ async function account(role = "USER") {
   return id;
 }
 const input = (stock = 3) => ({ supplierId: "test-supplier", title: "Isolert syntetisk premie", description: "Kun isolert test, ingen ekte premie.",
-  terms: "Ingen virkelig leverandør eller gavelevering.", points: 40, stock, supplierSku: "isolated-test",
+  terms: "Ingen virkelig leverandør eller gavelevering.", faceValueNok: 40, costOre: 3900, stock, supplierSku: "isolated-test",
   approvalReference: "Kun isolert godkjenningsfixture" });
 const request = () => ({ idempotencyKey: randomUUID() });
 const action = (a, key = randomUUID()) => ({ action: a, reason, evidenceReference: "Isolert bekreftet leveringsutfall",
   idempotencyKey: key, ...(a === "refund" ? { confirmedNotDelivered: true } : {}) });
-async function fixture(stock = 3, balance = 100) {
+async function fixture(stock = 3, balance = 10000) {
   const user = await account(), reward = await service.create(admin, input(stock));
   await service.review(admin, reward.id, { status: "approved", reason });
-  if (balance) await ledger.execute({ kind: "adjust", actorId: admin, accountId: user, amount: balance, reason, idempotencyKey: randomUUID() });
+  if (balance) await ledger.execute({ kind: "adjust", actorId: admin, accountId: user, amount: balance, fundingBudgetId: budget, reason, idempotencyKey: randomUUID() });
   return { user, reward };
 }
 before(async () => {
   await pool.query(`CREATE SCHEMA ${schema}`);
-  for (const file of ["0001_v2_identity.sql", "0002_v2_points.sql", "0003_v2_offers.sql", "0004_v2_rewards.sql", "0005_v2_controls.sql"]) {
-    await isolated.query(await readFile(new URL(`../../../lib/db/migrations/${file}`, import.meta.url), "utf8"));
-  }
+  await applyV2Migrations(isolated);
   admin = await account("ADMIN");
+  budget = await createTestBudget(isolated, admin);
   await isolated.query(`INSERT INTO v2_reward_suppliers(id,name,agreement_reference,integration_actor_id,active)
     VALUES('test-supplier','Kun isolert syntetisk leverandør','Isolert avtaledokument',$1,true)`, [admin]);
 });
@@ -74,20 +74,20 @@ test("atomic reservation and same-key replay have one order, one stock unit and 
   assert.equal(new Set(orders.map(o => o.id)).size, 1);
   assert.equal((await service.detail(user, reward.id)).reward.stock, 2);
   const wallet = await ledger.wallet(user);
-  assert.equal(wallet.balance, 100); assert.equal(wallet.reserved, 40); assert.equal(wallet.available, 60);
+  assert.equal(wallet.balance, 10000); assert.equal(wallet.reserved, 4000); assert.equal(wallet.available, 6000);
   const other = await account();
   await assert.rejects(service.redeem(other, reward.id, key), denied(409));
 });
 test("parallel different requests cannot overdraw balance", async () => {
-  const { user, reward } = await fixture(5, 60);
+  const { user, reward } = await fixture(5, 6000);
   const results = await Promise.allSettled([service.redeem(user, reward.id, request()), service.redeem(user, reward.id, request())]);
   assert.equal(results.filter(r => r.status === "fulfilled").length, 1);
-  assert.equal((await ledger.wallet(user)).available, 20);
+  assert.equal((await ledger.wallet(user)).available, 2000);
   assert.equal((await service.detail(user, reward.id)).reward.stock, 4);
 });
 test("parallel accounts cannot reserve the final stock twice", async () => {
   const { user, reward } = await fixture(1), other = await account();
-  await ledger.execute({ kind: "adjust", actorId: admin, accountId: other, amount: 100, reason, idempotencyKey: randomUUID() });
+  await ledger.execute({ kind: "adjust", actorId: admin, accountId: other, amount: 10000, fundingBudgetId: budget, reason, idempotencyKey: randomUUID() });
   const results = await Promise.allSettled([service.redeem(user, reward.id, request()), service.redeem(other, reward.id, request())]);
   assert.equal(results.filter(r => r.status === "fulfilled").length, 1);
   assert.equal((await service.detail(user, reward.id)).reward.stock, 0);
@@ -97,7 +97,7 @@ test("insufficient stock/balance rolls back request, points and audit; key retry
   await assert.rejects(service.redeem(user, reward.id, key), denied(409));
   assert.equal((await isolated.query("SELECT 1 FROM v2_reward_requests WHERE request_key=$1", [key.idempotencyKey])).rowCount, 0);
   assert.equal((await service.detail(user, reward.id)).reward.stock, 2);
-  await ledger.execute({ kind: "adjust", actorId: admin, accountId: user, amount: 40, reason, idempotencyKey: randomUUID() });
+  await ledger.execute({ kind: "adjust", actorId: admin, accountId: user, amount: 4000, fundingBudgetId: budget, reason, idempotencyKey: randomUUID() });
   await service.redeem(user, reward.id, key);
   const empty = await fixture(0);
   await assert.rejects(service.redeem(empty.user, empty.reward.id, request()), denied(409));
@@ -122,7 +122,7 @@ test("pre-delivery failure releases points/stock once, even on suspended owner a
   const key = action("refund");
   const results = await Promise.all([service.action(admin, o.id, key), service.action(admin, o.id, key)]);
   assert.ok(results.every(r => r.status === "refunded"));
-  assert.equal((await ledger.wallet(user)).balance, 100);
+  assert.equal((await ledger.wallet(user)).balance, 10000);
   assert.equal((await ledger.wallet(user)).reserved, 0);
   assert.equal((await service.list(admin, true)).items.find(r => r.id === reward.id).stock, 3);
   await assert.rejects(service.action(admin, o.id, action("refund")), denied(409));
@@ -131,15 +131,15 @@ test("pre-delivery failure releases points/stock once, even on suspended owner a
 test("dispatch debits once; uncertain delivery retains debit/stock until evidenced refund", async () => {
   const { user, reward } = await fixture(), o = await service.redeem(user, reward.id, request()), dispatch = action("dispatch");
   await Promise.all([service.action(admin, o.id, dispatch), service.action(admin, o.id, dispatch)]);
-  assert.equal((await ledger.wallet(user)).balance, 60);
+  assert.equal((await ledger.wallet(user)).balance, 6000);
   assert.equal((await ledger.wallet(user)).reserved, 0);
   await assert.rejects(service.action(admin, o.id, action("dispatch")), denied(409));
   await service.action(admin, o.id, action("uncertain"));
-  assert.equal((await ledger.wallet(user)).balance, 60);
+  assert.equal((await ledger.wallet(user)).balance, 6000);
   await isolated.query("UPDATE v2_accounts SET status='SUSPENDED' WHERE id=$1", [user]);
   const refund = action("refund");
   await Promise.all([service.action(admin, o.id, refund), service.action(admin, o.id, refund)]);
-  assert.equal((await ledger.wallet(user)).balance, 100);
+  assert.equal((await ledger.wallet(user)).balance, 10000);
   assert.equal((await service.list(admin, true)).items.find(r => r.id === reward.id).stock, 3);
   assert.equal((await isolated.query("SELECT count(*)::int n FROM v2_points_transactions WHERE related_transaction_id=$1", [o.transactionId])).rows[0].n, 1);
 });
@@ -149,8 +149,8 @@ test("concurrent deliver/refund has one final outcome, delivery cannot be refund
   const results = await Promise.allSettled([service.action(admin, o.id, action("delivered")), service.action(admin, o.id, action("refund"))]);
   assert.equal(results.filter(r => r.status === "fulfilled").length, 1);
   const final = (await service.orders(user)).items[0];
-  if (final.status === "delivered") assert.equal((await ledger.wallet(user)).balance, 60);
-  else assert.equal((await ledger.wallet(user)).balance, 100);
+  if (final.status === "delivered") assert.equal((await ledger.wallet(user)).balance, 6000);
+  else assert.equal((await ledger.wallet(user)).balance, 10000);
 });
 test("foreign history/actions denied; changed-payload replay denied; generic ledger cannot bypass lifecycle", async () => {
   const { user, reward } = await fixture(), other = await account(), o = await service.redeem(user, reward.id, request());
@@ -184,7 +184,7 @@ test("post-ledger write failure rolls back every order, reservation, stock, audi
     BEGIN RAISE EXCEPTION 'isolated failure after ledger write'; END; $$;
     CREATE TRIGGER test_order_failure BEFORE INSERT ON v2_reward_orders FOR EACH ROW EXECUTE FUNCTION test_fail_order()`);
   await assert.rejects(service.redeem(user, reward.id, key), /isolated failure/);
-  assert.equal((await ledger.wallet(user)).available, 100);
+  assert.equal((await ledger.wallet(user)).available, 10000);
   assert.equal((await ledger.wallet(user)).reserved, 0);
   assert.equal((await service.detail(user, reward.id)).reward.stock, 3);
   assert.equal((await service.orders(user)).items.length, 0);
@@ -197,11 +197,11 @@ test("post-ledger write failure rolls back every order, reservation, stock, audi
     BEGIN RAISE EXCEPTION 'isolated refund write failure'; END; $$;
     CREATE TRIGGER test_stock_failure BEFORE UPDATE ON v2_rewards FOR EACH ROW EXECUTE FUNCTION test_fail_stock()`);
   await assert.rejects(service.action(admin, o.id, action("refund")), /refund write failure/);
-  assert.equal((await ledger.wallet(user)).reserved, 40);
+  assert.equal((await ledger.wallet(user)).reserved, 4000);
   assert.equal((await service.orders(user)).items[0].status, "reserved");
   await isolated.query("DROP TRIGGER test_stock_failure ON v2_rewards; DROP FUNCTION test_fail_stock()");
   await service.action(admin, o.id, action("refund"));
-  assert.equal((await ledger.wallet(user)).available, 100);
+  assert.equal((await ledger.wallet(user)).available, 10000);
   assert.deepEqual(await service.reconcile(admin), { ok: true, issues: [] });
   assert.equal((await createPointsReconciler(isolated)()).status, "ok");
 });

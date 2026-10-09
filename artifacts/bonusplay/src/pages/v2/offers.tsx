@@ -13,6 +13,7 @@ import {
 import { Btn, Card, Empty, ErrorState, PageHead, Skel } from '@/components/bp';
 import { errMsg } from '@/hooks/use-bp';
 import { cn } from '@/lib/utils';
+import { EconomicsFields, EconomicsSummary, emptyEconomics, toEconomicsInput, type EconomicsForm } from './economics';
 import { fmtDate, queuedText, ScrollTop, SignedInOnly, useApprovalRequest, useV2State, V2Frame } from './shared';
 import { ReversalHistory, ReverseConversionForm } from './offer-reversal';
 
@@ -246,8 +247,10 @@ function CreateForm({ onDone }: { onDone: () => void }) {
   const partners = useListV2OfferPartners({ query: { queryKey: getListV2OfferPartnersQueryKey() } });
   const inv = useInvalidate();
   const create = useCreateV2Offer();
-  const empty = { partnerId: '', title: '', description: '', terms: '', points: '', destinationUrl: '', category: 'other' as V2OfferInput['category'], requirements: '', completionSteps: '', estimatedMinutes: '', approvalDays: '', expiresAt: '' };
+  const empty = { partnerId: '', title: '', description: '', terms: '', destinationUrl: '', category: 'other' as V2OfferInput['category'], requirements: '', completionSteps: '', estimatedMinutes: '', approvalDays: '', expiresAt: '' };
   const [f, setF] = useState(empty);
+  const [econ, setEcon] = useState<EconomicsForm>(emptyEconomics);
+  const [econOk, setEconOk] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const set = (k: keyof typeof f) => (e: { target: { value: string } }) => setF(p => ({ ...p, [k]: e.target.value }));
   if (partners.isLoading) return <Skel className="h-60" />;
@@ -255,14 +258,15 @@ function CreateForm({ onDone }: { onDone: () => void }) {
   if (!partners.data || partners.data.length === 0) return <Empty icon={<Lock />} title="Ingen partnere er satt opp" text="Partnerkonfigurasjon opprettes av driftsteamet. Det finnes ikke noe API for å opprette partnere her, så et tilbud kan ikke lages før en partner er klargjort av operatør." />;
   const submit = (e: FormEvent) => {
     e.preventDefault();
-    const points = Number(f.points);
+    const economics = toEconomicsInput(econ);
     let https = false;
     try { https = new URL(f.destinationUrl).protocol === 'https:'; } catch { https = false; }
     if (!f.partnerId) return setErr('Velg en partner.');
     if (f.title.trim().length < 3 || f.title.length > 120) return setErr('Tittel må være 3-120 tegn.');
     if (f.description.trim().length < 10 || f.description.length > 2000) return setErr('Beskrivelse må være 10-2000 tegn.');
     if (f.terms.trim().length < 10 || f.terms.length > 4000) return setErr('Vilkår må være 10-4000 tegn.');
-    if (!Number.isInteger(points) || points < 1 || points > 1000000) return setErr('Poeng må være et heltall mellom 1 og 1 000 000.');
+    if (typeof economics === 'string') return setErr(economics);
+    if (!econOk) return setErr('Beregn lønnsomheten først. Kampanjen må oppfylle økonomireglene.');
     if (!https || f.destinationUrl.length > 2000) return setErr('Destinasjon må være en HTTPS-adresse på maks 2000 tegn.');
     if (f.requirements.trim().length < 10 || f.completionSteps.trim().length < 10) return setErr('Krav og gjennomføring må være minst 10 tegn hver.');
     const estimatedMinutes = Number(f.estimatedMinutes), approvalDays = Number(f.approvalDays);
@@ -270,10 +274,10 @@ function CreateForm({ onDone }: { onDone: () => void }) {
       !Number.isInteger(approvalDays) || approvalDays < 1 || approvalDays > 365) return setErr('Oppgi tid i hele minutter (1–10080) og vurderingsdager (1–365).');
     if (f.expiresAt && new Date(f.expiresAt).getTime() <= Date.now()) return setErr('Utløpsdato må være i fremtiden.');
     setErr(null);
-    create.mutate({ data: { partnerId: f.partnerId, title: f.title.trim(), description: f.description.trim(), terms: f.terms.trim(), points, destinationUrl: f.destinationUrl,
+    create.mutate({ data: { partnerId: f.partnerId, title: f.title.trim(), description: f.description.trim(), terms: f.terms.trim(), economics, destinationUrl: f.destinationUrl,
       category: f.category, requirements: f.requirements.trim(), completionSteps: f.completionSteps.trim(), estimatedMinutes, approvalDays,
       expiresAt: f.expiresAt ? new Date(f.expiresAt).toISOString() : null } }, {
-      onSuccess: () => { void inv.offers(); setF(empty); onDone(); },
+      onSuccess: () => { void inv.offers(); setF(empty); setEcon(emptyEconomics); setEconOk(false); onDone(); },
       onError: x => setErr(errMsg(x)),
     });
   };
@@ -284,7 +288,7 @@ function CreateForm({ onDone }: { onDone: () => void }) {
       <L id="of-title" t="Tittel"><input id="of-title" className={inputCls} value={f.title} onChange={set('title')} maxLength={120} data-testid="input-offer-title" /></L>
       <L id="of-desc" t="Beskrivelse"><textarea id="of-desc" rows={3} className={inputCls} value={f.description} onChange={set('description')} maxLength={2000} data-testid="input-offer-description" /></L>
       <L id="of-terms" t="Vilkår"><textarea id="of-terms" rows={4} className={inputCls} value={f.terms} onChange={set('terms')} maxLength={4000} data-testid="input-offer-terms" /></L>
-      <L id="of-points" t="Poeng"><input id="of-points" inputMode="numeric" className={inputCls} value={f.points} onChange={set('points')} data-testid="input-offer-points" /></L>
+      <EconomicsFields f={econ} setF={setEcon} onComputed={setEconOk} />
       <L id="of-url" t="Destinasjons-URL (HTTPS)"><input id="of-url" type="url" inputMode="url" className={inputCls} value={f.destinationUrl} onChange={set('destinationUrl')} maxLength={2000} data-testid="input-offer-url" /></L>
       <L id="of-category" t="Kategori"><select id="of-category" className={inputCls} value={f.category} onChange={e => setF(v => ({ ...v, category: e.target.value as V2OfferInput['category'] }))}>{Object.entries(CATEGORIES).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></L>
       <L id="of-requirements" t="Krav"><textarea id="of-requirements" className={inputCls} value={f.requirements} onChange={set('requirements')} maxLength={2000} /></L>
@@ -293,7 +297,7 @@ function CreateForm({ onDone }: { onDone: () => void }) {
       <L id="of-days" t="Forventet vurdering (dager)"><input id="of-days" inputMode="numeric" className={inputCls} value={f.approvalDays} onChange={set('approvalDays')} /></L>
       <L id="of-expiry" t="Utløpsdato (valgfritt, lokal tid)"><input id="of-expiry" type="datetime-local" className={inputCls} value={f.expiresAt} onChange={set('expiresAt')} /></L>
       <div aria-live="polite">{err && <p className="text-sm text-red-300" role="alert" data-testid="text-create-error">{err}</p>}</div>
-      <Btn type="submit" loading={create.isPending} disabled={create.isPending} data-testid="button-create-offer">Opprett utkast</Btn>
+      <Btn type="submit" loading={create.isPending} disabled={create.isPending || !econOk} data-testid="button-create-offer">Opprett utkast</Btn>
     </form>
   );
 }
@@ -319,6 +323,8 @@ function AdminOffers() {
         <ul className="space-y-3">{sorted.map(o => (
           <li key={o.id} className="rounded-2xl bg-white/5 p-4" data-testid={`row-admin-offer-${o.id}`}>
             <div className="flex items-start justify-between gap-2"><div><div className="text-xs text-muted-foreground">{o.partnerName} · {fmtDate(o.createdAt)}</div><div className="font-bold">{o.title}</div><div className="text-xs">{nf.format(o.points)} poeng</div></div><Chip k={o.status}>{OFFER[o.status]}</Chip></div>
+            {o.economics ? <details className="mt-2 text-sm"><summary className="cursor-pointer text-primary">Lønnsomhet</summary><div className="mt-2"><EconomicsSummary e={o.economics} /></div></details>
+              : <p className="mt-2 text-xs text-amber-200">Mangler lønnsomhetsberegning og kan ikke aktiveres.</p>}
             <details className="mt-3 text-sm"><summary className="cursor-pointer text-primary">Kontroller krav, vilkår og destinasjon</summary><div className="mt-2 space-y-2 whitespace-pre-wrap break-words"><p>{o.description}</p><p><b>Krav:</b> {o.requirements}</p><p><b>Gjennomføring:</b> {o.completionSteps}</p><p><b>Vilkår:</b> {o.terms}</p><p><b>Destinasjon:</b> {o.destinationUrl}</p><p>{o.estimatedMinutes} minutter · ca. {o.approvalDays} vurderingsdager · {o.expiresAt ? `utløper ${fmtDate(o.expiresAt)}` : 'ingen fast utløpsdato'}</p></div></details>
             {o.status === 'draft' && <><ReasonBox testid={`approve-${o.id}`} label="Send til godkjenning" pending={review.isPending || approval.isPending} onSubmit={act(o, 'approved')} /><ReasonBox testid={`reject-draft-${o.id}`} label="Avvis utkast" danger pending={review.isPending} onSubmit={act(o, 'rejected')} /></>}
             {o.status === 'approved' && <ReasonBox testid={`pause-${o.id}`} label="Avvis og pause" danger pending={review.isPending} onSubmit={act(o, 'rejected')} />}

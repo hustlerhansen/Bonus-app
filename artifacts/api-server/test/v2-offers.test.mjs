@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { createHmac, randomUUID } from "node:crypto";
 import { readFile, mkdir } from "node:fs/promises";
 import { build } from "esbuild";
+import { applyV2Migrations, createTestBudget } from "./fixtures.mjs";
 
 const out = new URL("../.cache/v2-offers-test.mjs", import.meta.url);
 await mkdir(new URL("../.cache/", import.meta.url), { recursive: true });
@@ -19,7 +20,7 @@ const isolated = new pool.constructor({ ...pool.options, options: `-c search_pat
 const secret = "isolated-test-signing-key-not-a-live-credential";
 const offers = createOfferService(isolated, () => secret);
 const ledger = createPointsLedger(isolated);
-let admin;
+let admin, budget;
 const reason = "Kontrollert vurdering av signert partnerbevis";
 const denied = status => error => error.status === status;
 async function account(role = "USER") {
@@ -30,7 +31,8 @@ async function account(role = "USER") {
   return id;
 }
 const input = () => ({ partnerId: "test-partner", title: "Syntetisk testtilbud", description: "Kun isolert test av tilbudsmotor",
-  terms: "Kun test. Ingen penger eller virkelig partner.", points: 37, destinationUrl: "https://example.invalid/action?campaign=test",
+  terms: "Kun test. Ingen penger eller virkelig partner.",
+  economics: { grossCpaOre: 124, networkFeeBp: 0, expectedReversalBp: 0, giftcardFeeBp: 0, maxConversions: 1000, paymentTermsDays: 30, agreementReference: "Isolert testavtale uten virkelig partner" }, destinationUrl: "https://example.invalid/action?campaign=test",
   category: "other", requirements: "Kun for syntetiske testkontoer.", completionSteps: "Fullfør handlingen hos testpartneren.",
   estimatedMinutes: 5, approvalDays: 7, expiresAt: null });
 async function fixture(partnerId = "test-partner") {
@@ -55,10 +57,9 @@ async function review(id, status = "verified", actor = admin) {
 }
 before(async () => {
   await pool.query(`CREATE SCHEMA ${schema}`);
-  for (const name of ["0001_v2_identity.sql", "0002_v2_points.sql", "0003_v2_offers.sql", "0004_v2_offer_reversals.sql"]) {
-    await isolated.query(await readFile(new URL(`../../../lib/db/migrations/${name}`, import.meta.url), "utf8"));
-  }
+  await applyV2Migrations(isolated);
   admin = await account("ADMIN");
+  budget = await createTestBudget(isolated, admin);
   for (const partner of ["test-partner", "other-partner"]) {
     await isolated.query(`INSERT INTO v2_offer_partners(id,name,secret_env_key,integration_actor_id,active)
       VALUES($1,'Isolert testpartner','V2_OFFER_CALLBACK_TEST',$2,true)`, [partner, admin]);
@@ -375,7 +376,7 @@ test("full reversal preserves signed proof and records immutable linked events a
   await assert.rejects(isolated.query("DELETE FROM v2_offer_reversal_events WHERE conversion_id=$1", [f.v.id]), /append-only/);
   await assert.rejects(isolated.query("UPDATE v2_offer_conversions SET status='verified' WHERE id=$1", [f.v.id]), /lifecycle/);
   // Idempotent replay returns current wallet, not the original snapshot.
-  await ledger.execute({ kind: "adjust", actorId: admin, accountId: f.user, amount: 5, reason, idempotencyKey: randomUUID() });
+  await ledger.execute({ kind: "adjust", actorId: admin, accountId: f.user, amount: 5, fundingBudgetId: budget, reason, idempotencyKey: randomUUID() });
   const replay = await reverse(f.v.id, key, admin, `  ${reason}  `);
   assert.equal(replay.replayed, true);
   assert.equal(replay.compensation.id, result.compensation.id);
@@ -442,7 +443,7 @@ test("spent credit cannot make balance negative; failures leave no reversal or r
   assert.equal((await ledger.wallet(f.user)).balance, 17);
   assert.equal((await offers.listConversions(f.user)).items[0].status, "verified");
   assert.equal((await isolated.query("SELECT 1 FROM v2_offer_reversal_events WHERE conversion_id=$1", [f.v.id])).rowCount, 0);
-  await ledger.execute({ kind: "adjust", actorId: admin, accountId: f.user, amount: 20, reason, idempotencyKey: randomUUID() });
+  await ledger.execute({ kind: "adjust", actorId: admin, accountId: f.user, amount: 20, fundingBudgetId: budget, reason, idempotencyKey: randomUUID() });
   assert.equal((await reverse(f.v.id, key)).wallet.balance, 0);
 });
 test("reserved points cannot be consumed by reversal; releasing reservation allows same-key retry", async () => {

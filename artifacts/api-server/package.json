@@ -10,6 +10,7 @@
     "test:v2-offers": "node --test test/v2-offers.test.mjs",
     "test:v2-rewards": "node --test test/v2-rewards.test.mjs",
     "test:v2-admin": "node --test test/v2-admin-requests.test.mjs",
+    "test:v2-economy": "node --test test/v2-economy.test.mjs",
     "points:reconcile": "node scripts/reconcile-points.mjs",
     "dev": "export NODE_ENV=development && pnpm run build && pnpm run start",
     "build": "node ./build.mjs",

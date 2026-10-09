@@ -5,9 +5,11 @@
  * API for the BONUSPLAY demo rewards platform
  * OpenAPI spec version: 0.1.0
  */
+import type { V2CampaignEconomics } from './v2CampaignEconomics';
 import type { V2OfferStatus } from './v2OfferStatus';
 
 export interface V2Offer {
+  economics?: V2CampaignEconomics | null;
   id: string;
   partnerId: string;
   partnerName: string;

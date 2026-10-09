@@ -9,6 +9,106 @@ import * as zod from 'zod';
 
 
 /**
+ * @summary XP, level, streak and badges (non-monetary, separate from BonusPoints)
+ */
+export const GetV2EngagementResponse = zod.object({
+  "xp": zod.number().int(),
+  "level": zod.number().int(),
+  "levelName": zod.string(),
+  "levelFloorXp": zod.number().int(),
+  "nextLevelXp": zod.number().int(),
+  "streak": zod.number().int(),
+  "checkedInToday": zod.boolean(),
+  "badges": zod.array(zod.object({
+  "id": zod.string(),
+  "title": zod.string(),
+  "description": zod.string(),
+  "earned": zod.boolean()
+})),
+  "xpAwarded": zod.number().int()
+})
+
+
+/**
+ * @summary Daily check-in (once per Oslo day); awards XP only, never BonusPoints
+ */
+export const CheckInV2EngagementResponse = zod.object({
+  "xp": zod.number().int(),
+  "level": zod.number().int(),
+  "levelName": zod.string(),
+  "levelFloorXp": zod.number().int(),
+  "nextLevelXp": zod.number().int(),
+  "streak": zod.number().int(),
+  "checkedInToday": zod.boolean(),
+  "badges": zod.array(zod.object({
+  "id": zod.string(),
+  "title": zod.string(),
+  "description": zod.string(),
+  "earned": zod.boolean()
+})),
+  "xpAwarded": zod.number().int()
+})
+
+
+/**
+ * @summary Compute campaign profitability with the active economy rules (no write)
+ */
+export const previewV2CampaignEconomicsBodyGrossCpaOreMin = 100;
+export const previewV2CampaignEconomicsBodyGrossCpaOreMax = 100000000;
+
+export const previewV2CampaignEconomicsBodyNetworkFeeBpMin = 0;
+export const previewV2CampaignEconomicsBodyNetworkFeeBpMax = 9000;
+
+export const previewV2CampaignEconomicsBodyExpectedReversalBpMin = 0;
+export const previewV2CampaignEconomicsBodyExpectedReversalBpMax = 9000;
+
+export const previewV2CampaignEconomicsBodyGiftcardFeeBpMin = 0;
+export const previewV2CampaignEconomicsBodyGiftcardFeeBpMax = 2000;
+
+export const previewV2CampaignEconomicsBodyUserShareBpMax = 4000;
+
+export const previewV2CampaignEconomicsBodyMaxConversionsMax = 1000000;
+
+export const previewV2CampaignEconomicsBodyPaymentTermsDaysMin = 0;
+export const previewV2CampaignEconomicsBodyPaymentTermsDaysMax = 365;
+
+export const previewV2CampaignEconomicsBodyAgreementReferenceMin = 10;
+export const previewV2CampaignEconomicsBodyAgreementReferenceMax = 200;
+
+
+
+export const PreviewV2CampaignEconomicsBody = zod.object({
+  "grossCpaOre": zod.number().int().min(previewV2CampaignEconomicsBodyGrossCpaOreMin).max(previewV2CampaignEconomicsBodyGrossCpaOreMax).describe('Partnerens betaling per verifisert konvertering, i øre'),
+  "networkFeeBp": zod.number().int().min(previewV2CampaignEconomicsBodyNetworkFeeBpMin).max(previewV2CampaignEconomicsBodyNetworkFeeBpMax).describe('Nettverksgebyr i basispunkter (100 = 1 %)'),
+  "expectedReversalBp": zod.number().int().min(previewV2CampaignEconomicsBodyExpectedReversalBpMin).max(previewV2CampaignEconomicsBodyExpectedReversalBpMax),
+  "giftcardFeeBp": zod.number().int().min(previewV2CampaignEconomicsBodyGiftcardFeeBpMin).max(previewV2CampaignEconomicsBodyGiftcardFeeBpMax),
+  "userShareBp": zod.number().int().min(1).max(previewV2CampaignEconomicsBodyUserShareBpMax).optional().describe('Valgfri; standard fra økonomireglene'),
+  "maxConversions": zod.number().int().min(1).max(previewV2CampaignEconomicsBodyMaxConversionsMax),
+  "paymentTermsDays": zod.number().int().min(previewV2CampaignEconomicsBodyPaymentTermsDaysMin).max(previewV2CampaignEconomicsBodyPaymentTermsDaysMax),
+  "agreementReference": zod.string().min(previewV2CampaignEconomicsBodyAgreementReferenceMin).max(previewV2CampaignEconomicsBodyAgreementReferenceMax)
+})
+
+export const PreviewV2CampaignEconomicsResponse = zod.object({
+  "configVersion": zod.number().int(),
+  "grossCpaOre": zod.number().int(),
+  "networkFeeBp": zod.number().int(),
+  "expectedReversalBp": zod.number().int(),
+  "giftcardFeeBp": zod.number().int(),
+  "userShareBp": zod.number().int(),
+  "netOre": zod.number().int(),
+  "points": zod.number().int(),
+  "expectedMarginBp": zod.number().int(),
+  "marginOre": zod.number().int(),
+  "maxConversions": zod.number().int(),
+  "maxLiabilityOre": zod.number().int(),
+  "paymentTermsDays": zod.number().int(),
+  "agreementReference": zod.string(),
+  "ok": zod.boolean(),
+  "problems": zod.array(zod.string())
+})
+
+
+/**
  * @summary High-risk administrator requests, newest first
  */
 export const ListV2AdminRequestsQueryParams = zod.object({
@@ -168,7 +268,21 @@ export const GetV2AdminEconomyResponse = zod.object({
   "balanceNok": zod.number(),
   "pendingCreditNok": zod.number()
 }),
-  "admins": zod.number().int()
+  "admins": zod.number().int(),
+  "budgets": zod.array(zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "purpose": zod.string(),
+  "pointsTotal": zod.number().int(),
+  "pointsUsed": zod.number().int(),
+  "validUntil": zod.string(),
+  "approvedBy": zod.string(),
+  "createdAt": zod.string()
+})),
+  "funding": zod.object({
+  "conversionPoints": zod.number().int(),
+  "budgetPoints": zod.number().int()
+})
 })
 
 
@@ -210,7 +324,9 @@ export const ListV2RewardsResponse = zod.object({
   "terms": zod.string(),
   "points": zod.number().int(),
   "stock": zod.number().int(),
-  "status": zod.enum(['draft', 'approved', 'disabled'])
+  "status": zod.enum(['draft', 'approved', 'disabled']),
+  "faceValueOre": zod.number().int().nullish(),
+  "costOre": zod.number().int().nullish()
 })),
   "redeemEnabled": zod.boolean()
 })
@@ -230,7 +346,9 @@ export const GetV2RewardResponse = zod.object({
   "terms": zod.string(),
   "points": zod.number().int(),
   "stock": zod.number().int(),
-  "status": zod.enum(['draft', 'approved', 'disabled'])
+  "status": zod.enum(['draft', 'approved', 'disabled']),
+  "faceValueOre": zod.number().int().nullish(),
+  "costOre": zod.number().int().nullish()
 }),
   "redeemEnabled": zod.boolean()
 })
@@ -293,7 +411,9 @@ export const ListV2AdminRewardsResponse = zod.object({
   "terms": zod.string(),
   "points": zod.number().int(),
   "stock": zod.number().int(),
-  "status": zod.enum(['draft', 'approved', 'disabled'])
+  "status": zod.enum(['draft', 'approved', 'disabled']),
+  "faceValueOre": zod.number().int().nullish(),
+  "costOre": zod.number().int().nullish()
 })),
   "redeemEnabled": zod.boolean()
 })
@@ -311,7 +431,10 @@ export const createV2RewardBodyDescriptionMax = 2000;
 export const createV2RewardBodyTermsMin = 10;
 export const createV2RewardBodyTermsMax = 2000;
 
-export const createV2RewardBodyPointsMax = 1000000;
+export const createV2RewardBodyFaceValueNokMax = 10000;
+
+export const createV2RewardBodyCostOreMin = 0;
+export const createV2RewardBodyCostOreMax = 2000000;
 
 export const createV2RewardBodyStockMin = 0;
 export const createV2RewardBodyStockMax = 1000000;
@@ -328,7 +451,8 @@ export const CreateV2RewardBody = zod.object({
   "title": zod.string().min(createV2RewardBodyTitleMin).max(createV2RewardBodyTitleMax),
   "description": zod.string().min(createV2RewardBodyDescriptionMin).max(createV2RewardBodyDescriptionMax),
   "terms": zod.string().min(createV2RewardBodyTermsMin).max(createV2RewardBodyTermsMax),
-  "points": zod.number().int().min(1).max(createV2RewardBodyPointsMax),
+  "faceValueNok": zod.number().int().min(1).max(createV2RewardBodyFaceValueNokMax).describe('Gavekortets pålydende i kr; poengprisen blir pålydende × 100'),
+  "costOre": zod.number().int().min(createV2RewardBodyCostOreMin).max(createV2RewardBodyCostOreMax).describe('Innkjøpspris inkl. gebyr i øre'),
   "stock": zod.number().int().min(createV2RewardBodyStockMin).max(createV2RewardBodyStockMax),
   "supplierSku": zod.string().min(1).max(createV2RewardBodySupplierSkuMax),
   "approvalReference": zod.string().min(createV2RewardBodyApprovalReferenceMin).max(createV2RewardBodyApprovalReferenceMax)
@@ -343,7 +467,9 @@ export const CreateV2RewardResponse = zod.object({
   "terms": zod.string(),
   "points": zod.number().int(),
   "stock": zod.number().int(),
-  "status": zod.enum(['draft', 'approved', 'disabled'])
+  "status": zod.enum(['draft', 'approved', 'disabled']),
+  "faceValueOre": zod.number().int().nullish(),
+  "costOre": zod.number().int().nullish()
 })
 
 
@@ -370,7 +496,9 @@ export const ReviewV2RewardResponse = zod.object({
   "terms": zod.string(),
   "points": zod.number().int(),
   "stock": zod.number().int(),
-  "status": zod.enum(['draft', 'approved', 'disabled'])
+  "status": zod.enum(['draft', 'approved', 'disabled']),
+  "faceValueOre": zod.number().int().nullish(),
+  "costOre": zod.number().int().nullish()
 })
 
 
@@ -437,6 +565,24 @@ export const ReconcileV2RewardsResponse = zod.object({
 
 export const ListV2OffersResponse = zod.object({
   "items": zod.array(zod.object({
+  "economics": zod.union([zod.object({
+  "configVersion": zod.number().int(),
+  "grossCpaOre": zod.number().int(),
+  "networkFeeBp": zod.number().int(),
+  "expectedReversalBp": zod.number().int(),
+  "giftcardFeeBp": zod.number().int(),
+  "userShareBp": zod.number().int(),
+  "netOre": zod.number().int(),
+  "points": zod.number().int(),
+  "expectedMarginBp": zod.number().int(),
+  "marginOre": zod.number().int(),
+  "maxConversions": zod.number().int(),
+  "maxLiabilityOre": zod.number().int(),
+  "paymentTermsDays": zod.number().int(),
+  "agreementReference": zod.string(),
+  "ok": zod.boolean(),
+  "problems": zod.array(zod.string())
+}),zod.null()]).optional(),
   "id": zod.string().uuid(),
   "partnerId": zod.string(),
   "partnerName": zod.string(),
@@ -465,6 +611,24 @@ export const GetV2OfferParams = zod.object({
 
 export const GetV2OfferResponse = zod.object({
   "offer": zod.object({
+  "economics": zod.union([zod.object({
+  "configVersion": zod.number().int(),
+  "grossCpaOre": zod.number().int(),
+  "networkFeeBp": zod.number().int(),
+  "expectedReversalBp": zod.number().int(),
+  "giftcardFeeBp": zod.number().int(),
+  "userShareBp": zod.number().int(),
+  "netOre": zod.number().int(),
+  "points": zod.number().int(),
+  "expectedMarginBp": zod.number().int(),
+  "marginOre": zod.number().int(),
+  "maxConversions": zod.number().int(),
+  "maxLiabilityOre": zod.number().int(),
+  "paymentTermsDays": zod.number().int(),
+  "agreementReference": zod.string(),
+  "ok": zod.boolean(),
+  "problems": zod.array(zod.string())
+}),zod.null()]).optional(),
   "id": zod.string().uuid(),
   "partnerId": zod.string(),
   "partnerName": zod.string(),
@@ -536,6 +700,24 @@ export const ListV2OfferPartnersResponse = zod.array(ListV2OfferPartnersResponse
 
 export const ListV2AdminOffersResponse = zod.object({
   "items": zod.array(zod.object({
+  "economics": zod.union([zod.object({
+  "configVersion": zod.number().int(),
+  "grossCpaOre": zod.number().int(),
+  "networkFeeBp": zod.number().int(),
+  "expectedReversalBp": zod.number().int(),
+  "giftcardFeeBp": zod.number().int(),
+  "userShareBp": zod.number().int(),
+  "netOre": zod.number().int(),
+  "points": zod.number().int(),
+  "expectedMarginBp": zod.number().int(),
+  "marginOre": zod.number().int(),
+  "maxConversions": zod.number().int(),
+  "maxLiabilityOre": zod.number().int(),
+  "paymentTermsDays": zod.number().int(),
+  "agreementReference": zod.string(),
+  "ok": zod.boolean(),
+  "problems": zod.array(zod.string())
+}),zod.null()]).optional(),
   "id": zod.string().uuid(),
   "partnerId": zod.string(),
   "partnerName": zod.string(),
@@ -568,7 +750,27 @@ export const createV2OfferBodyDescriptionMax = 2000;
 export const createV2OfferBodyTermsMin = 10;
 export const createV2OfferBodyTermsMax = 4000;
 
-export const createV2OfferBodyPointsMax = 1000000;
+export const createV2OfferBodyEconomicsGrossCpaOreMin = 100;
+export const createV2OfferBodyEconomicsGrossCpaOreMax = 100000000;
+
+export const createV2OfferBodyEconomicsNetworkFeeBpMin = 0;
+export const createV2OfferBodyEconomicsNetworkFeeBpMax = 9000;
+
+export const createV2OfferBodyEconomicsExpectedReversalBpMin = 0;
+export const createV2OfferBodyEconomicsExpectedReversalBpMax = 9000;
+
+export const createV2OfferBodyEconomicsGiftcardFeeBpMin = 0;
+export const createV2OfferBodyEconomicsGiftcardFeeBpMax = 2000;
+
+export const createV2OfferBodyEconomicsUserShareBpMax = 4000;
+
+export const createV2OfferBodyEconomicsMaxConversionsMax = 1000000;
+
+export const createV2OfferBodyEconomicsPaymentTermsDaysMin = 0;
+export const createV2OfferBodyEconomicsPaymentTermsDaysMax = 365;
+
+export const createV2OfferBodyEconomicsAgreementReferenceMin = 10;
+export const createV2OfferBodyEconomicsAgreementReferenceMax = 200;
 
 export const createV2OfferBodyDestinationUrlMax = 2000;
 
@@ -589,7 +791,16 @@ export const CreateV2OfferBody = zod.object({
   "title": zod.string().min(createV2OfferBodyTitleMin).max(createV2OfferBodyTitleMax),
   "description": zod.string().min(createV2OfferBodyDescriptionMin).max(createV2OfferBodyDescriptionMax),
   "terms": zod.string().min(createV2OfferBodyTermsMin).max(createV2OfferBodyTermsMax),
-  "points": zod.number().int().min(1).max(createV2OfferBodyPointsMax),
+  "economics": zod.object({
+  "grossCpaOre": zod.number().int().min(createV2OfferBodyEconomicsGrossCpaOreMin).max(createV2OfferBodyEconomicsGrossCpaOreMax).describe('Partnerens betaling per verifisert konvertering, i øre'),
+  "networkFeeBp": zod.number().int().min(createV2OfferBodyEconomicsNetworkFeeBpMin).max(createV2OfferBodyEconomicsNetworkFeeBpMax).describe('Nettverksgebyr i basispunkter (100 = 1 %)'),
+  "expectedReversalBp": zod.number().int().min(createV2OfferBodyEconomicsExpectedReversalBpMin).max(createV2OfferBodyEconomicsExpectedReversalBpMax),
+  "giftcardFeeBp": zod.number().int().min(createV2OfferBodyEconomicsGiftcardFeeBpMin).max(createV2OfferBodyEconomicsGiftcardFeeBpMax),
+  "userShareBp": zod.number().int().min(1).max(createV2OfferBodyEconomicsUserShareBpMax).optional().describe('Valgfri; standard fra økonomireglene'),
+  "maxConversions": zod.number().int().min(1).max(createV2OfferBodyEconomicsMaxConversionsMax),
+  "paymentTermsDays": zod.number().int().min(createV2OfferBodyEconomicsPaymentTermsDaysMin).max(createV2OfferBodyEconomicsPaymentTermsDaysMax),
+  "agreementReference": zod.string().min(createV2OfferBodyEconomicsAgreementReferenceMin).max(createV2OfferBodyEconomicsAgreementReferenceMax)
+}),
   "destinationUrl": zod.string().url().max(createV2OfferBodyDestinationUrlMax),
   "category": zod.enum(['shopping', 'subscriptions', 'surveys', 'apps', 'services', 'finance', 'travel', 'food', 'entertainment', 'other']),
   "requirements": zod.string().min(createV2OfferBodyRequirementsMin).max(createV2OfferBodyRequirementsMax),
@@ -600,6 +811,24 @@ export const CreateV2OfferBody = zod.object({
 })
 
 export const CreateV2OfferResponse = zod.object({
+  "economics": zod.union([zod.object({
+  "configVersion": zod.number().int(),
+  "grossCpaOre": zod.number().int(),
+  "networkFeeBp": zod.number().int(),
+  "expectedReversalBp": zod.number().int(),
+  "giftcardFeeBp": zod.number().int(),
+  "userShareBp": zod.number().int(),
+  "netOre": zod.number().int(),
+  "points": zod.number().int(),
+  "expectedMarginBp": zod.number().int(),
+  "marginOre": zod.number().int(),
+  "maxConversions": zod.number().int(),
+  "maxLiabilityOre": zod.number().int(),
+  "paymentTermsDays": zod.number().int(),
+  "agreementReference": zod.string(),
+  "ok": zod.boolean(),
+  "problems": zod.array(zod.string())
+}),zod.null()]).optional(),
   "id": zod.string().uuid(),
   "partnerId": zod.string(),
   "partnerName": zod.string(),
@@ -635,6 +864,24 @@ export const ReviewV2OfferBody = zod.object({
 })
 
 export const ReviewV2OfferResponse = zod.object({
+  "economics": zod.union([zod.object({
+  "configVersion": zod.number().int(),
+  "grossCpaOre": zod.number().int(),
+  "networkFeeBp": zod.number().int(),
+  "expectedReversalBp": zod.number().int(),
+  "giftcardFeeBp": zod.number().int(),
+  "userShareBp": zod.number().int(),
+  "netOre": zod.number().int(),
+  "points": zod.number().int(),
+  "expectedMarginBp": zod.number().int(),
+  "marginOre": zod.number().int(),
+  "maxConversions": zod.number().int(),
+  "maxLiabilityOre": zod.number().int(),
+  "paymentTermsDays": zod.number().int(),
+  "agreementReference": zod.string(),
+  "ok": zod.boolean(),
+  "problems": zod.array(zod.string())
+}),zod.null()]).optional(),
   "id": zod.string().uuid(),
   "partnerId": zod.string(),
   "partnerName": zod.string(),

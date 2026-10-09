@@ -252,7 +252,7 @@ function CreateForm({ onDone }: { onDone: () => void }) {
   const sup = useListV2RewardSuppliers({ query: { queryKey: getListV2RewardSuppliersQueryKey() } });
   const create = useCreateV2Reward();
   const refresh = useRefresh();
-  const empty = { supplierId: '', title: '', description: '', terms: '', points: '', stock: '', supplierSku: '', approvalReference: '' };
+  const empty = { supplierId: '', title: '', description: '', terms: '', faceValue: '', cost: '', stock: '', supplierSku: '', approvalReference: '' };
   const [f, setF] = useState(empty);
   const [err, setErr] = useState<string | null>(null);
   const set = (k: keyof typeof f) => (e: { target: { value: string } }) => setF(p => ({ ...p, [k]: e.target.value }));
@@ -261,17 +261,18 @@ function CreateForm({ onDone }: { onDone: () => void }) {
   if (!sup.data || sup.data.length === 0) return <Empty icon={<Lock />} title="Ingen leverandører er satt opp" text="Leverandører klargjøres av operatør. Det finnes ingen funksjon for å opprette dem her, så en premie kan ikke lages før da." />;
   const submit = (e: FormEvent) => {
     e.preventDefault();
-    const points = Number(f.points), stock = Number(f.stock);
+    const faceValueNok = Number(f.faceValue), costKr = Number(f.cost.replace(',', '.')), stock = Number(f.stock);
     if (!f.supplierId) return setErr('Velg en leverandør.');
     if (f.title.trim().length < 3 || f.title.length > 120) return setErr('Tittel må være 3-120 tegn.');
     if (f.description.trim().length < 10 || f.description.length > 2000) return setErr('Beskrivelse må være 10-2000 tegn.');
     if (f.terms.trim().length < 10 || f.terms.length > 2000) return setErr('Vilkår må være 10-2000 tegn.');
-    if (!Number.isInteger(points) || points < 1 || points > 1000000) return setErr('Poeng må være et heltall mellom 1 og 1 000 000.');
+    if (!Number.isInteger(faceValueNok) || faceValueNok < 1 || faceValueNok > 10000) return setErr('Pålydende må være hele kroner mellom 1 og 10 000.');
+    if (!(costKr >= 0 && costKr <= 20000)) return setErr('Oppgi innkjøpspris inkludert gebyr i kroner.');
     if (!Number.isInteger(stock) || stock < 0 || stock > 1000000) return setErr('Lager må være et heltall mellom 0 og 1 000 000.');
     if (f.supplierSku.trim().length < 1 || f.supplierSku.length > 128) return setErr('Leverandørens SKU må være 1-128 tegn.');
     if (f.approvalReference.trim().length < 10 || f.approvalReference.length > 200) return setErr('Godkjenningsreferanse må være 10-200 tegn.');
     setErr(null);
-    create.mutate({ data: { supplierId: f.supplierId, title: f.title.trim(), description: f.description.trim(), terms: f.terms.trim(), points, stock, supplierSku: f.supplierSku.trim(), approvalReference: f.approvalReference.trim() } }, {
+    create.mutate({ data: { supplierId: f.supplierId, title: f.title.trim(), description: f.description.trim(), terms: f.terms.trim(), faceValueNok, costOre: Math.round(costKr * 100), stock, supplierSku: f.supplierSku.trim(), approvalReference: f.approvalReference.trim() } }, {
       onSuccess: () => { void refresh(); setF(empty); onDone(); }, onError: x => setErr(errMsg(x)),
     });
   };
@@ -282,7 +283,9 @@ function CreateForm({ onDone }: { onDone: () => void }) {
       <L id="rw-title" t="Tittel"><input id="rw-title" className={inputCls} value={f.title} onChange={set('title')} maxLength={120} data-testid="input-reward-title" /></L>
       <L id="rw-desc" t="Beskrivelse"><textarea id="rw-desc" rows={3} className={inputCls} value={f.description} onChange={set('description')} maxLength={2000} /></L>
       <L id="rw-terms" t="Vilkår"><textarea id="rw-terms" rows={4} className={inputCls} value={f.terms} onChange={set('terms')} maxLength={2000} /></L>
-      <L id="rw-points" t="Poeng"><input id="rw-points" inputMode="numeric" className={inputCls} value={f.points} onChange={set('points')} /></L>
+      <L id="rw-face" t="Pålydende (kr)"><input id="rw-face" inputMode="numeric" className={inputCls} value={f.faceValue} onChange={set('faceValue')} data-testid="input-reward-face" /></L>
+      <p className="text-xs text-muted-foreground">Poengpris: {Number(f.faceValue) > 0 ? `${nf.format(Number(f.faceValue) * 100)} BP` : '—'} (100 BP = 1 kr i gavekortverdi). Prisen settes automatisk.</p>
+      <L id="rw-cost" t="Innkjøpspris inkl. gebyr (kr)"><input id="rw-cost" inputMode="decimal" className={inputCls} value={f.cost} onChange={set('cost')} data-testid="input-reward-cost" /></L>
       <L id="rw-stock" t="Lager"><input id="rw-stock" inputMode="numeric" className={inputCls} value={f.stock} onChange={set('stock')} /></L>
       <L id="rw-sku" t="Leverandørens SKU"><input id="rw-sku" className={inputCls} value={f.supplierSku} onChange={set('supplierSku')} maxLength={128} /></L>
       <L id="rw-ref" t="Godkjenningsreferanse"><input id="rw-ref" className={inputCls} value={f.approvalReference} onChange={set('approvalReference')} maxLength={200} /></L>

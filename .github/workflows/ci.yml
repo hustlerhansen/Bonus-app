@@ -45,6 +45,8 @@ jobs:
         run: pnpm --filter @workspace/api-server run test:v2-rewards
       - name: Admin approval queue tests
         run: pnpm --filter @workspace/api-server run test:v2-admin
+      - name: Economy, funding and XP tests
+        run: pnpm --filter @workspace/api-server run test:v2-economy
       - name: Frontend cache tests
         run: pnpm --filter @workspace/bonusplay run test:v2-cache
       - name: Dependency audit (production)

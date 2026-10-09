@@ -6,10 +6,14 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { V2EconomyConfig } from './v2EconomyConfig';
+import type { V2EconomyOverviewFunding } from './v2EconomyOverviewFunding';
 import type { V2Liability } from './v2Liability';
+import type { V2MarketingBudget } from './v2MarketingBudget';
 
 export interface V2EconomyOverview {
   config: V2EconomyConfig;
   liability: V2Liability;
   admins: number;
+  budgets: V2MarketingBudget[];
+  funding: V2EconomyOverviewFunding;
 }

@@ -30,12 +30,13 @@ const STATUS: Record<string, [string, string]> = {
 function describe(r: V2AdminRequest): string {
   const p = r.payload as Record<string, unknown>;
   switch (r.action) {
-    case 'POINTS_ADJUSTMENT': return `${nf.format(Number(p.amount))} BP til konto ${String(p.accountId)}`;
+    case 'POINTS_ADJUSTMENT': return `${nf.format(Number(p.amount))} BP til konto ${String(p.accountId)}${p.fundingBudgetId ? ' (markedsbudsjett)' : ''}`;
     case 'POINTS_DECISION': return `${p.status === 'approved' ? 'Godkjenn' : 'Avvis'} transaksjon ${String(p.transactionId)}`;
     case 'POINTS_COMPENSATION': return `${p.type === 'REFUND' ? 'Refusjon' : 'Reversering'} av transaksjon ${String(p.transactionId)}`;
     case 'OFFER_APPROVAL': return `Kampanje ${String(p.offerId)}`;
     case 'REWARD_APPROVAL': return `Premie ${String(p.rewardId)}`;
     case 'ORDER_DISPATCH': return `Ordre ${String(p.orderId)} · bevis ${String(p.evidenceReference)}`;
+    case 'MARKETING_BUDGET': return `${String(p.name)}: ${nf.format(Number(p.pointsTotal))} BP (${kr(Number(p.pointsTotal) / 100)}) til ${fmtDateTime(String(p.validUntil))}`;
     case 'ECONOMY_CONFIG': return `Standardandel ${pct(Number(p.defaultShareBp))}, maks ${pct(Number(p.maxShareBp))}, minstemargin ${pct(Number(p.minMarginBp))}, to administratorer: ${p.dualControl ? 'ja' : 'nei'}`;
     default: return JSON.stringify(p);
   }
@@ -166,6 +167,34 @@ function EconomyForm({ c }: { c: V2EconomyConfig }) {
   );
 }
 
+function BudgetForm() {
+  const approval = useApprovalRequest();
+  const [v, setV] = useState({ name: '', purpose: '', nok: '', until: '' });
+  const [reason, setReason] = useState('');
+  const [msg, setMsg] = useState<string | null>(null);
+  const nok = Number(v.nok);
+  const ok = v.name.trim().length >= 3 && v.purpose.trim().length >= 10 && Number.isInteger(nok) && nok >= 1 && nok <= 100000 && !!v.until && reason.trim().length >= 10;
+  return (
+    <form className="space-y-3" onSubmit={(e: FormEvent) => {
+      e.preventDefault(); if (!ok) return; setMsg(null);
+      approval.send('MARKETING_BUDGET', { name: v.name.trim(), purpose: v.purpose.trim(), pointsTotal: nok * 100, validUntil: new Date(`${v.until}T23:59:59`).toISOString() },
+        reason.trim(), { onQueued: r => setMsg(queuedText(r)), onError: x => setMsg(errMsg(x)) });
+    }}>
+      <p className="text-xs text-muted-foreground">Et markedsbudsjett er en forhåndsgodkjent kostnad (f.eks. velkomstbonus eller kampanje). Det er eneste måte å gi poeng med pengeverdi uten en verifisert konvertering.</p>
+      <div className="grid gap-3 sm:grid-cols-2">
+        <label className="block text-sm font-bold">Navn<input className={inputCls} value={v.name} maxLength={120} onChange={e => setV({ ...v, name: e.target.value })} data-testid="input-budget-name" /></label>
+        <label className="block text-sm font-bold">Beløp (kr)<input className={inputCls} inputMode="numeric" value={v.nok} onChange={e => setV({ ...v, nok: e.target.value })} data-testid="input-budget-nok" /></label>
+        <label className="block text-sm font-bold sm:col-span-2">Formål<input className={inputCls} value={v.purpose} maxLength={500} onChange={e => setV({ ...v, purpose: e.target.value })} data-testid="input-budget-purpose" /></label>
+        <label className="block text-sm font-bold">Gyldig til<input type="date" className={inputCls} value={v.until} onChange={e => setV({ ...v, until: e.target.value })} data-testid="input-budget-until" /></label>
+        <label className="block text-sm font-bold">Begrunnelse<input className={inputCls} value={reason} maxLength={500} onChange={e => setReason(e.target.value)} data-testid="input-budget-reason" /></label>
+      </div>
+      {Number.isInteger(nok) && nok > 0 && <p className="text-xs text-muted-foreground">= {nf.format(nok * 100)} BP</p>}
+      <Btn type="submit" size="sm" variant="gold" disabled={!ok} loading={approval.isPending} data-testid="button-budget-submit">Send til godkjenning</Btn>
+      {msg && <p role="status" className="text-sm">{msg}</p>}
+    </form>
+  );
+}
+
 function Economy() {
   const q = useGetV2AdminEconomy({ query: { queryKey: getGetV2AdminEconomyQueryKey(), refetchInterval: 60000 } });
   if (q.isLoading) return <Skel className="h-48" />;
@@ -192,7 +221,19 @@ function Economy() {
           <Stat label="Innløsningsregler" value={`${c.minAccountAgeDays} dager`} sub={`min ${nf.format(c.minVerifiedPointsBeforeRedeem)} BP verifisert, maks ${c.maxRedemptionsPerDay}/døgn`} />
         </div>
       </section>
-      <Card><h2 className="mb-3 font-display text-lg font-bold">Foreslå endring</h2><EconomyForm key={c.version} c={c} /></Card>
+      <section aria-labelledby="h-budgets">
+        <h2 id="h-budgets" className="mb-3 font-display text-lg font-bold">Finansiering</h2>
+        <div className="mb-3 grid gap-3 sm:grid-cols-2">
+          <Stat label="Poeng finansiert av partnerinntekt" value={`${nf.format(q.data.funding.conversionPoints)} BP`} sub={kr(q.data.funding.conversionPoints / c.pointsPerNok)} />
+          <Stat label="Poeng finansiert av markedsbudsjett" value={`${nf.format(q.data.funding.budgetPoints)} BP`} sub={kr(q.data.funding.budgetPoints / c.pointsPerNok)} />
+        </div>
+        {q.data.budgets.length === 0 ? <p className="text-sm text-muted-foreground">Ingen markedsbudsjetter. Uten budsjett kan det ikke gis poeng utenom verifiserte konverteringer.</p> : (
+          <ul className="space-y-2">{q.data.budgets.map(b => (
+            <li key={b.id} className="rounded-2xl bg-white/5 p-3 text-sm"><div className="flex justify-between gap-3"><b>{b.name}</b><span className="tabular-nums">{nf.format(b.pointsUsed)} / {nf.format(b.pointsTotal)} BP</span></div>
+              <div className="text-xs text-muted-foreground">{b.purpose} · gyldig til {fmtDateTime(b.validUntil)}</div></li>))}</ul>)}
+        <Card className="mt-3"><h3 className="mb-2 font-bold">Be om nytt markedsbudsjett</h3><BudgetForm /></Card>
+      </section>
+      <Card><h2 className="mb-3 font-display text-lg font-bold">Foreslå endring av regler</h2><EconomyForm key={c.version} c={c} /></Card>
     </div>
   );
 }

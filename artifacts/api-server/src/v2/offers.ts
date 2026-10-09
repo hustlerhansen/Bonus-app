@@ -8,6 +8,7 @@ import {
 } from "@workspace/api-zod";
 import { createPointsLedger, PointsError } from "./points";
 import { verifyOfferSignature } from "./offer-signature";
+import { campaignEconomics, currentEconomy, validateCampaignInput } from "./economy";
 
 type Database = Pick<typeof pool, "query" | "connect">;
 type Reader = Pick<PoolClient, "query">;
@@ -96,7 +97,19 @@ export function createOfferService(database: Database = pool, secretFor = (key: 
       await account(actorId, client, admin);
       const r = await client.query(`SELECT ${offerProjection} FROM v2_offers o JOIN v2_offer_partners p ON p.id=o.partner_id
         ${admin ? "" : "WHERE o.status='approved' AND p.active=true AND (o.expires_at IS NULL OR o.expires_at>now())"} ORDER BY o.created_at DESC,o.id DESC LIMIT 100`);
-      return ListV2OffersResponse.parse({ items: r.rows.map(serialize), earnEnabled: await gate(client) });
+      let items: Record<string, unknown>[] = r.rows.map(serialize);
+      if (admin && items.length) {
+        const econ = (await client.query(`SELECT * FROM v2_offer_economics WHERE offer_id=ANY($1::uuid[])`, [items.map(o => o.id)])).rows;
+        const config = await currentEconomy(client);
+        items = items.map(o => {
+          const e = econ.find(x => x.offer_id === o.id);
+          return { ...o, economics: e ? campaignEconomics({ grossCpaOre: e.gross_cpa_ore, networkFeeBp: e.network_fee_bp,
+            expectedReversalBp: e.expected_reversal_bp, giftcardFeeBp: e.giftcard_fee_bp, userShareBp: e.user_share_bp,
+            maxConversions: e.max_conversions, paymentTermsDays: e.payment_terms_days, agreementReference: e.agreement_reference },
+          { ...config, version: e.config_version }) : null };
+        });
+      }
+      return ListV2OffersResponse.parse({ items, earnEnabled: await gate(client) });
     });
   }
   async function detail(actorId: string, id: string) {
@@ -117,17 +130,26 @@ export function createOfferService(database: Database = pool, secretFor = (key: 
     if (![input.description, input.terms, input.requirements, input.completionSteps].every(s => s.trim().length >= 10) ||
       input.title.trim().length < 3) throw new PointsError(400, "Fyll ut tilbudsteksten.");
     if (input.expiresAt && new Date(input.expiresAt).getTime() <= Date.now()) throw new PointsError(400, "Utløpsdato må være i fremtiden.");
+    const campaign = validateCampaignInput(input.economics);
     return atomic(async client => {
       const actor = await account(actorId, client, true);
       const partner = await client.query("SELECT id FROM v2_offer_partners WHERE id=$1 AND active=true FOR SHARE", [input.partnerId]);
       if (!partner.rowCount) throw new PointsError(400, "Partneren må konfigureres og godkjennes av operatøren først.");
+      // Points are never typed in: they are computed from partner revenue and the active economy rules.
+      const econ = campaignEconomics(campaign, await currentEconomy(client));
+      if (!econ.ok) throw new PointsError(400, `Kampanjen er ikke lønnsom nok: ${econ.problems.join(" ")}`, { problems: econ.problems });
       const id = randomUUID();
       await client.query(`INSERT INTO v2_offers(id,partner_id,title,description,terms,points,destination_url,created_by,
         category,requirements,completion_steps,estimated_minutes,approval_days,expires_at)
         VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)`,
-      [id, input.partnerId, input.title.trim(), input.description.trim(), input.terms.trim(), input.points, input.destinationUrl, actorId,
+      [id, input.partnerId, input.title.trim(), input.description.trim(), input.terms.trim(), econ.points, input.destinationUrl, actorId,
         input.category, input.requirements.trim(), input.completionSteps.trim(), input.estimatedMinutes, input.approvalDays, input.expiresAt ?? null]);
-      await audit(client, actor, "OFFER_CREATED", id, input);
+      await client.query(`INSERT INTO v2_offer_economics(offer_id,config_version,gross_cpa_ore,network_fee_bp,expected_reversal_bp,
+        giftcard_fee_bp,user_share_bp,net_ore,points,expected_margin_bp,max_conversions,payment_terms_days,agreement_reference)
+        VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)`,
+      [id, econ.configVersion, econ.grossCpaOre, econ.networkFeeBp, econ.expectedReversalBp, econ.giftcardFeeBp, econ.userShareBp,
+        econ.netOre, econ.points, econ.expectedMarginBp, econ.maxConversions, econ.paymentTermsDays, econ.agreementReference]);
+      await audit(client, actor, "OFFER_CREATED", id, { ...input, economics: econ });
       return offer(id, client);
     });
   }
@@ -143,6 +165,15 @@ export function createOfferService(database: Database = pool, secretFor = (key: 
       if (before === input.status) return offer(id, client);
       if (before === "rejected" || (input.status === "approved" && before !== "draft")) {
         throw new PointsError(409, "Opprett et nytt tilbud hvis vilkår eller godkjenning skal endres.");
+      }
+      if (input.status === "approved") {
+        // Activation re-checks the stored profitability against the economy rules in force now.
+        const e = (await client.query("SELECT * FROM v2_offer_economics WHERE offer_id=$1", [id])).rows[0];
+        if (!e) throw new PointsError(409, "Kampanjen mangler lønnsomhetsberegning og kan ikke aktiveres.");
+        const config = await currentEconomy(client);
+        if (e.user_share_bp > config.maxShareBp || e.expected_margin_bp < config.minMarginBp) {
+          throw new PointsError(409, "Kampanjen oppfyller ikke gjeldende økonomiregler. Opprett et nytt utkast med oppdatert beregning.");
+        }
       }
       await client.query("UPDATE v2_offers SET status=$2 WHERE id=$1", [id, input.status]);
       await audit(client, actor, "OFFER_REVIEWED", id, { before, after: input.status, reason: input.reason.trim() });
@@ -212,11 +243,17 @@ export function createOfferService(database: Database = pool, secretFor = (key: 
       }
       if (v && v.partner_status === input.status) return conversion(v.id, client);
       if (!v) {
+        // Campaign cap: never more conversions than the costed maximum (serialized by the partner lock above).
+        const cap = (await client.query(`SELECT x.max_conversions,(SELECT count(*)::int FROM v2_offer_conversions cv
+          JOIN v2_offer_clicks ck ON ck.id=cv.click_id WHERE ck.offer_id=$1 AND cv.status<>'rejected') AS used
+          FROM v2_offer_economics x WHERE x.offer_id=$1`, [c.offer_id])).rows[0];
+        if (!cap) throw new PointsError(409, "Kampanjen mangler lønnsomhetsberegning.");
+        if (cap.used >= cap.max_conversions) throw new PointsError(409, "Kampanjens maksimale antall konverteringer er nådd.");
         const id = randomUUID();
         const reward = await ledger.execute({ kind: "record", actorId: actor.id, accountId: c.account_id,
           type: "EARN", amount: c.points, status: "pending", source: `offer:${partnerId}`, reference: input.eventId,
           description: c.title, reason: "Signert partnerbevis; avventer administratorgodkjenning",
-          idempotencyKey: `offer-record:${id}` }, client);
+          funding: { kind: "conversion", reference: id }, idempotencyKey: `offer-record:${id}` }, client);
         await client.query(`INSERT INTO v2_offer_conversions(id,partner_id,event_id,click_id,transaction_id,partner_status)
           VALUES($1,$2,$3,$4,$5,$6)`, [id, partnerId, input.eventId, input.clickId, reward.transaction.id, input.status]);
         v = { id, transaction_id: reward.transaction.id, status: "pending" };
@@ -253,6 +290,11 @@ export function createOfferService(database: Database = pool, secretFor = (key: 
         status: input.status === "verified" ? "approved" : "rejected", reason: input.reason,
         idempotencyKey: `offer-review:${id}:${input.status}` }, client);
       await client.query("UPDATE v2_offer_conversions SET status=$2,updated_at=now() WHERE id=$1", [id, input.status]);
+      if (input.status === "verified") {
+        // Non-monetary XP; never touches the points ledger.
+        await client.query(`INSERT INTO v2_xp_events(account_id,kind,xp,reference,oslo_day)
+          VALUES($1,'OFFER_VERIFIED',100,$2,(now() AT TIME ZONE 'Europe/Oslo')::date) ON CONFLICT DO NOTHING`, [initial.account_id, id]);
+      }
       await audit(client, actor, "OFFER_CONVERSION_REVIEWED", id,
         { before: "pending", after: input.status, reason: input.reason.trim() });
       return conversion(id, client);
@@ -294,6 +336,13 @@ export function createOfferService(database: Database = pool, secretFor = (key: 
         compensation: result.transaction, wallet: result.wallet, replayed: result.replayed });
     });
   }
-  return { listOffers, detail, partners, create, reviewOffer, start, listConversions, callback, reviewConversion, reverseConversion };
+  async function preview(actorId: string, value: unknown) {
+    const campaign = validateCampaignInput(value);
+    return atomic(async client => {
+      await account(actorId, client, true);
+      return campaignEconomics(campaign, await currentEconomy(client));
+    });
+  }
+  return { preview, listOffers, detail, partners, create, reviewOffer, start, listConversions, callback, reviewConversion, reverseConversion };
 }
 export const offerService = createOfferService();

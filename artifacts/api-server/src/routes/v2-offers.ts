@@ -33,6 +33,10 @@ router.get("/admin/offer-partners", async (req, res) => {
   const { userId } = await requireAdmin(req);
   res.json(await offerService.partners(userId));
 });
+router.post("/admin/offers/economics", async (req, res) => {
+  const { userId } = await requireAdmin(req);
+  res.json(await offerService.preview(userId, req.body));
+});
 router.get("/admin/offers", async (req, res) => {
   const { userId } = await requireAdmin(req);
   res.json(await offerService.listOffers(userId, true));

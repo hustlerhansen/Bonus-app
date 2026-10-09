@@ -131,10 +131,47 @@ export interface V2Liability {
   pendingCreditNok: number;
 }
 
+export type V2EconomyOverviewFunding = {
+  conversionPoints: number;
+  budgetPoints: number;
+};
+
+export interface V2MarketingBudget {
+  id: string;
+  name: string;
+  purpose: string;
+  pointsTotal: number;
+  pointsUsed: number;
+  validUntil: string;
+  approvedBy: string;
+  createdAt: string;
+}
+
 export interface V2EconomyOverview {
   config: V2EconomyConfig;
   liability: V2Liability;
   admins: number;
+  budgets: V2MarketingBudget[];
+  funding: V2EconomyOverviewFunding;
+}
+
+export interface V2Badge {
+  id: string;
+  title: string;
+  description: string;
+  earned: boolean;
+}
+
+export interface V2Engagement {
+  xp: number;
+  level: number;
+  levelName: string;
+  levelFloorXp: number;
+  nextLevelXp: number;
+  streak: number;
+  checkedInToday: boolean;
+  badges: V2Badge[];
+  xpAwarded: number;
 }
 
 export type V2AuditEntryMetadata = { [key: string]: unknown };
@@ -183,10 +220,17 @@ export interface V2RewardInput {
      */
   terms: string;
   /**
+     * Gavekortets pålydende i kr; poengprisen blir pålydende × 100
      * @minimum 1
-     * @maximum 1000000
+     * @maximum 10000
      */
-  points: number;
+  faceValueNok: number;
+  /**
+     * Innkjøpspris inkl. gebyr i øre
+     * @minimum 0
+     * @maximum 2000000
+     */
+  costOre: number;
   /**
      * @minimum 0
      * @maximum 1000000
@@ -223,6 +267,10 @@ export interface V2Reward {
   points: number;
   stock: number;
   status: V2RewardStatus;
+  /** @nullable */
+  faceValueOre?: number | null;
+  /** @nullable */
+  costOre?: number | null;
 }
 
 export interface V2RewardPage {
@@ -342,6 +390,52 @@ export const V2OfferInputCategory = {
   other: 'other',
 } as const;
 
+export interface V2CampaignEconomicsInput {
+  /**
+     * Partnerens betaling per verifisert konvertering, i øre
+     * @minimum 100
+     * @maximum 100000000
+     */
+  grossCpaOre: number;
+  /**
+     * Nettverksgebyr i basispunkter (100 = 1 %)
+     * @minimum 0
+     * @maximum 9000
+     */
+  networkFeeBp: number;
+  /**
+     * @minimum 0
+     * @maximum 9000
+     */
+  expectedReversalBp: number;
+  /**
+     * @minimum 0
+     * @maximum 2000
+     */
+  giftcardFeeBp: number;
+  /**
+     * Valgfri; standard fra økonomireglene
+     * @minimum 1
+     * @maximum 4000
+     */
+  userShareBp?: number;
+  /**
+     * @minimum 1
+     * @maximum 1000000
+     */
+  maxConversions: number;
+  /**
+     * @minimum 0
+     * @maximum 365
+     */
+  paymentTermsDays: number;
+  /**
+     * @minLength 10
+     * @maxLength 200
+     */
+  agreementReference: string;
+}
+
 export interface V2OfferInput {
   /** @pattern ^[a-z0-9-]{3,40}$ */
   partnerId: string;
@@ -360,11 +454,7 @@ export interface V2OfferInput {
      * @maxLength 4000
      */
   terms: string;
-  /**
-     * @minimum 1
-     * @maximum 1000000
-     */
-  points: number;
+  economics: V2CampaignEconomicsInput;
   /** @maxLength 2000 */
   destinationUrl: string;
   category: V2OfferInputCategory;
@@ -392,6 +482,25 @@ export interface V2OfferInput {
   expiresAt?: string | null;
 }
 
+export interface V2CampaignEconomics {
+  configVersion: number;
+  grossCpaOre: number;
+  networkFeeBp: number;
+  expectedReversalBp: number;
+  giftcardFeeBp: number;
+  userShareBp: number;
+  netOre: number;
+  points: number;
+  expectedMarginBp: number;
+  marginOre: number;
+  maxConversions: number;
+  maxLiabilityOre: number;
+  paymentTermsDays: number;
+  agreementReference: string;
+  ok: boolean;
+  problems: string[];
+}
+
 export type V2OfferStatus = typeof V2OfferStatus[keyof typeof V2OfferStatus];
 
 
@@ -402,6 +511,7 @@ export const V2OfferStatus = {
 } as const;
 
 export interface V2Offer {
+  economics?: V2CampaignEconomics | null;
   id: string;
   partnerId: string;
   partnerName: string;

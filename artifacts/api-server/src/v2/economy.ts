@@ -61,3 +61,48 @@ export async function appendEconomyVersion(client: Reader, change: EconomyChange
     change.maxRedemptionsPerDay, change.maxRedeemPointsPerDay, actorId, requestId]);
   return { version };
 }
+
+export type CampaignInput = {
+  grossCpaOre: number; networkFeeBp: number; expectedReversalBp: number; giftcardFeeBp: number;
+  userShareBp?: number; maxConversions: number; paymentTermsDays: number; agreementReference: string;
+};
+const CAMPAIGN_KEYS = ["grossCpaOre", "networkFeeBp", "expectedReversalBp", "giftcardFeeBp", "userShareBp",
+  "maxConversions", "paymentTermsDays", "agreementReference"];
+
+export function validateCampaignInput(value: unknown): CampaignInput {
+  const v = (value ?? {}) as Record<string, unknown>;
+  if (typeof value !== "object" || value === null || Object.keys(v).some(k => !CAMPAIGN_KEYS.includes(k))) {
+    throw new PointsError(400, "Ukjente felt i kampanjeøkonomien.");
+  }
+  const ref = typeof v.agreementReference === "string" ? v.agreementReference.trim() : "";
+  if (!int(v.grossCpaOre, 100, 100_000_000) || !int(v.networkFeeBp, 0, 9000) || !int(v.expectedReversalBp, 0, 9000) ||
+    !int(v.giftcardFeeBp, 0, 2000) || (v.userShareBp !== undefined && !int(v.userShareBp, 1, ECONOMY_LIMITS.maxShareBp)) ||
+    !int(v.maxConversions, 1, 1_000_000) || !int(v.paymentTermsDays, 0, 365) || ref.length < 10 || ref.length > 200) {
+    throw new PointsError(400, "Kontroller kampanjeøkonomien: partnerbetaling, gebyrer, tak, betalingsfrist og avtalereferanse.");
+  }
+  return { ...(v as CampaignInput), agreementReference: ref };
+}
+
+/** Automatic profitability calculation. Mirrors the database CHECKs exactly (integer øre, truncating division). */
+export function campaignEconomics(input: CampaignInput, config: Pick<EconomyConfig, "version" | "defaultShareBp" | "maxShareBp" | "minMarginBp">) {
+  const userShareBp = input.userShareBp ?? config.defaultShareBp;
+  const netOre = Math.floor(input.grossCpaOre * (10000 - input.networkFeeBp) / 10000);
+  const points = netOre > 0 ? Math.floor(netOre * userShareBp / 10000) : 0;
+  const revenue = Math.floor(netOre * (10000 - input.expectedReversalBp) / 10000);
+  const cost = Math.floor(points * (10000 + input.giftcardFeeBp) / 10000);
+  const marginOre = revenue - cost;
+  const expectedMarginBp = netOre > 0 ? Math.trunc(marginOre * 10000 / netOre) : 0;
+  const problems: string[] = [];
+  const p = (bp: number) => `${(bp / 100).toLocaleString("nb-NO")} %`;
+  if (netOre <= 0) problems.push("Netto partnerinntekt må være større enn null.");
+  if (userShareBp > config.maxShareBp) problems.push(`Brukerandelen ${p(userShareBp)} overstiger maksimum på ${p(config.maxShareBp)}.`);
+  if (points < 1) problems.push("Kampanjen gir ingen poeng til brukeren.");
+  if (expectedMarginBp < config.minMarginBp) problems.push(`Forventet margin er ${p(expectedMarginBp)}, under minstekravet på ${p(config.minMarginBp)}.`);
+  return {
+    configVersion: config.version, grossCpaOre: input.grossCpaOre, networkFeeBp: input.networkFeeBp,
+    expectedReversalBp: input.expectedReversalBp, giftcardFeeBp: input.giftcardFeeBp, userShareBp, netOre, points,
+    expectedMarginBp, marginOre, maxConversions: input.maxConversions, maxLiabilityOre: points * input.maxConversions,
+    paymentTermsDays: input.paymentTermsDays, agreementReference: input.agreementReference,
+    ok: problems.length === 0, problems,
+  };
+}

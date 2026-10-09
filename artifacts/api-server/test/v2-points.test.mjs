@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import { readFile, mkdir } from "node:fs/promises";
 import { build } from "esbuild";
+import { applyV2Migrations, createTestBudget } from "./fixtures.mjs";
 
 // Real PostgreSQL, isolated schema. No HTTP seed endpoint or demo balance import.
 // DATABASE_URL is used by the normal db module, never printed or copied.
@@ -19,7 +20,7 @@ const { createPointsLedger, createPointsReconciler, analyzePointsSnapshot, point
 const schema = `points_test_${randomUUID().replaceAll("-", "")}`;
 const isolated = new pool.constructor({ ...pool.options, options: `-c search_path=${schema}`, max: 10 });
 const ledger = createPointsLedger(isolated);
-let admin;
+let admin, budget;
 const reason = "Kontrollert poenghendelse i isolert test";
 async function account(role = "USER", status = "ACTIVE") {
   const id = `test_${randomUUID()}`;
@@ -29,10 +30,12 @@ async function account(role = "USER", status = "ACTIVE") {
   return id;
 }
 function adjust(accountId, amount, extra = {}) {
-  return ledger.execute({ kind: "adjust", accountId, amount, actorId: admin, reason, idempotencyKey: randomUUID(), ...extra });
+  return ledger.execute({ kind: "adjust", accountId, amount, actorId: admin, reason, idempotencyKey: randomUUID(),
+    ...(amount > 0 ? { fundingBudgetId: budget } : {}), ...extra });
 }
 function record(accountId, type, amount, status = "approved", extra = {}) {
   return ledger.execute({ kind: "record", accountId, type, amount, status, actorId: admin, reason,
+    ...(["EARN", "REFERRAL", "BONUS"].includes(type) ? { funding: { kind: "budget", reference: budget } } : {}),
     source: "verified-test", reference: randomUUID(), description: "Verifisert testhendelse", idempotencyKey: randomUUID(), ...extra });
 }
 function compensate(transactionId, type = "REVERSAL", extra = {}) {
@@ -44,10 +47,9 @@ function decide(transactionId, status, extra = {}) {
 const denied = (status) => e => e.status === status;
 before(async () => {
   await pool.query(`CREATE SCHEMA ${schema}`);
-  for (const name of ["0001_v2_identity.sql", "0002_v2_points.sql"]) {
-    await isolated.query(await readFile(new URL(`../../../lib/db/migrations/${name}`, import.meta.url), "utf8"));
-  }
+  await applyV2Migrations(isolated);
   admin = await account("ADMIN");
+  budget = await createTestBudget(isolated, admin);
 });
 after(async () => {
   await isolated.end();
