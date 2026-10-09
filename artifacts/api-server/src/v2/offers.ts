@@ -131,10 +131,11 @@ export function createOfferService(database: Database = pool, secretFor = (key: 
       return offer(id, client);
     });
   }
-  async function reviewOffer(actorId: string, id: string, value: unknown) {
+  // `existing`: run inside a caller-owned transaction (the approved high-risk request queue).
+  async function reviewOffer(actorId: string, id: string, value: unknown, existing?: PoolClient) {
     const input = validate(ReviewV2OfferBody.strict(), value);
     if (input.reason.trim().length < 10) throw new PointsError(400, "Oppgi en konkret begrunnelse.");
-    return atomic(async client => {
+    return (existing ? (run: (c: PoolClient) => Promise<unknown>) => run(existing) : atomic)(async (client: PoolClient) => {
       const actor = await account(actorId, client, true);
       const r = await client.query("SELECT status FROM v2_offers WHERE id=$1 FOR UPDATE", [id]);
       if (!r.rowCount) throw new PointsError(404, "Tilbudet finnes ikke.");

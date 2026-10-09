@@ -13,7 +13,7 @@ import {
 import { Btn, Card, Empty, ErrorState, PageHead, Skel } from '@/components/bp';
 import { errMsg } from '@/hooks/use-bp';
 import { cn } from '@/lib/utils';
-import { fmtDate, ScrollTop, SignedInOnly, useV2State, V2Frame } from './shared';
+import { fmtDate, queuedText, ScrollTop, SignedInOnly, useApprovalRequest, useV2State, V2Frame } from './shared';
 import { ReversalHistory, ReverseConversionForm } from './offer-reversal';
 
 const nf = new Intl.NumberFormat('nb-NO');
@@ -301,11 +301,13 @@ function CreateForm({ onDone }: { onDone: () => void }) {
 function AdminOffers() {
   const q = useListV2AdminOffers({ query: { queryKey: getListV2AdminOffersQueryKey() } });
   const review = useReviewV2Offer();
+  const approval = useApprovalRequest();
   const inv = useInvalidate();
   const [msg, setMsg] = useState<string | null>(null);
   const act = (o: V2Offer, status: 'approved' | 'rejected') => (reason: string) => {
     setMsg(null);
-    review.mutate({ offerId: o.id, data: { status, reason } }, { onSuccess: () => { void inv.offers(o.id); setMsg(status === 'approved' ? 'Tilbudet er godkjent.' : 'Tilbudet er avvist.'); }, onError: x => setMsg(errMsg(x)) });
+    if (status === 'approved') { approval.send('OFFER_APPROVAL', { offerId: o.id }, reason, { onQueued: r => setMsg(queuedText(r)), onError: x => setMsg(errMsg(x)) }); return; }
+    review.mutate({ offerId: o.id, data: { status, reason } }, { onSuccess: () => { void inv.offers(o.id); setMsg('Tilbudet er avvist.'); }, onError: x => setMsg(errMsg(x)) });
   };
   const sorted = useMemo(() => q.data?.items ?? [], [q.data]);
   if (q.isLoading) return <Skel className="h-40" />;
@@ -318,7 +320,7 @@ function AdminOffers() {
           <li key={o.id} className="rounded-2xl bg-white/5 p-4" data-testid={`row-admin-offer-${o.id}`}>
             <div className="flex items-start justify-between gap-2"><div><div className="text-xs text-muted-foreground">{o.partnerName} · {fmtDate(o.createdAt)}</div><div className="font-bold">{o.title}</div><div className="text-xs">{nf.format(o.points)} poeng</div></div><Chip k={o.status}>{OFFER[o.status]}</Chip></div>
             <details className="mt-3 text-sm"><summary className="cursor-pointer text-primary">Kontroller krav, vilkår og destinasjon</summary><div className="mt-2 space-y-2 whitespace-pre-wrap break-words"><p>{o.description}</p><p><b>Krav:</b> {o.requirements}</p><p><b>Gjennomføring:</b> {o.completionSteps}</p><p><b>Vilkår:</b> {o.terms}</p><p><b>Destinasjon:</b> {o.destinationUrl}</p><p>{o.estimatedMinutes} minutter · ca. {o.approvalDays} vurderingsdager · {o.expiresAt ? `utløper ${fmtDate(o.expiresAt)}` : 'ingen fast utløpsdato'}</p></div></details>
-            {o.status === 'draft' && <><ReasonBox testid={`approve-${o.id}`} label="Godkjenn" pending={review.isPending} onSubmit={act(o, 'approved')} /><ReasonBox testid={`reject-draft-${o.id}`} label="Avvis utkast" danger pending={review.isPending} onSubmit={act(o, 'rejected')} /></>}
+            {o.status === 'draft' && <><ReasonBox testid={`approve-${o.id}`} label="Send til godkjenning" pending={review.isPending || approval.isPending} onSubmit={act(o, 'approved')} /><ReasonBox testid={`reject-draft-${o.id}`} label="Avvis utkast" danger pending={review.isPending} onSubmit={act(o, 'rejected')} /></>}
             {o.status === 'approved' && <ReasonBox testid={`pause-${o.id}`} label="Avvis og pause" danger pending={review.isPending} onSubmit={act(o, 'rejected')} />}
           </li>))}</ul>)}
     </List>

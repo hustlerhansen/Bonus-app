@@ -1,15 +1,15 @@
 import { createHash, randomUUID } from "node:crypto";
 import { pool, type PoolClient } from "@workspace/db";
-import { GetV2WalletResponse, ListV2TransactionsResponse, AdjustV2PointsResponse } from "@workspace/api-zod";
+import { GetV2WalletResponse, ListV2TransactionsResponse } from "@workspace/api-zod";
 
 export class PointsError extends Error {
-  constructor(public status: number, message: string) { super(message); }
+  constructor(public status: number, message: string, public body?: Record<string, unknown>) { super(message); }
 }
 
 type PointsType = "EARN" | "REDEEM" | "REFERRAL" | "BONUS" | "ADJUSTMENT" | "REFUND" | "REVERSAL" | "EXPIRATION";
 type CommandBase = { actorId: string; idempotencyKey: string; reason: string };
 export type PointsCommand = CommandBase & (
-  | { kind: "adjust"; accountId: string; amount: number }
+  | { kind: "adjust"; accountId: string; amount: number; fundingBudgetId?: string }
   // Trusted server integration seam only; deliberately has no public HTTP route.
   | { kind: "record"; accountId: string; type: Exclude<PointsType, "REFUND" | "REVERSAL" | "ADJUSTMENT">;
       amount: number; status: "pending" | "approved"; source: string; reference: string; description: string }
@@ -120,6 +120,11 @@ export function createPointsLedger(database: Database = pool) {
       }
       const target = locked.rows.find(a => a.id === accountId);
       if (!target) throw new PointsError(404, "V2-kontoen finnes ikke.");
+      // Administrators never decide their own financial benefit. Only a pending,
+      // integration-recorded entry (e.g. a reservation) may name the actor's own account.
+      if (cmd.actorId === accountId && (cmd.kind !== "record" || cmd.status !== "pending")) {
+        throw new PointsError(403, "Administratorer kan ikke behandle poeng på egen konto.");
+      }
       // Trusted reward cleanup must also refund/release an account suspended after ordering.
       const rewardCleanup = !!existingClient && cmd.idempotencyKey.startsWith("reward-") &&
         (cmd.kind === "compensate" || (cmd.kind === "decide" && cmd.status === "rejected")) &&
@@ -128,7 +133,7 @@ export function createPointsLedger(database: Database = pool) {
       const previous = await client.query("SELECT fingerprint,transaction_id FROM v2_points_requests WHERE idempotency_key=$1", [cmd.idempotencyKey]);
       if (previous.rows[0]) {
         if (previous.rows[0].fingerprint !== fingerprint) throw new PointsError(409, "Nøkkelen er allerede brukt til en annen forespørsel.");
-        const result = AdjustV2PointsResponse.parse({ transaction: await transaction(previous.rows[0].transaction_id, client),
+        const result = ({ transaction: await transaction(previous.rows[0].transaction_id, client),
           wallet: await wallet(accountId, client), replayed: true });
         if (!existingClient) await client.query("COMMIT");
         return result;
@@ -201,7 +206,7 @@ export function createPointsLedger(database: Database = pool) {
           JSON.stringify({ accountId, reason: cmd.reason, before, after, requestKey: cmd.idempotencyKey })]);
       await client.query(`INSERT INTO v2_points_requests(idempotency_key,fingerprint,transaction_id,actor_id)
         VALUES($1,$2,$3,$4)`, [cmd.idempotencyKey, fingerprint, id, cmd.actorId]);
-      const result = AdjustV2PointsResponse.parse({ transaction: await transaction(id, client), wallet: after, replayed: false });
+      const result = ({ transaction: await transaction(id, client), wallet: after, replayed: false });
       if (!existingClient) await client.query("COMMIT");
       return result;
     } catch (error) {

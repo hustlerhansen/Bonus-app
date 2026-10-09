@@ -9,8 +9,7 @@
   },
   "scripts": {
     "migrate:dev": "node migrate.mjs --development",
-    "push": "drizzle-kit push --config ./drizzle.config.ts",
-    "push-force": "drizzle-kit push --force --config ./drizzle.config.ts"
+    "push": "node migrate.mjs --development"
   },
   "dependencies": {
     "drizzle-orm": "catalog:",

@@ -13,6 +13,108 @@ tags:
   - name: bonusplay
     description: BONUSPLAY demo account, game and rewards operations
 paths:
+  /v2/admin/requests:
+    get:
+      operationId: listV2AdminRequests
+      tags: [v2]
+      summary: High-risk administrator requests, newest first
+      parameters:
+        - name: status
+          in: query
+          schema: { type: string, enum: [pending, executed, rejected, cancelled] }
+      responses:
+        "200":
+          description: Requests with confirmation eligibility for the viewer
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/V2AdminRequestPage" }
+        default:
+          $ref: "#/components/responses/V2PointsError"
+    post:
+      operationId: createV2AdminRequest
+      tags: [v2]
+      summary: Record a high-risk action for later confirmation
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/V2AdminRequestInput" }
+      responses:
+        "202":
+          description: Recorded or identical replay
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/V2AdminRequest" }
+        default:
+          $ref: "#/components/responses/V2PointsError"
+  /v2/admin/requests/{requestId}/confirm:
+    post:
+      operationId: confirmV2AdminRequest
+      tags: [v2]
+      summary: Execute a pending request after cooldown; requires fresh MFA
+      parameters:
+        - $ref: "#/components/parameters/AdminRequestId"
+      responses:
+        "200":
+          description: Executed request
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/V2AdminRequest" }
+        default:
+          $ref: "#/components/responses/V2PointsError"
+  /v2/admin/requests/{requestId}/reject:
+    post:
+      operationId: rejectV2AdminRequest
+      tags: [v2]
+      summary: Cancel own or reject another administrator's pending request
+      parameters:
+        - $ref: "#/components/parameters/AdminRequestId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/V2AdminRejectInput" }
+      responses:
+        "200":
+          description: Closed request
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/V2AdminRequest" }
+        default:
+          $ref: "#/components/responses/V2PointsError"
+  /v2/admin/economy:
+    get:
+      operationId: getV2AdminEconomy
+      tags: [v2]
+      summary: Current economy configuration and points liability
+      responses:
+        "200":
+          description: Economy overview
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/V2EconomyOverview" }
+        default:
+          $ref: "#/components/responses/V2PointsError"
+  /v2/admin/audit:
+    get:
+      operationId: listV2AdminAudit
+      tags: [v2]
+      summary: Append-only administrative audit log, newest first
+      parameters:
+        - name: before
+          in: query
+          schema: { type: string, format: date-time }
+        - name: limit
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 100, default: 50 }
+      responses:
+        "200":
+          description: Audit page
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/V2AuditPage" }
+        default:
+          $ref: "#/components/responses/V2PointsError"
   /v2/rewards:
     get:
       operationId: listV2Rewards
@@ -404,11 +506,11 @@ paths:
           application/json:
             schema: { $ref: "#/components/schemas/V2PointsAdjustment" }
       responses:
-        "200":
-          description: Committed transaction or identical idempotent replay
+        "202":
+          description: High-risk request recorded; executes only after the cooldown and an explicit MFA-verified confirmation
           content:
             application/json:
-              schema: { $ref: "#/components/schemas/V2PointsResult" }
+              schema: { $ref: "#/components/schemas/V2AdminRequest" }
         default:
           $ref: "#/components/responses/V2PointsError"
   /v2/admin/transactions/{transactionId}/decision:
@@ -424,11 +526,11 @@ paths:
           application/json:
             schema: { $ref: "#/components/schemas/V2PointsDecision" }
       responses:
-        "200":
-          description: Committed decision or identical replay
+        "202":
+          description: High-risk request recorded; executes only after the cooldown and an explicit MFA-verified confirmation
           content:
             application/json:
-              schema: { $ref: "#/components/schemas/V2PointsResult" }
+              schema: { $ref: "#/components/schemas/V2AdminRequest" }
         default:
           $ref: "#/components/responses/V2PointsError"
   /v2/admin/transactions/{transactionId}/compensation:
@@ -444,11 +546,11 @@ paths:
           application/json:
             schema: { $ref: "#/components/schemas/V2PointsCompensation" }
       responses:
-        "200":
-          description: Committed compensation or identical replay; amount derived from original
+        "202":
+          description: High-risk request recorded; executes only after the cooldown and an explicit MFA-verified confirmation
           content:
             application/json:
-              schema: { $ref: "#/components/schemas/V2PointsResult" }
+              schema: { $ref: "#/components/schemas/V2AdminRequest" }
         default:
           $ref: "#/components/responses/V2PointsError"
   /v2/me:
@@ -931,6 +1033,11 @@ components:
         application/json:
           schema: { $ref: "#/components/schemas/ErrorResponse" }
   parameters:
+    AdminRequestId:
+      name: requestId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
     PointsAccountId:
       name: accountId
       in: path
@@ -950,6 +1057,103 @@ components:
       in: query
       schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
   schemas:
+    V2AdminRequestInput:
+      type: object
+      additionalProperties: false
+      required: [action, payload, reason, requestKey]
+      properties:
+        action: { type: string, enum: [POINTS_ADJUSTMENT, POINTS_DECISION, POINTS_COMPENSATION, OFFER_APPROVAL, REWARD_APPROVAL, ORDER_DISPATCH, ECONOMY_CONFIG, MARKETING_BUDGET] }
+        payload: { type: object, additionalProperties: true }
+        reason: { type: string, minLength: 10, maxLength: 500 }
+        requestKey: { type: string, minLength: 16, maxLength: 128, pattern: '^[A-Za-z0-9_.:-]{16,128}$' }
+    V2AdminRejectInput:
+      type: object
+      additionalProperties: false
+      required: [note]
+      properties:
+        note: { type: string, minLength: 10, maxLength: 500 }
+    V2AdminRequest:
+      type: object
+      required: [id, action, payload, reason, requestedBy, requestedByName, targetAccountId, requestedAt, notBefore, status, decidedBy, decidedAt, note, result, canConfirm, blockedReason]
+      properties:
+        id: { type: string }
+        action: { type: string, enum: [POINTS_ADJUSTMENT, POINTS_DECISION, POINTS_COMPENSATION, OFFER_APPROVAL, REWARD_APPROVAL, ORDER_DISPATCH, ECONOMY_CONFIG, MARKETING_BUDGET] }
+        payload: { type: object, additionalProperties: true }
+        reason: { type: string }
+        requestedBy: { type: string }
+        requestedByName: { type: string }
+        targetAccountId: { type: [string, "null"] }
+        requestedAt: { type: string }
+        notBefore: { type: string }
+        status: { type: string, enum: [pending, executed, rejected, cancelled] }
+        decidedBy: { type: [string, "null"] }
+        decidedAt: { type: [string, "null"] }
+        note: { type: [string, "null"] }
+        result: { type: [object, "null"], additionalProperties: true }
+        canConfirm: { type: boolean }
+        blockedReason: { type: [string, "null"] }
+    V2AdminRequestPage:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/V2AdminRequest" }
+    V2EconomyConfig:
+      type: object
+      required: [version, pointsPerNok, defaultShareBp, maxShareBp, minMarginBp, highRiskCooldownMinutes, highValueOrderPoints, dualControl, minAccountAgeDays, minVerifiedPointsBeforeRedeem, maxRedemptionsPerDay, maxRedeemPointsPerDay, createdBy, createdAt]
+      properties:
+        version: { type: integer }
+        pointsPerNok: { type: integer }
+        defaultShareBp: { type: integer }
+        maxShareBp: { type: integer }
+        minMarginBp: { type: integer }
+        highRiskCooldownMinutes: { type: integer }
+        highValueOrderPoints: { type: integer }
+        dualControl: { type: boolean }
+        minAccountAgeDays: { type: integer }
+        minVerifiedPointsBeforeRedeem: { type: integer }
+        maxRedemptionsPerDay: { type: integer }
+        maxRedeemPointsPerDay: { type: integer }
+        createdBy: { type: string }
+        createdAt: { type: string }
+    V2Liability:
+      type: object
+      required: [balancePoints, reservedPoints, availablePoints, pendingCreditPoints, balanceNok, pendingCreditNok]
+      properties:
+        balancePoints: { type: integer }
+        reservedPoints: { type: integer }
+        availablePoints: { type: integer }
+        pendingCreditPoints: { type: integer }
+        balanceNok: { type: number }
+        pendingCreditNok: { type: number }
+    V2EconomyOverview:
+      type: object
+      required: [config, liability, admins]
+      properties:
+        config: { $ref: "#/components/schemas/V2EconomyConfig" }
+        liability: { $ref: "#/components/schemas/V2Liability" }
+        admins: { type: integer }
+    V2AuditEntry:
+      type: object
+      required: [id, actorId, actorRole, action, entityType, entityId, metadata, createdAt]
+      properties:
+        id: { type: string }
+        actorId: { type: string }
+        actorRole: { type: string }
+        action: { type: string }
+        entityType: { type: string }
+        entityId: { type: string }
+        metadata: { type: object, additionalProperties: true }
+        createdAt: { type: string }
+    V2AuditPage:
+      type: object
+      required: [items, nextBefore]
+      properties:
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/V2AuditEntry" }
+        nextBefore: { type: [string, "null"] }
     V2RewardSupplier:
       type: object
       required: [id, name]

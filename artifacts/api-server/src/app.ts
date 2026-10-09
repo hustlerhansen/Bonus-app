@@ -52,7 +52,7 @@ app.use("/api", router);
 const errorHandler: ErrorRequestHandler = (error, req, res, _next) => {
   if (error instanceof DemoError || error instanceof PointsError) {
     req.log.warn({ status: error.status }, error.message);
-    res.status(error.status).json({ error: error.message });
+    res.status(error.status).json({ ...(error.body ?? {}), error: error.message });
     return;
   }
   req.log.error({ errorName: error?.name, code: error?.code }, "BONUSPLAY request failed");

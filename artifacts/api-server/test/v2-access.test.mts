@@ -29,3 +29,23 @@ test("same-origin CSRF policy fails closed", () => {
   }
   assert.equal(isSafeMutation({ host: "app.example", origin: "https://app.example", fetchSite: "cross-site" }), false);
 });
+import { adminMfaStatus, mfaEnforced } from "../src/v2/access-policy.ts";
+
+test("administrator access requires a verified second factor", () => {
+  for (const age of [null, undefined, [1, -1], [5, Number.NaN]] as const) {
+    assert.equal(adminMfaStatus(age as never, { enforce: true }), "mfa_required");
+  }
+  assert.equal(adminMfaStatus([1, 600], { enforce: true }), "ok");
+  assert.equal(adminMfaStatus([1, 0], { enforce: true }), "ok");
+});
+test("high-risk confirmation requires a recent second factor", () => {
+  assert.equal(adminMfaStatus([1, 3], { enforce: true, strict: true }), "ok");
+  assert.equal(adminMfaStatus([1, 11], { enforce: true, strict: true }), "reverify");
+  assert.equal(adminMfaStatus([1, -1], { enforce: true, strict: true }), "mfa_required");
+});
+test("MFA can only be disabled explicitly outside production", () => {
+  assert.equal(mfaEnforced({}), true);
+  assert.equal(mfaEnforced({ V2_ADMIN_MFA: "off", NODE_ENV: "production" }), true);
+  assert.equal(mfaEnforced({ V2_ADMIN_MFA: "off", NODE_ENV: "development" }), false);
+  assert.equal(mfaEnforced({ V2_ADMIN_MFA: "OFF", NODE_ENV: "development" }), true);
+});

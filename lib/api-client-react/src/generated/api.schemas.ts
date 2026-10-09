@@ -5,6 +5,157 @@
  * API for the BONUSPLAY demo rewards platform
  * OpenAPI spec version: 0.1.0
  */
+export type V2AdminRequestInputAction = typeof V2AdminRequestInputAction[keyof typeof V2AdminRequestInputAction];
+
+
+export const V2AdminRequestInputAction = {
+  POINTS_ADJUSTMENT: 'POINTS_ADJUSTMENT',
+  POINTS_DECISION: 'POINTS_DECISION',
+  POINTS_COMPENSATION: 'POINTS_COMPENSATION',
+  OFFER_APPROVAL: 'OFFER_APPROVAL',
+  REWARD_APPROVAL: 'REWARD_APPROVAL',
+  ORDER_DISPATCH: 'ORDER_DISPATCH',
+  ECONOMY_CONFIG: 'ECONOMY_CONFIG',
+  MARKETING_BUDGET: 'MARKETING_BUDGET',
+} as const;
+
+export type V2AdminRequestInputPayload = { [key: string]: unknown };
+
+export interface V2AdminRequestInput {
+  action: V2AdminRequestInputAction;
+  payload: V2AdminRequestInputPayload;
+  /**
+     * @minLength 10
+     * @maxLength 500
+     */
+  reason: string;
+  /**
+     * @minLength 16
+     * @maxLength 128
+     * @pattern ^[A-Za-z0-9_.:-]{16,128}$
+     */
+  requestKey: string;
+}
+
+export interface V2AdminRejectInput {
+  /**
+     * @minLength 10
+     * @maxLength 500
+     */
+  note: string;
+}
+
+export type V2AdminRequestAction = typeof V2AdminRequestAction[keyof typeof V2AdminRequestAction];
+
+
+export const V2AdminRequestAction = {
+  POINTS_ADJUSTMENT: 'POINTS_ADJUSTMENT',
+  POINTS_DECISION: 'POINTS_DECISION',
+  POINTS_COMPENSATION: 'POINTS_COMPENSATION',
+  OFFER_APPROVAL: 'OFFER_APPROVAL',
+  REWARD_APPROVAL: 'REWARD_APPROVAL',
+  ORDER_DISPATCH: 'ORDER_DISPATCH',
+  ECONOMY_CONFIG: 'ECONOMY_CONFIG',
+  MARKETING_BUDGET: 'MARKETING_BUDGET',
+} as const;
+
+export type V2AdminRequestPayload = { [key: string]: unknown };
+
+export type V2AdminRequestStatus = typeof V2AdminRequestStatus[keyof typeof V2AdminRequestStatus];
+
+
+export const V2AdminRequestStatus = {
+  pending: 'pending',
+  executed: 'executed',
+  rejected: 'rejected',
+  cancelled: 'cancelled',
+} as const;
+
+/**
+ * @nullable
+ */
+export type V2AdminRequestResult = { [key: string]: unknown } | null;
+
+export interface V2AdminRequest {
+  id: string;
+  action: V2AdminRequestAction;
+  payload: V2AdminRequestPayload;
+  reason: string;
+  requestedBy: string;
+  requestedByName: string;
+  /** @nullable */
+  targetAccountId: string | null;
+  requestedAt: string;
+  notBefore: string;
+  status: V2AdminRequestStatus;
+  /** @nullable */
+  decidedBy: string | null;
+  /** @nullable */
+  decidedAt: string | null;
+  /** @nullable */
+  note: string | null;
+  /** @nullable */
+  result: V2AdminRequestResult;
+  canConfirm: boolean;
+  /** @nullable */
+  blockedReason: string | null;
+}
+
+export interface V2AdminRequestPage {
+  items: V2AdminRequest[];
+}
+
+export interface V2EconomyConfig {
+  version: number;
+  pointsPerNok: number;
+  defaultShareBp: number;
+  maxShareBp: number;
+  minMarginBp: number;
+  highRiskCooldownMinutes: number;
+  highValueOrderPoints: number;
+  dualControl: boolean;
+  minAccountAgeDays: number;
+  minVerifiedPointsBeforeRedeem: number;
+  maxRedemptionsPerDay: number;
+  maxRedeemPointsPerDay: number;
+  createdBy: string;
+  createdAt: string;
+}
+
+export interface V2Liability {
+  balancePoints: number;
+  reservedPoints: number;
+  availablePoints: number;
+  pendingCreditPoints: number;
+  balanceNok: number;
+  pendingCreditNok: number;
+}
+
+export interface V2EconomyOverview {
+  config: V2EconomyConfig;
+  liability: V2Liability;
+  admins: number;
+}
+
+export type V2AuditEntryMetadata = { [key: string]: unknown };
+
+export interface V2AuditEntry {
+  id: string;
+  actorId: string;
+  actorRole: string;
+  action: string;
+  entityType: string;
+  entityId: string;
+  metadata: V2AuditEntryMetadata;
+  createdAt: string;
+}
+
+export interface V2AuditPage {
+  items: V2AuditEntry[];
+  /** @nullable */
+  nextBefore: string | null;
+}
+
 export interface V2RewardSupplier {
   id: string;
   name: string;
@@ -1212,6 +1363,29 @@ export type V2PointsErrorResponse = ErrorResponse;
 export type PointsCursorParameter = string;
 
 export type PointsLimitParameter = number;
+
+export type ListV2AdminRequestsParams = {
+status?: ListV2AdminRequestsStatus;
+};
+
+export type ListV2AdminRequestsStatus = typeof ListV2AdminRequestsStatus[keyof typeof ListV2AdminRequestsStatus];
+
+
+export const ListV2AdminRequestsStatus = {
+  pending: 'pending',
+  executed: 'executed',
+  rejected: 'rejected',
+  cancelled: 'cancelled',
+} as const;
+
+export type ListV2AdminAuditParams = {
+before?: string;
+/**
+ * @minimum 1
+ * @maximum 100
+ */
+limit?: number;
+};
 
 export type ListV2TransactionsParams = {
 /**

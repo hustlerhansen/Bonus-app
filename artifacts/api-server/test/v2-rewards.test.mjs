@@ -40,7 +40,7 @@ async function fixture(stock = 3, balance = 100) {
 }
 before(async () => {
   await pool.query(`CREATE SCHEMA ${schema}`);
-  for (const file of ["0001_v2_identity.sql", "0002_v2_points.sql", "0003_v2_offers.sql", "0004_v2_rewards.sql"]) {
+  for (const file of ["0001_v2_identity.sql", "0002_v2_points.sql", "0003_v2_offers.sql", "0004_v2_rewards.sql", "0005_v2_controls.sql"]) {
     await isolated.query(await readFile(new URL(`../../../lib/db/migrations/${file}`, import.meta.url), "utf8"));
   }
   admin = await account("ADMIN");

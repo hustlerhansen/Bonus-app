@@ -6,7 +6,7 @@ import { CheckCircle2, ChevronDown, ChevronLeft, ChevronRight, Search } from 'lu
 import {
   getGetV2AdminWalletQueryKey, getGetV2WalletQueryKey, getListV2AdminTransactionsQueryKey, getListV2TransactionsQueryKey,
   useAdjustV2Points, useCompensateV2Points, useDecideV2Points, useGetV2AdminWallet, useGetV2Wallet, useListV2AdminTransactions, useListV2Transactions,
-  type V2PointsResult, type V2PointsTransaction, type V2Wallet,
+  type V2AdminRequest, getListV2AdminRequestsQueryKey, type V2PointsTransaction, type V2Wallet,
 } from '@workspace/api-client-react';
 import { AnimatedNumber, Btn, Card, Empty, ErrorState, PageHead, PageSkeleton, Skel } from '@/components/bp';
 import { errMsg } from '@/hooks/use-bp';
@@ -161,6 +161,11 @@ export function PointsPage() {
   );
 }
 
+export function QueuedNotice({ r }: { r: V2AdminRequest }) {
+  const when = new Date(r.notBefore).toLocaleString('nb-NO', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+  return <span><CheckCircle2 className="mr-1 inline h-4 w-4" />Forespørselen er registrert og venter på bekreftelse. Den kan bekreftes tidligst {when} i <Link href="/account/admin" className="underline">godkjenningskøen</Link>.</span>;
+}
+
 type Act = { kind: 'approved' | 'rejected' | 'REFUND' | 'REVERSAL'; label: string };
 
 function ActionPanel({ t, act, onDone }: { t: V2PointsTransaction; act: Act; onDone: () => void }) {
@@ -169,7 +174,7 @@ function ActionPanel({ t, act, onDone }: { t: V2PointsTransaction; act: Act; onD
   const comp = useCompensateV2Points();
   const idem = useIdemKey();
   const [reason, setReason] = useState('');
-  const [done, setDone] = useState<V2PointsResult | null>(null);
+  const [done, setDone] = useState<V2AdminRequest | null>(null);
   const m = act.kind === 'approved' || act.kind === 'rejected' ? decide : comp;
   const r = reason.trim();
   const valid = r.length >= 10 && r.length <= 500;
@@ -177,15 +182,15 @@ function ActionPanel({ t, act, onDone }: { t: V2PointsTransaction; act: Act; onD
     e.preventDefault();
     if (!valid || m.isPending) return;
     const key = idem.get(`${t.id}:${act.kind}:${r}`);
-    const ok = async (res: V2PointsResult) => {
-      await updatePointsCaches(qc, res);
+    const ok = async (res: V2AdminRequest) => {
+      await qc.invalidateQueries({ queryKey: getListV2AdminRequestsQueryKey() });
       idem.reset(); setDone(res);
     };
     if (act.kind === 'approved' || act.kind === 'rejected') decide.mutate({ transactionId: t.id, data: { status: act.kind, reason: r, idempotencyKey: key } }, { onSuccess: ok });
     else comp.mutate({ transactionId: t.id, data: { type: act.kind, reason: r, idempotencyKey: key } }, { onSuccess: ok });
   };
   if (done) return (
-    <div role="status" className="rounded-xl bg-emerald-400/10 p-3 text-sm text-emerald-300"><CheckCircle2 className="mr-1 inline h-4 w-4" />{done.replayed ? 'Handlingen var allerede utført.' : 'Handlingen er utført.'} Transaksjon {done.transaction.id}, status {STATUS[done.transaction.status]}. Ny saldo: {nf.format(done.wallet.balance)}.
+    <div role="status" className="rounded-xl bg-emerald-400/10 p-3 text-sm text-emerald-300"><QueuedNotice r={done} />
       <button type="button" className="ml-2 underline" onClick={onDone}>Lukk</button></div>
   );
   return (
@@ -219,7 +224,7 @@ function Adjust({ accountId }: { accountId: string }) {
   const idem = useIdemKey();
   const [amount, setAmount] = useState('');
   const [reason, setReason] = useState('');
-  const [done, setDone] = useState<V2PointsResult | null>(null);
+  const [done, setDone] = useState<V2AdminRequest | null>(null);
   const n = Number(amount);
   const amtOk = amount.trim() !== '' && Number.isInteger(n) && n !== 0 && Math.abs(n) <= 1000000;
   const r = reason.trim();
@@ -230,7 +235,7 @@ function Adjust({ accountId }: { accountId: string }) {
     setDone(null);
     adj.mutate({ accountId, data: { amount: n, reason: r, idempotencyKey: idem.get(`${accountId}:${n}:${r}`) } }, {
       onSuccess: async (res) => {
-        await updatePointsCaches(qc, res);
+        await qc.invalidateQueries({ queryKey: getListV2AdminRequestsQueryKey() });
         idem.reset(); setDone(res); setAmount(''); setReason('');
       },
     });
@@ -247,9 +252,10 @@ function Adjust({ accountId }: { accountId: string }) {
         <div className="text-[11px] text-muted-foreground">{r.length}/500</div>
         <div aria-live="polite">
           {adj.isError && <div role="alert" className="rounded-xl border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive">{errMsg(adj.error)} Du kan trygt prøve igjen.</div>}
-          {done && <div className="flex items-center gap-2 text-sm text-emerald-300" data-testid="text-adjust-success"><CheckCircle2 className="h-4 w-4" />{done.replayed ? 'Justeringen var allerede bokført.' : 'Justering bokført.'} Transaksjon {done.transaction.id}. Saldo etter denne justeringen: {nf.format(done.wallet.balance)}.</div>}
+          {done && <div className="text-sm text-emerald-300" data-testid="text-adjust-success"><QueuedNotice r={done} /></div>}
         </div>
-        <Btn type="submit" variant="gold" disabled={!valid} loading={adj.isPending} data-testid="button-adjust">Bokfør justering</Btn>
+        <p className="text-xs text-muted-foreground">Justeringer er høyrisikohandlinger. De utføres først når de er bekreftet i godkjenningskøen, tidligst etter ventetiden.</p>
+        <Btn type="submit" variant="gold" disabled={!valid} loading={adj.isPending} data-testid="button-adjust">Send til godkjenning</Btn>
       </Card>
     </form>
   );

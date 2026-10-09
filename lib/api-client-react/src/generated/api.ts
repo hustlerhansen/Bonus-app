@@ -34,6 +34,8 @@ import type {
   FeatureFlag,
   FeatureFlagInput,
   HealthStatus,
+  ListV2AdminAuditParams,
+  ListV2AdminRequestsParams,
   ListV2AdminTransactionsParams,
   ListV2TransactionsParams,
   Mission,
@@ -43,11 +45,17 @@ import type {
   RedemptionInput,
   V2Access,
   V2AccountState,
+  V2AdminRejectInput,
+  V2AdminRequest,
+  V2AdminRequestInput,
+  V2AdminRequestPage,
+  V2AuditPage,
   V2Conversion,
   V2ConversionPage,
   V2ConversionReversalInput,
   V2ConversionReversalResult,
   V2ConversionReviewInput,
+  V2EconomyOverview,
   V2EnrollmentInput,
   V2Offer,
   V2OfferCallbackInput,
@@ -64,7 +72,6 @@ import type {
   V2PointsCompensation,
   V2PointsDecision,
   V2PointsErrorResponse,
-  V2PointsResult,
   V2ProfileInput,
   V2RedemptionInput,
   V2Reward,
@@ -105,6 +112,502 @@ const withQueryKey = <T extends object, K>(query: T, queryKey: K): T & { queryKe
   }
   return result;
 };
+
+export const getListV2AdminRequestsUrl = (params?: ListV2AdminRequestsParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/v2/admin/requests?${stringifiedParams}` : `/api/v2/admin/requests`
+}
+
+/**
+ * @summary High-risk administrator requests, newest first
+ */
+export const listV2AdminRequests = async (params?: ListV2AdminRequestsParams, options?: Parameters<typeof customFetch>[1]): Promise<V2AdminRequestPage> => {
+
+  return customFetch<V2AdminRequestPage>(getListV2AdminRequestsUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListV2AdminRequestsQueryKey = (params?: ListV2AdminRequestsParams,) => {
+    return [
+    `/api/v2/admin/requests`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getListV2AdminRequestsQueryOptions = <TData = Awaited<ReturnType<typeof listV2AdminRequests>>, TError = ErrorType<V2PointsErrorResponse>>(params?: ListV2AdminRequestsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listV2AdminRequests>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListV2AdminRequestsQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listV2AdminRequests>>> = ({ signal }) => listV2AdminRequests(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listV2AdminRequests>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListV2AdminRequestsQueryResult = NonNullable<Awaited<ReturnType<typeof listV2AdminRequests>>>
+export type ListV2AdminRequestsQueryError = ErrorType<V2PointsErrorResponse>
+
+
+/**
+ * @summary High-risk administrator requests, newest first
+ */
+
+export function useListV2AdminRequests<TData = Awaited<ReturnType<typeof listV2AdminRequests>>, TError = ErrorType<V2PointsErrorResponse>>(
+ params?: ListV2AdminRequestsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listV2AdminRequests>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListV2AdminRequestsQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getCreateV2AdminRequestUrl = () => {
+
+
+
+
+  return `/api/v2/admin/requests`
+}
+
+/**
+ * @summary Record a high-risk action for later confirmation
+ */
+export const createV2AdminRequest = async (v2AdminRequestInput: V2AdminRequestInput, options?: Parameters<typeof customFetch>[1]): Promise<V2AdminRequest> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<V2AdminRequest>(getCreateV2AdminRequestUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(v2AdminRequestInput)
+  }
+);}
+
+
+
+
+
+export const getCreateV2AdminRequestMutationKey = () => ['createV2AdminRequest'] as const;
+
+export const getCreateV2AdminRequestMutationOptions = <TError = ErrorType<V2PointsErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createV2AdminRequest>>, TError,CreateV2AdminRequestMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createV2AdminRequest>>, TError,CreateV2AdminRequestMutationVariables, TContext> => {
+
+const mutationKey = getCreateV2AdminRequestMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createV2AdminRequest>>, CreateV2AdminRequestMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  createV2AdminRequest(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateV2AdminRequestMutationResult = NonNullable<Awaited<ReturnType<typeof createV2AdminRequest>>>
+    export type CreateV2AdminRequestMutationBody = BodyType<V2AdminRequestInput>
+    export type CreateV2AdminRequestMutationError = ErrorType<V2PointsErrorResponse>
+    export type CreateV2AdminRequestMutationVariables = {data: BodyType<V2AdminRequestInput>}
+
+    /**
+ * @summary Record a high-risk action for later confirmation
+ */
+export const useCreateV2AdminRequest = <TError = ErrorType<V2PointsErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createV2AdminRequest>>, TError,CreateV2AdminRequestMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createV2AdminRequest>>,
+        TError,
+        CreateV2AdminRequestMutationVariables,
+        TContext
+      > => {
+      return useMutation(getCreateV2AdminRequestMutationOptions(options));
+    }
+
+export const getConfirmV2AdminRequestUrl = (requestId: string,) => {
+
+
+
+
+  return `/api/v2/admin/requests/${requestId}/confirm`
+}
+
+/**
+ * @summary Execute a pending request after cooldown; requires fresh MFA
+ */
+export const confirmV2AdminRequest = async (requestId: string, options?: Parameters<typeof customFetch>[1]): Promise<V2AdminRequest> => {
+
+  return customFetch<V2AdminRequest>(getConfirmV2AdminRequestUrl(requestId),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+
+export const getConfirmV2AdminRequestMutationKey = () => ['confirmV2AdminRequest'] as const;
+
+export const getConfirmV2AdminRequestMutationOptions = <TError = ErrorType<V2PointsErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof confirmV2AdminRequest>>, TError,ConfirmV2AdminRequestMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof confirmV2AdminRequest>>, TError,ConfirmV2AdminRequestMutationVariables, TContext> => {
+
+const mutationKey = getConfirmV2AdminRequestMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof confirmV2AdminRequest>>, ConfirmV2AdminRequestMutationVariables> = (props) => {
+          const {requestId} = props ?? {};
+
+          return  confirmV2AdminRequest(requestId,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ConfirmV2AdminRequestMutationResult = NonNullable<Awaited<ReturnType<typeof confirmV2AdminRequest>>>
+
+    export type ConfirmV2AdminRequestMutationError = ErrorType<V2PointsErrorResponse>
+    export type ConfirmV2AdminRequestMutationVariables = {requestId: string}
+
+    /**
+ * @summary Execute a pending request after cooldown; requires fresh MFA
+ */
+export const useConfirmV2AdminRequest = <TError = ErrorType<V2PointsErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof confirmV2AdminRequest>>, TError,ConfirmV2AdminRequestMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof confirmV2AdminRequest>>,
+        TError,
+        ConfirmV2AdminRequestMutationVariables,
+        TContext
+      > => {
+      return useMutation(getConfirmV2AdminRequestMutationOptions(options));
+    }
+
+export const getRejectV2AdminRequestUrl = (requestId: string,) => {
+
+
+
+
+  return `/api/v2/admin/requests/${requestId}/reject`
+}
+
+/**
+ * @summary Cancel own or reject another administrator's pending request
+ */
+export const rejectV2AdminRequest = async (requestId: string,
+    v2AdminRejectInput: V2AdminRejectInput, options?: Parameters<typeof customFetch>[1]): Promise<V2AdminRequest> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<V2AdminRequest>(getRejectV2AdminRequestUrl(requestId),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(v2AdminRejectInput)
+  }
+);}
+
+
+
+
+
+export const getRejectV2AdminRequestMutationKey = () => ['rejectV2AdminRequest'] as const;
+
+export const getRejectV2AdminRequestMutationOptions = <TError = ErrorType<V2PointsErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof rejectV2AdminRequest>>, TError,RejectV2AdminRequestMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof rejectV2AdminRequest>>, TError,RejectV2AdminRequestMutationVariables, TContext> => {
+
+const mutationKey = getRejectV2AdminRequestMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof rejectV2AdminRequest>>, RejectV2AdminRequestMutationVariables> = (props) => {
+          const {requestId,data} = props ?? {};
+
+          return  rejectV2AdminRequest(requestId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RejectV2AdminRequestMutationResult = NonNullable<Awaited<ReturnType<typeof rejectV2AdminRequest>>>
+    export type RejectV2AdminRequestMutationBody = BodyType<V2AdminRejectInput>
+    export type RejectV2AdminRequestMutationError = ErrorType<V2PointsErrorResponse>
+    export type RejectV2AdminRequestMutationVariables = {requestId: string;data: BodyType<V2AdminRejectInput>}
+
+    /**
+ * @summary Cancel own or reject another administrator's pending request
+ */
+export const useRejectV2AdminRequest = <TError = ErrorType<V2PointsErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof rejectV2AdminRequest>>, TError,RejectV2AdminRequestMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof rejectV2AdminRequest>>,
+        TError,
+        RejectV2AdminRequestMutationVariables,
+        TContext
+      > => {
+      return useMutation(getRejectV2AdminRequestMutationOptions(options));
+    }
+
+export const getGetV2AdminEconomyUrl = () => {
+
+
+
+
+  return `/api/v2/admin/economy`
+}
+
+/**
+ * @summary Current economy configuration and points liability
+ */
+export const getV2AdminEconomy = async ( options?: Parameters<typeof customFetch>[1]): Promise<V2EconomyOverview> => {
+
+  return customFetch<V2EconomyOverview>(getGetV2AdminEconomyUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetV2AdminEconomyQueryKey = () => {
+    return [
+    `/api/v2/admin/economy`
+    ] as const;
+    }
+
+
+export const getGetV2AdminEconomyQueryOptions = <TData = Awaited<ReturnType<typeof getV2AdminEconomy>>, TError = ErrorType<V2PointsErrorResponse>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getV2AdminEconomy>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetV2AdminEconomyQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getV2AdminEconomy>>> = ({ signal }) => getV2AdminEconomy({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getV2AdminEconomy>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetV2AdminEconomyQueryResult = NonNullable<Awaited<ReturnType<typeof getV2AdminEconomy>>>
+export type GetV2AdminEconomyQueryError = ErrorType<V2PointsErrorResponse>
+
+
+/**
+ * @summary Current economy configuration and points liability
+ */
+
+export function useGetV2AdminEconomy<TData = Awaited<ReturnType<typeof getV2AdminEconomy>>, TError = ErrorType<V2PointsErrorResponse>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getV2AdminEconomy>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetV2AdminEconomyQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getListV2AdminAuditUrl = (params?: ListV2AdminAuditParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/v2/admin/audit?${stringifiedParams}` : `/api/v2/admin/audit`
+}
+
+/**
+ * @summary Append-only administrative audit log, newest first
+ */
+export const listV2AdminAudit = async (params?: ListV2AdminAuditParams, options?: Parameters<typeof customFetch>[1]): Promise<V2AuditPage> => {
+
+  return customFetch<V2AuditPage>(getListV2AdminAuditUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListV2AdminAuditQueryKey = (params?: ListV2AdminAuditParams,) => {
+    return [
+    `/api/v2/admin/audit`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getListV2AdminAuditQueryOptions = <TData = Awaited<ReturnType<typeof listV2AdminAudit>>, TError = ErrorType<V2PointsErrorResponse>>(params?: ListV2AdminAuditParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listV2AdminAudit>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListV2AdminAuditQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listV2AdminAudit>>> = ({ signal }) => listV2AdminAudit(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listV2AdminAudit>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListV2AdminAuditQueryResult = NonNullable<Awaited<ReturnType<typeof listV2AdminAudit>>>
+export type ListV2AdminAuditQueryError = ErrorType<V2PointsErrorResponse>
+
+
+/**
+ * @summary Append-only administrative audit log, newest first
+ */
+
+export function useListV2AdminAudit<TData = Awaited<ReturnType<typeof listV2AdminAudit>>, TError = ErrorType<V2PointsErrorResponse>>(
+ params?: ListV2AdminAuditParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listV2AdminAudit>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListV2AdminAuditQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
 
 export const getListV2RewardsUrl = () => {
 
@@ -2191,7 +2694,7 @@ export const getAdjustV2PointsUrl = (accountId: string,) => {
  * @summary Audited administrator adjustment with mandatory reason
  */
 export const adjustV2Points = async (accountId: string,
-    v2PointsAdjustment: V2PointsAdjustment, options?: Parameters<typeof customFetch>[1]): Promise<V2PointsResult> => {
+    v2PointsAdjustment: V2PointsAdjustment, options?: Parameters<typeof customFetch>[1]): Promise<V2AdminRequest> => {
 
     const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
     if (!h) return {};
@@ -2207,7 +2710,7 @@ export const adjustV2Points = async (accountId: string,
     }
     return headers;
   };
-return customFetch<V2PointsResult>(getAdjustV2PointsUrl(accountId),
+return customFetch<V2AdminRequest>(getAdjustV2PointsUrl(accountId),
   {
     ...options,
     method: 'POST',
@@ -2280,7 +2783,7 @@ export const getDecideV2PointsUrl = (transactionId: string,) => {
  * @summary Approve or reject a pending transaction, append-only
  */
 export const decideV2Points = async (transactionId: string,
-    v2PointsDecision: V2PointsDecision, options?: Parameters<typeof customFetch>[1]): Promise<V2PointsResult> => {
+    v2PointsDecision: V2PointsDecision, options?: Parameters<typeof customFetch>[1]): Promise<V2AdminRequest> => {
 
     const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
     if (!h) return {};
@@ -2296,7 +2799,7 @@ export const decideV2Points = async (transactionId: string,
     }
     return headers;
   };
-return customFetch<V2PointsResult>(getDecideV2PointsUrl(transactionId),
+return customFetch<V2AdminRequest>(getDecideV2PointsUrl(transactionId),
   {
     ...options,
     method: 'POST',
@@ -2369,7 +2872,7 @@ export const getCompensateV2PointsUrl = (transactionId: string,) => {
  * @summary Full refund of a debit or full reversal of a credit/debit
  */
 export const compensateV2Points = async (transactionId: string,
-    v2PointsCompensation: V2PointsCompensation, options?: Parameters<typeof customFetch>[1]): Promise<V2PointsResult> => {
+    v2PointsCompensation: V2PointsCompensation, options?: Parameters<typeof customFetch>[1]): Promise<V2AdminRequest> => {
 
     const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
     if (!h) return {};
@@ -2385,7 +2888,7 @@ export const compensateV2Points = async (transactionId: string,
     }
     return headers;
   };
-return customFetch<V2PointsResult>(getCompensateV2PointsUrl(transactionId),
+return customFetch<V2AdminRequest>(getCompensateV2PointsUrl(transactionId),
   {
     ...options,
     method: 'POST',

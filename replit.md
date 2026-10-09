@@ -6,7 +6,7 @@ Norwegian Bokmål, mobile-first rewards and mini-games PWA for adults, with demo
 - Web workflow: `artifacts/bonusplay: web`
 - API workflow: `artifacts/api-server: API Server`
 - `pnpm run typecheck` — all shared libraries and apps
-- `pnpm --filter @workspace/db run push` — development schema
+- `pnpm --filter @workspace/db run migrate:dev` — development schema
 - `pnpm --filter @workspace/api-spec run codegen` — regenerate contract types
 - Required environment: managed `DATABASE_URL`, secret `SESSION_SECRET`, `DEMO_MODE=true`
 

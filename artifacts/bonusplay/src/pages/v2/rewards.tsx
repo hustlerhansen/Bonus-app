@@ -13,7 +13,7 @@ import {
 import { Btn, Card, Empty, ErrorState, PageHead, Skel } from '@/components/bp';
 import { errMsg } from '@/hooks/use-bp';
 import { cn } from '@/lib/utils';
-import { fmtDate, ScrollTop, SignedInOnly, useV2State, V2Frame } from './shared';
+import { apiErrorCode, fmtDate, queuedText, ScrollTop, SignedInOnly, useApprovalRequest, useV2State, V2Frame } from './shared';
 
 const nf = new Intl.NumberFormat('nb-NO');
 const inputCls = 'mt-1 w-full rounded-xl border border-white/15 bg-white/5 px-3 py-3 text-base outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/40 sm:text-sm';
@@ -312,11 +312,13 @@ function ReasonBox({ onSubmit, label, pending, danger, testid, children }: { onS
 function AdminRewards() {
   const q = useListV2AdminRewards({ query: { queryKey: getListV2AdminRewardsQueryKey() } });
   const review = useReviewV2Reward();
+  const approval = useApprovalRequest();
   const refresh = useRefresh();
   const [msg, setMsg] = useState<string | null>(null);
   const act = (r: V2Reward, status: 'approved' | 'disabled') => (reason: string) => {
     setMsg(null);
-    review.mutate({ rewardId: r.id, data: { status, reason } }, { onSuccess: () => { void refresh(r.id); setMsg(status === 'approved' ? 'Premien er godkjent.' : 'Premien er deaktivert.'); }, onError: x => setMsg(errMsg(x)) });
+    if (status === 'approved') { approval.send('REWARD_APPROVAL', { rewardId: r.id }, reason, { onQueued: q => setMsg(queuedText(q)), onError: x => setMsg(errMsg(x)) }); return; }
+    review.mutate({ rewardId: r.id, data: { status, reason } }, { onSuccess: () => { void refresh(r.id); setMsg('Premien er deaktivert.'); }, onError: x => setMsg(errMsg(x)) });
   };
   if (q.isLoading) return <Skel className="h-40" />;
   if (q.isError) return <ErrorState message={errMsg(q.error)} onRetry={() => q.refetch()} />;
@@ -329,7 +331,7 @@ function AdminRewards() {
           <li key={r.id} className="rounded-2xl bg-white/5 p-4" data-testid={`row-admin-reward-${r.id}`}>
             <div className="flex items-start justify-between gap-2"><div><div className="text-xs text-muted-foreground">{r.supplierName}</div><div className="font-bold">{r.title}</div><div className="text-xs">{nf.format(r.points)} poeng · lager {nf.format(r.stock)}</div></div><Chip k={r.status}>{RSTAT[r.status]}</Chip></div>
             <details className="mt-2 text-sm"><summary className="cursor-pointer text-primary">Kontroller beskrivelse og vilkår</summary><div className="mt-2 space-y-2 whitespace-pre-wrap break-words"><p>{r.description}</p><p><b>Vilkår:</b> {r.terms}</p></div></details>
-            {r.status === 'draft' && <ReasonBox testid={`approve-${r.id}`} label="Godkjenn" pending={review.isPending} onSubmit={act(r, 'approved')} />}
+            {r.status === 'draft' && <ReasonBox testid={`approve-${r.id}`} label="Send til godkjenning" pending={review.isPending || approval.isPending} onSubmit={act(r, 'approved')} />}
             {r.status !== 'disabled' && <ReasonBox testid={`disable-${r.id}`} label="Deaktiver" danger pending={review.isPending} onSubmit={act(r, 'disabled')} />}
           </li>))}</ul>)}
     </div>
@@ -342,6 +344,7 @@ function AdminOrders() {
   const q = useListV2AdminOrders({ query: { queryKey: getListV2AdminOrdersQueryKey(), refetchInterval: poll } });
   const rw = useListV2AdminRewards({ query: { queryKey: getListV2AdminRewardsQueryKey() } });
   const act = useActionV2Order();
+  const approval = useApprovalRequest();
   const refresh = useRefresh();
   const [msg, setMsg] = useState<string | null>(null);
   const keys = useRef<Record<string, string>>({});
@@ -354,7 +357,15 @@ function AdminOrders() {
     act.mutate({ orderId: o.id, data: { action, reason, evidenceReference, idempotencyKey,
       ...(action === 'refund' ? { confirmedNotDelivered: true } : {}) } }, {
       onSuccess: () => { delete keys.current[kk]; sessionStorage.removeItem(kk); void refresh(o.rewardId); setMsg('Handlingen er registrert.'); },
-      onError: x => setMsg(errMsg(x)),
+      onError: x => {
+        // High-value dispatch must go through the approval queue.
+        if (action === 'dispatch' && apiErrorCode(x) === 'USE_APPROVAL_QUEUE') {
+          delete keys.current[kk]; sessionStorage.removeItem(kk);
+          approval.send('ORDER_DISPATCH', { orderId: o.id, evidenceReference }, reason, { onQueued: r => setMsg(queuedText(r)), onError: e => setMsg(errMsg(e)) });
+          return;
+        }
+        setMsg(errMsg(x));
+      },
     });
   };
   if (q.isLoading) return <Skel className="h-40" />;

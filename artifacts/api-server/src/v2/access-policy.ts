@@ -18,3 +18,22 @@ export function isSafeMutation(headers: { origin?: string; host?: string; fetchS
     return false;
   }
 }
+
+/** Clerk `factorVerificationAge`: [first factor minutes, second factor minutes]; -1 = never verified. */
+export type FactorAge = readonly [number, number] | null | undefined;
+export const STEP_UP_MINUTES = 10;
+export type AdminMfaResult = "ok" | "mfa_required" | "reverify";
+
+// Administrators must use a second factor; high-risk confirmations need a fresh one.
+// Only a non-production environment may explicitly opt out for local development.
+export function adminMfaStatus(age: FactorAge, opts: { strict?: boolean; enforce: boolean }): AdminMfaResult {
+  if (!opts.enforce) return "ok";
+  const second = Array.isArray(age) ? age[1] : -1;
+  if (!Number.isFinite(second) || second < 0) return "mfa_required";
+  if (opts.strict && second > STEP_UP_MINUTES) return "reverify";
+  return "ok";
+}
+
+export function mfaEnforced(env: Record<string, string | undefined>): boolean {
+  return !(env.V2_ADMIN_MFA === "off" && env.NODE_ENV !== "production");
+}

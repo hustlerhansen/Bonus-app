@@ -12,7 +12,7 @@ import { providers } from "./providers";
 import { seedWallet } from "./seed";
 
 export class DemoError extends Error {
-  constructor(public status: number, message: string) { super(message); }
+  constructor(public status: number, message: string, public body?: Record<string, unknown>) { super(message); }
 }
 type Client = PoolClient;
 export function osloDay(): string {

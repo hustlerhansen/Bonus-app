@@ -6,6 +6,7 @@ import {
   ListV2OrdersResponse, RedeemV2RewardResponse, ReconcileV2RewardsResponse,
 } from "@workspace/api-zod";
 import { createPointsLedger, PointsError } from "./points";
+import { currentEconomy } from "./economy";
 
 type Database = Pick<typeof pool, "query" | "connect">;
 const rewardProjection = `r.id,r.supplier_id AS "supplierId",s.name AS "supplierName",
@@ -23,6 +24,12 @@ function dates(row: Record<string, unknown>) {
 
 export function createRewardService(database: Database = pool) {
   const ledger = createPointsLedger(database);
+  // Caller-owned transaction (approved request queue): same commercial lock, caller commits.
+  async function within<T>(existing: PoolClient | undefined, run: (c: PoolClient) => Promise<T>) {
+    if (!existing) return atomic(run);
+    await existing.query("SELECT pg_advisory_xact_lock(20761012,4)");
+    return run(existing);
+  }
   async function atomic<T>(run: (c: PoolClient) => Promise<T>, readOnly = false) {
     const c = await database.connect();
     try {
@@ -113,10 +120,10 @@ export function createRewardService(database: Database = pool) {
       return reward(c, id);
     });
   }
-  async function review(actorId: string, id: string, value: unknown) {
+  async function review(actorId: string, id: string, value: unknown, existing?: PoolClient) {
     const input = validate(ReviewV2RewardBody.strict(), value);
     if (input.reason.trim().length < 10) throw new PointsError(400, "Oppgi en konkret begrunnelse.");
-    return atomic(async c => {
+    return within(existing, async c => {
       const actor = await account(c, actorId, true);
       const current = await reward(c, id);
       if (current.status === input.status) return current;
@@ -171,14 +178,14 @@ export function createRewardService(database: Database = pool) {
       return ListV2OrdersResponse.parse({ items: rows.rows.map(dates) });
     });
   }
-  async function action(actorId: string, id: string, value: unknown) {
+  async function action(actorId: string, id: string, value: unknown, existing?: PoolClient) {
     const input = validate(ActionV2OrderBody.strict(), value);
     const reason = input.reason.trim(), evidence = input.evidenceReference.trim();
     if (reason.length < 10 || evidence.length < 10) throw new PointsError(400, "Oppgi begrunnelse og verifiserbar leveringsreferanse.");
     if (input.action === "refund" && input.confirmedNotDelivered !== true) {
       throw new PointsError(400, "Bekreft dokumentert ikke-levering før refusjon.");
     }
-    return atomic(async c => {
+    return within(existing, async c => {
       const initial = (await c.query("SELECT * FROM v2_reward_orders WHERE id=$1", [id])).rows[0];
       if (!initial) throw new PointsError(404, "Bestillingen finnes ikke.");
       const actor = await account(c, actorId, true, initial.account_id);
@@ -190,6 +197,11 @@ export function createRewardService(database: Database = pool) {
       if (input.action === "dispatch") {
         await gate(c, true);
         if (o.status !== "reserved") throw new PointsError(409, "Bestillingen er allerede behandlet.");
+        if (o.account_id === actorId) throw new PointsError(403, "Administratorer kan ikke behandle egne bestillinger.");
+        // High-value orders are dispatched only through the approval queue (caller-owned transaction).
+        if (!existing && o.points >= (await currentEconomy(c)).highValueOrderPoints) {
+          throw new PointsError(409, "Bestillingen har høy verdi og må sendes via godkjenningskøen.", { code: "USE_APPROVAL_QUEUE", action: "ORDER_DISPATCH" });
+        }
         if ((await c.query("SELECT 1 FROM v2_reward_risk_blocks WHERE account_id=$1 FOR SHARE", [o.account_id])).rowCount) {
           throw new PointsError(403, "Risikosperren må avklares før levering.");
         }

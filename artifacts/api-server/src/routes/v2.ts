@@ -1,13 +1,17 @@
+import { randomUUID } from "node:crypto";
 import { Router, type IRouter } from "express";
+import { getAuth } from "@clerk/express";
+import { logger } from "../lib/logger";
 import { rateLimit } from "express-rate-limit";
 import { pool } from "@workspace/db";
 import { EnrollV2AccountBody, UpdateV2AccountBody } from "@workspace/api-zod";
-import { authenticated, accountState, enroll, requireAccount, updateProfile } from "../v2/accounts";
+import { authenticated, accountState, enroll, requireAccount, requireAdmin, updateProfile } from "../v2/accounts";
 import { isSafeMutation } from "../v2/access-policy";
 import { getClerkProxyHost } from "../middlewares/clerkProxyMiddleware";
 import pointsRouter from "./v2-points";
 import offersRouter from "./v2-offers";
 import rewardsRouter from "./v2-rewards";
+import adminRouter from "./v2-admin";
 
 const router: IRouter = Router();
 router.use("/v2", rateLimit({
@@ -29,9 +33,25 @@ router.use("/v2", (req, res, next) => {
   next();
 });
 
+// Every administrator request, including reads and denied attempts, is recorded append-only.
+router.use("/v2/admin", (req, res, next) => {
+  const started = Date.now();
+  res.on("finish", () => {
+    const actor = getAuth(req).userId ?? "anonymous";
+    const route = `${req.method} /v2/admin${req.route?.path ?? req.path}`;
+    pool.query(`INSERT INTO v2_audit_logs(id,actor_id,actor_role,action,entity_type,entity_id,metadata)
+      VALUES($1,$2,COALESCE((SELECT role FROM v2_accounts WHERE id=$2),'NONE'),'ADMIN_HTTP_ACCESS','ADMIN_ROUTE',$3,$4)`,
+    [randomUUID(), actor, route.slice(0, 200), JSON.stringify({
+      status: res.statusCode, path: req.originalUrl.split("?")[0].slice(0, 300), ms: Date.now() - started,
+    })]).catch(() => logger.error({ code: "ADMIN_ACCESS_LOG_FAILED" }, "Administrator access could not be recorded"));
+  });
+  next();
+});
+
 router.use("/v2", pointsRouter);
 router.use("/v2", offersRouter);
 router.use("/v2", rewardsRouter);
+router.use("/v2", adminRouter);
 
 router.get("/v2/me", async (req, res) => {
   const identity = authenticated(req);
@@ -65,7 +85,7 @@ router.patch("/v2/me", async (req, res) => {
   res.json(await updateProfile(req, input.data));
 });
 router.get("/v2/admin/access", async (req, res) => {
-  const identity = await requireAccount(req, ["ADMIN", "SUPER_ADMIN"]);
+  const identity = await requireAdmin(req);
   res.json({ ok: true, role: identity.account.role });
 });
 router.get("/v2/partner/access", async (req, res) => {

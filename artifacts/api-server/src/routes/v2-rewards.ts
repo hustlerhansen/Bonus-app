@@ -1,10 +1,9 @@
 import { Router, type IRouter } from "express";
 import { GetV2RewardParams, RedeemV2RewardParams, ReviewV2RewardParams, ActionV2OrderParams } from "@workspace/api-zod";
-import { requireAccount } from "../v2/accounts";
+import { requireAccount, requireAdmin } from "../v2/accounts";
 import { rewardService } from "../v2/rewards";
 import { PointsError } from "../v2/points";
 const router: IRouter = Router();
-const roles = ["ADMIN", "SUPER_ADMIN"] as const;
 function params<T>(schema: { safeParse: (v: unknown) => { success: boolean; data?: T } }, value: unknown): T {
   const r = schema.safeParse(value);
   if (!r.success) throw new PointsError(400, "Ugyldig ID.");
@@ -23,24 +22,29 @@ router.get("/orders", async (req, res) => {
   res.json(await rewardService.orders((await requireAccount(req)).userId));
 });
 router.get("/admin/reward-suppliers", async (req, res) => {
-  res.json(await rewardService.suppliers((await requireAccount(req, roles)).userId));
+  res.json(await rewardService.suppliers((await requireAdmin(req)).userId));
 });
 router.get("/admin/rewards", async (req, res) => {
-  res.json(await rewardService.list((await requireAccount(req, roles)).userId, true));
+  res.json(await rewardService.list((await requireAdmin(req)).userId, true));
 });
 router.post("/admin/rewards", async (req, res) => {
-  res.status(201).json(await rewardService.create((await requireAccount(req, roles)).userId, req.body));
+  res.status(201).json(await rewardService.create((await requireAdmin(req)).userId, req.body));
 });
 router.post("/admin/rewards/:rewardId/review", async (req, res) => {
-  res.json(await rewardService.review((await requireAccount(req, roles)).userId, params(ReviewV2RewardParams, req.params).rewardId, req.body));
+  const { userId } = await requireAdmin(req);
+  // Making a reward redeemable is high-risk and goes through the approval queue.
+  if (req.body?.status === "approved") {
+    throw new PointsError(409, "Godkjenning er en høyrisikohandling. Send den til godkjenningskøen.", { code: "USE_APPROVAL_QUEUE", action: "REWARD_APPROVAL" });
+  }
+  res.json(await rewardService.review(userId, params(ReviewV2RewardParams, req.params).rewardId, req.body));
 });
 router.get("/admin/orders", async (req, res) => {
-  res.json(await rewardService.orders((await requireAccount(req, roles)).userId, true));
+  res.json(await rewardService.orders((await requireAdmin(req)).userId, true));
 });
 router.post("/admin/orders/:orderId/action", async (req, res) => {
-  res.json(await rewardService.action((await requireAccount(req, roles)).userId, params(ActionV2OrderParams, req.params).orderId, req.body));
+  res.json(await rewardService.action((await requireAdmin(req)).userId, params(ActionV2OrderParams, req.params).orderId, req.body));
 });
 router.get("/admin/rewards/reconciliation", async (req, res) => {
-  res.json(await rewardService.reconcile((await requireAccount(req, roles)).userId));
+  res.json(await rewardService.reconcile((await requireAdmin(req)).userId));
 });
 export default router;

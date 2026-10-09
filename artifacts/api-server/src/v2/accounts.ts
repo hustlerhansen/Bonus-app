@@ -4,7 +4,7 @@ import type { Request } from "express";
 import { pool, type PoolClient } from "@workspace/db";
 import { GetV2AccountResponse } from "@workspace/api-zod";
 import { DemoError } from "../bonusplay/service";
-import { canAccess, type V2Role } from "./access-policy";
+import { adminMfaStatus, canAccess, mfaEnforced, type FactorAge, type V2Role } from "./access-policy";
 
 export const TERMS_VERSION = "v2-foundation-draft-2026-10-07";
 export const PRIVACY_VERSION = "v2-foundation-draft-2026-10-07";
@@ -114,4 +114,24 @@ export async function updateProfile(req: Request, input: { firstName: string; la
   } finally {
     client.release();
   }
+}
+
+export const ADMIN_ROLES = ["ADMIN", "SUPER_ADMIN"] as const;
+
+// Every administrator route: active admin role from the database plus a verified second factor.
+// `strict` (high-risk confirmation) requires the second factor to be re-verified within minutes.
+export async function requireAdmin(req: Request, opts: { strict?: boolean } = {}) {
+  const identity = await requireAccount(req, ADMIN_ROLES);
+  const age = (getAuth(req) as { factorVerificationAge?: FactorAge }).factorVerificationAge;
+  const status = adminMfaStatus(age, { strict: opts.strict, enforce: mfaEnforced(process.env) });
+  if (status === "mfa_required") {
+    throw new DemoError(403, "Administratorer må bruke tofaktorautentisering. Aktiver det under Sikkerhet og logg inn på nytt.", { code: "MFA_REQUIRED" });
+  }
+  if (status === "reverify") {
+    throw new DemoError(403, "Bekreft identiteten din på nytt med tofaktor før du fortsetter.", {
+      code: "REVERIFY_REQUIRED",
+      clerk_error: { type: "forbidden", reason: "reverification-error", metadata: { reverification: "strict_mfa" } },
+    });
+  }
+  return identity;
 }

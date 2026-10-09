@@ -47,7 +47,7 @@ Use the existing `artifacts/bonusplay: web` and `artifacts/api-server: API Serve
 
 ```sh
 pnpm install
-pnpm --filter @workspace/db run push
+pnpm --filter @workspace/db run migrate:dev
 pnpm --filter @workspace/api-spec run codegen
 pnpm run typecheck
 ```

@@ -2,7 +2,7 @@ import { useEffect, type ReactNode } from 'react';
 import { Link, Redirect, useLocation } from 'wouter';
 import { useAuth, useClerk } from '@clerk/react';
 import { useQueryClient } from '@tanstack/react-query';
-import { getGetV2AccountQueryKey, useGetV2Account } from '@workspace/api-client-react';
+import { getGetV2AccountQueryKey, getListV2AdminRequestsQueryKey, useCreateV2AdminRequest, useGetV2Account, type V2AdminRequest, type V2AdminRequestInputAction } from '@workspace/api-client-react';
 import { Btn, Logo, PageSkeleton } from '@/components/bp';
 import { usePageMeta } from '@/hooks/use-page-meta';
 import { cn } from '@/lib/utils';
@@ -47,7 +47,7 @@ export function V2Frame({ children, title, desc, nav }: { children: ReactNode; t
   const qc = useQueryClient();
   const out = () => clerk.signOut({ redirectUrl: `${basePath}/v2` }).then(() => qc.clear());
   const isAdmin = useIsAdmin();
-  const links: [string, string][] = [['/account', 'Oversikt'], ['/account/points', 'Poeng'], ['/account/offers', 'Tilbud'], ['/account/rewards', 'Premier'], ['/account/orders', 'Bestillinger'], ...(isAdmin ? [['/account/points/admin', 'Poengadmin'] as [string, string]] : []), ['/account/profile', 'Profil'], ['/account/security', 'Sikkerhet']];
+  const links: [string, string][] = [['/account', 'Oversikt'], ['/account/points', 'Poeng'], ['/account/offers', 'Tilbud'], ['/account/rewards', 'Premier'], ['/account/orders', 'Bestillinger'], ...(isAdmin ? [['/account/admin', 'Admin'] as [string, string]] : []), ['/account/profile', 'Profil'], ['/account/security', 'Sikkerhet']];
   return (
     <div className="mx-auto min-h-[100dvh] max-w-3xl px-4 pb-16 pt-5">
       <header className="mb-6 flex flex-wrap items-center justify-between gap-3">
@@ -83,4 +83,32 @@ export function SignedInOnly({ children }: { children: ReactNode }) {
 export function ScrollTop() {
   useEffect(() => window.scrollTo(0, 0), []);
   return null;
+}
+
+export function fmtDateTime(s?: string | null) {
+  if (!s) return '-';
+  const d = new Date(s);
+  return Number.isNaN(d.getTime()) ? '-' : d.toLocaleString('nb-NO', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+}
+
+export function queuedText(r: V2AdminRequest) {
+  return `Sendt til godkjenningskøen. Kan bekreftes tidligst ${fmtDateTime(r.notBefore)} under Admin → Godkjenninger.`;
+}
+
+export function apiErrorCode(e: unknown): string | undefined {
+  return (e as { data?: { code?: string } } | null)?.data?.code;
+}
+
+/** High-risk actions are recorded first and executed after the cooldown and an MFA-verified confirmation. */
+export function useApprovalRequest() {
+  const qc = useQueryClient();
+  const m = useCreateV2AdminRequest();
+  const send = (action: V2AdminRequestInputAction, payload: Record<string, unknown>, reason: string,
+    cb: { onQueued: (r: V2AdminRequest) => void; onError: (e: unknown) => void }) => {
+    m.mutate({ data: { action, payload, reason, requestKey: crypto.randomUUID() } }, {
+      onSuccess: (r) => { void qc.invalidateQueries({ queryKey: getListV2AdminRequestsQueryKey() }); cb.onQueued(r); },
+      onError: cb.onError,
+    });
+  };
+  return { send, isPending: m.isPending };
 }
