@@ -104,3 +104,14 @@ One protected browser pass at 390×844 verified the Norwegian admin-to-user-to-a
 All browser suppliers/rewards/points/roles and opened test gates were confined to the isolated schema. The managed API workflow was restored without its temporary PGOPTIONS override before the test schema and temporary files were removed. Subsequent shared-database checks confirm `phase1_cleared=false`, `earn_enabled=false`, `v2_redeem_gate.enabled=false`, and zero V2 reward suppliers, definitions and orders. The restored workflow starts cleanly and health is 200.
 
 No live reward fulfillment, money, Stripe, production migration or publish was authorized by this phase. Actual supplier agreements, approved economics and the separately outstanding security/login gates remain prerequisites. See `V2_REWARDS.md` and the reward section in `RUNBOOK.md`.
+
+## MVP-herding 2026-10-09 (utvikling, ikke lansert)
+
+Bygget etter eierens rammer i `IMPLEMENTATION_PLAN.md`. Alle porter er fortsatt lukket, og ingen produksjonsmigrering eller publisering er utført.
+
+- **Sikkerhet:** Godkjenningskø for høyrisikohandlinger med ventetid ≥ 60 min, egen bekreftelse med ny MFA, utføres maks én gang og valgfritt krav om to administratorer. Administratorer kan aldri behandle egen fordel. MFA kreves på alle `/v2/admin/*`, og all admintilgang logges. `drizzle-kit push` er erstattet av migrasjoner. CI er satt opp.
+- **Økonomi:** 100 BP = 1 kr, 30 % standard brukerandel, maks 40 %, minstemargin 50 % (versjonert og kan bare endres via køen). Kampanjepoeng beregnes av serveren med lønnsomhetskontroll før aktivering. All opptjening krever finansiering (verifisert konvertering eller godkjent markedsbudsjett), håndhevet i databasen. Kampanjetak. Premier prises til pålydende. XP, nivåer, streak og merker er adskilt fra poengboken.
+- **Gavekort:** Manuell levering. Koden lagres kryptert (AES-256-GCM, `V2_VOUCHER_KEY`) og vises bare for eier, med logg. Innløsningsregler: kontoalder, verifisert opptjening og dagsgrenser. Dyre ordre går via køen. Adapter for senere automatikk finnes, men databasen tillater bare `manual`.
+- **Demo:** Flyttet til `/demo`. Privat for testere på en liste (administreres i admin-hub). Banner «TESTVERSJON». Ingen offentlig demo-admin. Demodata har ingen vei til V2.
+- **Brukeropplevelse:** Ny forside (`/`), nytt hjem (`/account`) med saldo, nivå, streak, merker, anbefalte tilbud, neste mål og siste aktivitet. Admin-hub (`/account/admin`). Dataeksport og sletteforespørsel under Profil.
+- **Verifisert:** typekontroll, 134 automatiske tester (`test:v2`, `-points`, `-offers`, `-rewards`, `-admin`, `-economy`, `-fulfillment`, `-privacy`, `test:v2-cache`), byggene for web og API, og en HTTP-røyktest mot nymigrert database (anonym tilgang avvises, demo krever tester, ukjent partner avvises, admintilgang logges). Ingen nettlesertest med ekte Clerk-innlogging i denne økten.

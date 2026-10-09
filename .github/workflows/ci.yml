@@ -49,6 +49,8 @@ jobs:
         run: pnpm --filter @workspace/api-server run test:v2-economy
       - name: Gift card fulfillment tests
         run: pnpm --filter @workspace/api-server run test:v2-fulfillment
+      - name: Private demo and privacy tests
+        run: pnpm --filter @workspace/api-server run test:v2-privacy
       - name: Frontend cache tests
         run: pnpm --filter @workspace/bonusplay run test:v2-cache
       - name: Dependency audit (production)

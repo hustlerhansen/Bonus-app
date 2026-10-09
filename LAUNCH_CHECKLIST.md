@@ -10,6 +10,17 @@ Unchecked means unverified or not implemented. A demo or passing typecheck is no
 - [x] Protected 390px wallet/admin journey verified, including live cache refresh after refund, insufficient balance, replay and permission denial
 - [ ] Outstanding phase-1 identity/email/production and real-administrator gates resolved
 
+## MVP-herding 2026-10-09 (utviklingsbevis, ikke lanseringsgodkjenning)
+- [x] Godkjenningskø, MFA-krav for administratorer, forbud mot selvbehandling og logg over admintilgang (automatiske tester)
+- [x] Økonomiregler (100 BP/kr, 30/40 %, 50 % margin) og finansieringskrav håndhevet i database og tjenestelag
+- [x] Kryptert manuell gavekortlevering og innløsningsregler
+- [x] Privat demo for testere
+- [x] CI-arbeidsflyt (første kjøring på GitHub gjenstår å bekrefte)
+- [ ] Clerk-produksjon med MFA (TOTP) aktivert, og eventuell plankostnad godkjent
+- [ ] `V2_VOUCHER_KEY` generert og lagret i hemmelighetslageret, med sikkerhetskopi
+- [ ] Første administrator provisjonert og MFA verifisert i nettleser
+- [ ] Nettlesertest av hele flyten: registrering → tilbud → konvertering → godkjenning → innløsning → kode vist
+
 ## Product
 Phase-4 development evidence is documented in `V2_REWARDS.md` and `CURRENT_STATE.md`: 13 isolated redemption/inventory/refund tests and the protected 390px user/admin journey pass behind closed shared gates. This does **not** clear real-supplier fulfillment, commercial launch or the separate security/login checks below.
 

@@ -27,7 +27,7 @@ Norwegian Bokmål, mobile-first rewards and mini-games PWA for adults, with demo
 - Demo providers remain simulated. V2 identity/financial data must never be seeded from demo accounts or balances.
 
 ## Architecture
-- Each signed browser demo session gets an isolated Magnar profile; public demo admin enrollment is intentional and is not production authorization.
+- The demo lives under `/demo` and is private: only signed-in V2 accounts on the tester list (admin hub) can open it; demo admin requires an explicit tester flag. Demo data has no path to V2.
 - Wallet balances are sums of ledger entries, never client-owned mutable balances.
 - Claims and redemptions lock the user row and write ledger/state in one transaction. Reward values and daily limits are server-owned.
 - Catalog disablement preserves historical ledger references. Admin changes are audited.

@@ -23,7 +23,7 @@ export function fmtDate(s?: string | null) {
 export function PhaseNotice({ className }: { className?: string }) {
   return (
     <div className={cn('rounded-2xl border border-amber-300/25 bg-amber-400/10 p-4 text-sm text-amber-100', className)} data-testid="notice-phase">
-      <b>Fase 2: poengbok aktiv.</b> Du kan se saldo og historikk for BonusPoints. Tilbud er klargjort, men ikke aktivert før sikkerhets- og innloggingskontrollene er klarert. Innløsning og utbetalinger er ikke aktive. Den eksisterende demoen er uendret.
+      <b>Lukket oppstart.</b> Du kan opprette konto og følge saldoen din nå. Tilbud fra partnere og innløsning av gavekort åpnes gradvis. Opptjente BonusPoints utløper ikke.
     </div>
   );
 }
@@ -45,17 +45,17 @@ export function V2Frame({ children, title, desc, nav }: { children: ReactNode; t
   const [loc] = useLocation();
   const clerk = useClerk();
   const qc = useQueryClient();
-  const out = () => clerk.signOut({ redirectUrl: `${basePath}/v2` }).then(() => qc.clear());
+  const out = () => clerk.signOut({ redirectUrl: `${basePath}/` }).then(() => qc.clear());
   const isAdmin = useIsAdmin();
-  const links: [string, string][] = [['/account', 'Oversikt'], ['/account/points', 'Poeng'], ['/account/offers', 'Tilbud'], ['/account/rewards', 'Premier'], ['/account/orders', 'Bestillinger'], ...(isAdmin ? [['/account/admin', 'Admin'] as [string, string]] : []), ['/account/profile', 'Profil'], ['/account/security', 'Sikkerhet']];
+  const links: [string, string][] = [['/account', 'Hjem'], ['/account/offers', 'Tjen poeng'], ['/account/rewards', 'Gavekort'], ['/account/points', 'Historikk'], ['/account/orders', 'Bestillinger'], ...(isAdmin ? [['/account/admin', 'Admin'] as [string, string]] : []), ['/account/profile', 'Profil']];
   return (
     <div className="mx-auto min-h-[100dvh] max-w-3xl px-4 pb-16 pt-5">
       <header className="mb-6 flex flex-wrap items-center justify-between gap-3">
-        <Link href={nav ? '/account' : '/v2'}><Logo /></Link>
+        <Link href={nav ? '/account' : '/'}><Logo /></Link>
         {nav ? (
           <Btn size="sm" variant="ghost" onClick={out} data-testid="button-v2-logout">Logg ut</Btn>
         ) : (
-          <div className="flex gap-3 text-sm"><Link href="/business" className="text-muted-foreground">For bedrifter</Link><Link href="/" className="text-muted-foreground">Demo</Link></div>
+          <div className="flex gap-3 text-sm"><Link href="/business" className="text-muted-foreground">For bedrifter</Link><Link href="/sign-in" className="text-muted-foreground">Logg inn</Link></div>
         )}
       </header>
       {nav && (

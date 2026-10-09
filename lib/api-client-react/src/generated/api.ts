@@ -31,12 +31,14 @@ import type {
   DemoSession,
   DemoSessionInput,
   ErrorResponse,
+  ExportV2MyData200,
   FeatureFlag,
   FeatureFlagInput,
   HealthStatus,
   ListV2AdminAuditParams,
   ListV2AdminRequestsParams,
   ListV2AdminTransactionsParams,
+  ListV2DemoTesters200,
   ListV2TransactionsParams,
   Mission,
   MissionUpdate,
@@ -57,6 +59,10 @@ import type {
   V2ConversionReversalInput,
   V2ConversionReversalResult,
   V2ConversionReviewInput,
+  V2DeletionRequestInput,
+  V2DemoAccess,
+  V2DemoTester,
+  V2DemoTesterInput,
   V2EconomyOverview,
   V2Engagement,
   V2EnrollmentInput,
@@ -116,6 +122,487 @@ const withQueryKey = <T extends object, K>(query: T, queryKey: K): T & { queryKe
   }
   return result;
 };
+
+export const getGetV2DemoAccessUrl = () => {
+
+
+
+
+  return `/api/v2/demo-access`
+}
+
+/**
+ * @summary Whether the signed-in account may open the private demo
+ */
+export const getV2DemoAccess = async ( options?: Parameters<typeof customFetch>[1]): Promise<V2DemoAccess> => {
+
+  return customFetch<V2DemoAccess>(getGetV2DemoAccessUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetV2DemoAccessQueryKey = () => {
+    return [
+    `/api/v2/demo-access`
+    ] as const;
+    }
+
+
+export const getGetV2DemoAccessQueryOptions = <TData = Awaited<ReturnType<typeof getV2DemoAccess>>, TError = ErrorType<V2PointsErrorResponse>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getV2DemoAccess>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetV2DemoAccessQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getV2DemoAccess>>> = ({ signal }) => getV2DemoAccess({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getV2DemoAccess>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetV2DemoAccessQueryResult = NonNullable<Awaited<ReturnType<typeof getV2DemoAccess>>>
+export type GetV2DemoAccessQueryError = ErrorType<V2PointsErrorResponse>
+
+
+/**
+ * @summary Whether the signed-in account may open the private demo
+ */
+
+export function useGetV2DemoAccess<TData = Awaited<ReturnType<typeof getV2DemoAccess>>, TError = ErrorType<V2PointsErrorResponse>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getV2DemoAccess>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetV2DemoAccessQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getListV2DemoTestersUrl = () => {
+
+
+
+
+  return `/api/v2/admin/testers`
+}
+
+/**
+ * @summary Accounts allowed to use the private demo
+ */
+export const listV2DemoTesters = async ( options?: Parameters<typeof customFetch>[1]): Promise<ListV2DemoTesters200> => {
+
+  return customFetch<ListV2DemoTesters200>(getListV2DemoTestersUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListV2DemoTestersQueryKey = () => {
+    return [
+    `/api/v2/admin/testers`
+    ] as const;
+    }
+
+
+export const getListV2DemoTestersQueryOptions = <TData = Awaited<ReturnType<typeof listV2DemoTesters>>, TError = ErrorType<V2PointsErrorResponse>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listV2DemoTesters>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListV2DemoTestersQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listV2DemoTesters>>> = ({ signal }) => listV2DemoTesters({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listV2DemoTesters>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListV2DemoTestersQueryResult = NonNullable<Awaited<ReturnType<typeof listV2DemoTesters>>>
+export type ListV2DemoTestersQueryError = ErrorType<V2PointsErrorResponse>
+
+
+/**
+ * @summary Accounts allowed to use the private demo
+ */
+
+export function useListV2DemoTesters<TData = Awaited<ReturnType<typeof listV2DemoTesters>>, TError = ErrorType<V2PointsErrorResponse>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listV2DemoTesters>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListV2DemoTestersQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getAddV2DemoTesterUrl = () => {
+
+
+
+
+  return `/api/v2/admin/testers`
+}
+
+/**
+ * @summary Allow an enrolled account (by e-mail) to use the private demo
+ */
+export const addV2DemoTester = async (v2DemoTesterInput: V2DemoTesterInput, options?: Parameters<typeof customFetch>[1]): Promise<V2DemoTester> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<V2DemoTester>(getAddV2DemoTesterUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(v2DemoTesterInput)
+  }
+);}
+
+
+
+
+
+export const getAddV2DemoTesterMutationKey = () => ['addV2DemoTester'] as const;
+
+export const getAddV2DemoTesterMutationOptions = <TError = ErrorType<V2PointsErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof addV2DemoTester>>, TError,AddV2DemoTesterMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof addV2DemoTester>>, TError,AddV2DemoTesterMutationVariables, TContext> => {
+
+const mutationKey = getAddV2DemoTesterMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof addV2DemoTester>>, AddV2DemoTesterMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  addV2DemoTester(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AddV2DemoTesterMutationResult = NonNullable<Awaited<ReturnType<typeof addV2DemoTester>>>
+    export type AddV2DemoTesterMutationBody = BodyType<V2DemoTesterInput>
+    export type AddV2DemoTesterMutationError = ErrorType<V2PointsErrorResponse>
+    export type AddV2DemoTesterMutationVariables = {data: BodyType<V2DemoTesterInput>}
+
+    /**
+ * @summary Allow an enrolled account (by e-mail) to use the private demo
+ */
+export const useAddV2DemoTester = <TError = ErrorType<V2PointsErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof addV2DemoTester>>, TError,AddV2DemoTesterMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof addV2DemoTester>>,
+        TError,
+        AddV2DemoTesterMutationVariables,
+        TContext
+      > => {
+      return useMutation(getAddV2DemoTesterMutationOptions(options));
+    }
+
+export const getRemoveV2DemoTesterUrl = (accountId: string,) => {
+
+
+
+
+  return `/api/v2/admin/testers/${accountId}`
+}
+
+/**
+ * @summary Revoke demo access
+ */
+export const removeV2DemoTester = async (accountId: string, options?: Parameters<typeof customFetch>[1]): Promise<OkResponse> => {
+
+  return customFetch<OkResponse>(getRemoveV2DemoTesterUrl(accountId),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+
+export const getRemoveV2DemoTesterMutationKey = () => ['removeV2DemoTester'] as const;
+
+export const getRemoveV2DemoTesterMutationOptions = <TError = ErrorType<V2PointsErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof removeV2DemoTester>>, TError,RemoveV2DemoTesterMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof removeV2DemoTester>>, TError,RemoveV2DemoTesterMutationVariables, TContext> => {
+
+const mutationKey = getRemoveV2DemoTesterMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof removeV2DemoTester>>, RemoveV2DemoTesterMutationVariables> = (props) => {
+          const {accountId} = props ?? {};
+
+          return  removeV2DemoTester(accountId,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RemoveV2DemoTesterMutationResult = NonNullable<Awaited<ReturnType<typeof removeV2DemoTester>>>
+
+    export type RemoveV2DemoTesterMutationError = ErrorType<V2PointsErrorResponse>
+    export type RemoveV2DemoTesterMutationVariables = {accountId: string}
+
+    /**
+ * @summary Revoke demo access
+ */
+export const useRemoveV2DemoTester = <TError = ErrorType<V2PointsErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof removeV2DemoTester>>, TError,RemoveV2DemoTesterMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof removeV2DemoTester>>,
+        TError,
+        RemoveV2DemoTesterMutationVariables,
+        TContext
+      > => {
+      return useMutation(getRemoveV2DemoTesterMutationOptions(options));
+    }
+
+export const getExportV2MyDataUrl = () => {
+
+
+
+
+  return `/api/v2/me/export`
+}
+
+/**
+ * @summary Download all personal and financial data held about the caller (GDPR art. 15/20)
+ */
+export const exportV2MyData = async ( options?: Parameters<typeof customFetch>[1]): Promise<ExportV2MyData200> => {
+
+  return customFetch<ExportV2MyData200>(getExportV2MyDataUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getExportV2MyDataQueryKey = () => {
+    return [
+    `/api/v2/me/export`
+    ] as const;
+    }
+
+
+export const getExportV2MyDataQueryOptions = <TData = Awaited<ReturnType<typeof exportV2MyData>>, TError = ErrorType<V2PointsErrorResponse>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof exportV2MyData>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getExportV2MyDataQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof exportV2MyData>>> = ({ signal }) => exportV2MyData({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof exportV2MyData>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ExportV2MyDataQueryResult = NonNullable<Awaited<ReturnType<typeof exportV2MyData>>>
+export type ExportV2MyDataQueryError = ErrorType<V2PointsErrorResponse>
+
+
+/**
+ * @summary Download all personal and financial data held about the caller (GDPR art. 15/20)
+ */
+
+export function useExportV2MyData<TData = Awaited<ReturnType<typeof exportV2MyData>>, TError = ErrorType<V2PointsErrorResponse>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof exportV2MyData>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getExportV2MyDataQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getRequestV2AccountDeletionUrl = () => {
+
+
+
+
+  return `/api/v2/me/deletion-request`
+}
+
+/**
+ * @summary Ask for account deletion; access stops immediately, financial records are kept per retention policy
+ */
+export const requestV2AccountDeletion = async (v2DeletionRequestInput: V2DeletionRequestInput, options?: Parameters<typeof customFetch>[1]): Promise<OkResponse> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<OkResponse>(getRequestV2AccountDeletionUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(v2DeletionRequestInput)
+  }
+);}
+
+
+
+
+
+export const getRequestV2AccountDeletionMutationKey = () => ['requestV2AccountDeletion'] as const;
+
+export const getRequestV2AccountDeletionMutationOptions = <TError = ErrorType<V2PointsErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof requestV2AccountDeletion>>, TError,RequestV2AccountDeletionMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof requestV2AccountDeletion>>, TError,RequestV2AccountDeletionMutationVariables, TContext> => {
+
+const mutationKey = getRequestV2AccountDeletionMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof requestV2AccountDeletion>>, RequestV2AccountDeletionMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  requestV2AccountDeletion(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RequestV2AccountDeletionMutationResult = NonNullable<Awaited<ReturnType<typeof requestV2AccountDeletion>>>
+    export type RequestV2AccountDeletionMutationBody = BodyType<V2DeletionRequestInput>
+    export type RequestV2AccountDeletionMutationError = ErrorType<V2PointsErrorResponse>
+    export type RequestV2AccountDeletionMutationVariables = {data: BodyType<V2DeletionRequestInput>}
+
+    /**
+ * @summary Ask for account deletion; access stops immediately, financial records are kept per retention policy
+ */
+export const useRequestV2AccountDeletion = <TError = ErrorType<V2PointsErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof requestV2AccountDeletion>>, TError,RequestV2AccountDeletionMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof requestV2AccountDeletion>>,
+        TError,
+        RequestV2AccountDeletionMutationVariables,
+        TContext
+      > => {
+      return useMutation(getRequestV2AccountDeletionMutationOptions(options));
+    }
 
 export const getGetV2OrderVoucherUrl = (orderId: string,) => {
 

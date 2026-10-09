@@ -51,6 +51,9 @@ export function Shell({ children }: { children: ReactNode }) {
 
   return (
     <div className="min-h-[100dvh]">
+      <div role="note" className="relative z-40 bg-amber-400 px-4 py-1.5 text-center text-xs font-bold text-[hsl(228_60%_8%)] lg:pl-64" data-testid="banner-test-version">
+        TESTVERSJON – kun for inviterte testere. Poeng og premier her har ingen verdi og kan ikke løses inn.
+      </div>
       <aside className="fixed inset-y-0 left-0 z-30 hidden w-64 flex-col border-r border-white/5 bg-[hsl(229_62%_5%/.8)] p-5 backdrop-blur-xl lg:flex">
         <Link href="/" className="mb-8 block" data-testid="link-logo"><Logo /></Link>
         <nav className="flex-1 space-y-1 overflow-y-auto">

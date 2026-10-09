@@ -1,5 +1,5 @@
 import { useEffect, useRef, type ComponentType, type ReactNode } from 'react';
-import { ClerkProvider, useClerk } from '@clerk/react';
+import { ClerkProvider, useAuth, useClerk } from '@clerk/react';
 import { publishableKeyFromHost } from '@clerk/react/internal';
 import { dark } from '@clerk/themes';
 import { V2Landing, BusinessPage } from '@/pages/v2/public';
@@ -31,7 +31,7 @@ import NotificationsPage from '@/pages/notifications';
 import SettingsPage from '@/pages/settings';
 import AdminPage from '@/pages/admin';
 import { HelpPage, PrivacyPage, TermsPage } from '@/pages/legal';
-import { Route, Switch, useLocation, Router as WouterRouter } from 'wouter';
+import { Redirect, Route, Switch, useLocation, Router as WouterRouter } from 'wouter';
 
 const queryClient = new QueryClient({ defaultOptions: { queries: { retry: 1 } } });
 
@@ -122,6 +122,13 @@ const pages: [string, ComponentType, boolean?][] = [
 ];
 const wrapped = pages.map(([p, C, a]) => [p, guard(p, C, a)] as const);
 
+/** Production entry: the real platform. Signed-in users go to their dashboard. */
+function HomeGate() {
+  const { isLoaded, isSignedIn } = useAuth();
+  if (isLoaded && isSignedIn) return <Redirect to="/account" />;
+  return <V2Landing />;
+}
+
 function Router() {
   return (
     <RoutedErrorBoundary>
@@ -143,7 +150,16 @@ function Router() {
         <Route path="/account/orders" component={OrdersPage} />
         <Route path="/account/profile" component={AccountProfilePage} />
         <Route path="/account/security/*?" component={AccountSecurityPage} />
-        {wrapped.map(([p, C]) => <Route key={p} path={p} component={C} />)}
+        {/* Public legal and help pages at the root (also reachable inside the demo). */}
+        {wrapped.filter(([p]) => ['/help', '/privacy', '/terms'].includes(p)).map(([p, C]) => <Route key={p} path={p} component={C} />)}
+        {/* The legacy demo is private for invited testers and lives under /demo. */}
+        <Route path="/demo" nest>
+          <Switch>
+            {wrapped.map(([p, C]) => <Route key={p} path={p} component={C} />)}
+            <Route component={NotFound} />
+          </Switch>
+        </Route>
+        <Route path="/" component={HomeGate} />
         <Route component={NotFound} />
       </Switch>
     </RoutedErrorBoundary>

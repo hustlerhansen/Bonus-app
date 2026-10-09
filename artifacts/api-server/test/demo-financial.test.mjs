@@ -4,14 +4,25 @@ import { randomUUID } from "node:crypto";
 
 // Development gateway only: never run financial test mutations against a published site.
 const base = "http://localhost:80";
-async function demo() {
+// The demo is private: provide a signed-in tester's Clerk session cookie, e.g.
+// BONUSPLAY_TESTER_COOKIE="__session=..." pnpm --filter @workspace/api-server run test:demo-financial
+const tester = process.env.BONUSPLAY_TESTER_COOKIE;
+test("anonymous visitors cannot open a demo session", async () => {
   const res = await fetch(`${base}/api/bonusplay/demo-session`, {
-    method: "POST", headers: { "Content-Type": "application/json" },
+    method: "POST", headers: { "Content-Type": "application/json", Origin: base }, body: JSON.stringify({ role: "user" }),
+  });
+  assert.ok([401, 403].includes(res.status));
+});
+async function demo(t) {
+  if (!tester) { t.skip("BONUSPLAY_TESTER_COOKIE er ikke satt"); return null; }
+  const res = await fetch(`${base}/api/bonusplay/demo-session`, {
+    method: "POST", headers: { "Content-Type": "application/json", Origin: base, Cookie: tester },
     body: JSON.stringify({ role: "user" }),
   });
   assert.equal(res.status, 200);
-  const cookie = res.headers.getSetCookie().find(c => c.startsWith("bonusplay_demo="))?.split(";")[0];
-  assert.ok(cookie);
+  const demoCookie = res.headers.getSetCookie().find(c => c.startsWith("bonusplay_demo="))?.split(";")[0];
+  assert.ok(demoCookie);
+  const cookie = `${demoCookie}; ${tester}`;
   return async (path, body, method = body ? "POST" : "GET") => {
     const response = await fetch(`${base}${path}`, {
       method, headers: { Cookie: cookie, Origin: base, "Content-Type": "application/json" },
@@ -21,8 +32,9 @@ async function demo() {
   };
 }
 
-test("demo ledger reward retries do not duplicate credits", async () => {
-  const call = await demo();
+test("demo ledger reward retries do not duplicate credits", async (t) => {
+  const call = await demo(t);
+  if (!call) return;
   const before = (await call("/api/bonusplay/state")).body;
   const key = randomUUID();
   const one = await call("/api/bonusplay/claims", { activityId: "mission-ad", idempotencyKey: key });
@@ -34,8 +46,9 @@ test("demo ledger reward retries do not duplicate credits", async () => {
   assert.equal(two.body.state.transactions.filter(t => t.title === "Se en video" && t.currency === "points").length, 1);
 });
 
-test("simultaneous redemptions cannot overdraw; retry debits only once", async () => {
-  const call = await demo();
+test("simultaneous redemptions cannot overdraw; retry debits only once", async (t) => {
+  const call = await demo(t);
+  if (!call) return;
   const start = (await call("/api/bonusplay/state")).body.user.points;
   assert.equal(start, 12450);
   const firstKey = randomUUID(), secondKey = randomUUID();
@@ -54,8 +67,9 @@ test("simultaneous redemptions cannot overdraw; retry debits only once", async (
   assert.equal(insufficient.status, 409);
 });
 
-test("demo identity never authorizes V2; user cannot access demo admin", async () => {
-  const call = await demo();
+test("demo identity never authorizes V2; user cannot access demo admin", async (t) => {
+  const call = await demo(t);
+  if (!call) return;
   assert.equal((await call("/api/v2/me")).status, 401);
   assert.equal((await call("/api/v2/admin/access")).status, 401);
   assert.equal((await call("/api/v2/partner/access")).status, 401);

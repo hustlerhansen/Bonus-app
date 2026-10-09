@@ -4,7 +4,7 @@ import { getAuth } from "@clerk/express";
 import { logger } from "../lib/logger";
 import { rateLimit } from "express-rate-limit";
 import { pool } from "@workspace/db";
-import { EnrollV2AccountBody, UpdateV2AccountBody } from "@workspace/api-zod";
+import { EnrollV2AccountBody, UpdateV2AccountBody, RequestV2AccountDeletionBody } from "@workspace/api-zod";
 import { authenticated, accountState, enroll, requireAccount, requireAdmin, updateProfile } from "../v2/accounts";
 import { isSafeMutation } from "../v2/access-policy";
 import { getClerkProxyHost } from "../middlewares/clerkProxyMiddleware";
@@ -13,6 +13,8 @@ import offersRouter from "./v2-offers";
 import rewardsRouter from "./v2-rewards";
 import adminRouter from "./v2-admin";
 import { engagement } from "../v2/engagement";
+import { demoAccess } from "../v2/demo-access";
+import { exportAccountData, requestDeletion } from "../v2/privacy";
 
 const router: IRouter = Router();
 router.use("/v2", rateLimit({
@@ -39,7 +41,7 @@ router.use("/v2/admin", (req, res, next) => {
   const started = Date.now();
   res.on("finish", () => {
     const actor = getAuth(req).userId ?? "anonymous";
-    const route = `${req.method} /v2/admin${req.route?.path ?? req.path}`;
+    const route = `${req.method} /v2${req.route?.path ?? `/admin${req.path}`}`;
     pool.query(`INSERT INTO v2_audit_logs(id,actor_id,actor_role,action,entity_type,entity_id,metadata)
       VALUES($1,$2,COALESCE((SELECT role FROM v2_accounts WHERE id=$2),'NONE'),'ADMIN_HTTP_ACCESS','ADMIN_ROUTE',$3,$4)`,
     [randomUUID(), actor, route.slice(0, 200), JSON.stringify({
@@ -84,6 +86,21 @@ router.patch("/v2/me", async (req, res) => {
     return;
   }
   res.json(await updateProfile(req, input.data));
+});
+router.get("/v2/demo-access", async (req, res) => {
+  const { userId } = await requireAccount(req);
+  res.json(await demoAccess(pool, userId));
+});
+router.get("/v2/me/export", async (req, res) => {
+  const { userId } = await requireAccount(req);
+  res.setHeader("Content-Disposition", `attachment; filename="bonusplay-data-${new Date().toISOString().slice(0, 10)}.json"`);
+  res.json(await exportAccountData(pool, userId));
+});
+router.post("/v2/me/deletion-request", async (req, res) => {
+  const { userId } = await requireAccount(req);
+  const input = RequestV2AccountDeletionBody.strict().safeParse(req.body);
+  if (!input.success) { res.status(400).json({ error: "Skriv SLETT for å bekrefte." }); return; }
+  res.json(await requestDeletion(pool, userId));
 });
 router.get("/v2/engagement", async (req, res) => {
   const { userId } = await requireAccount(req);

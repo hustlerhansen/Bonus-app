@@ -1,10 +1,11 @@
 import { Router, type IRouter } from "express";
 import { pool } from "@workspace/db";
-import { ListV2AdminRequestsQueryParams, ListV2AdminAuditQueryParams, ConfirmV2AdminRequestParams, RejectV2AdminRequestParams } from "@workspace/api-zod";
+import { AddV2DemoTesterBody, RemoveV2DemoTesterParams, ListV2AdminRequestsQueryParams, ListV2AdminAuditQueryParams, ConfirmV2AdminRequestParams, RejectV2AdminRequestParams } from "@workspace/api-zod";
 import { requireAdmin } from "../v2/accounts";
 import { adminRequests } from "../v2/admin-requests";
 import { currentEconomy } from "../v2/economy";
 import { PointsError } from "../v2/points";
+import { testers } from "../v2/demo-access";
 
 const router: IRouter = Router();
 function parse<T>(schema: { safeParse: (v: unknown) => { success: boolean; data?: T } }, value: unknown): T {
@@ -83,6 +84,19 @@ router.get("/admin/audit", async (req, res) => {
     WHERE ($1::timestamptz IS NULL OR created_at<$1) ORDER BY created_at DESC,id DESC LIMIT $2`, [before, limit + 1])).rows;
   const items = rows.slice(0, limit).map(r => ({ ...r, createdAt: (r.createdAt as Date).toISOString() }));
   res.json({ items, nextBefore: rows.length > limit ? items[items.length - 1].createdAt : null });
+});
+
+router.get("/admin/testers", async (req, res) => {
+  const { userId } = await requireAdmin(req);
+  res.json(await testers.list(userId));
+});
+router.post("/admin/testers", async (req, res) => {
+  const { userId } = await requireAdmin(req);
+  res.json(await testers.add(userId, parse(AddV2DemoTesterBody.strict(), req.body)));
+});
+router.delete("/admin/testers/:accountId", async (req, res) => {
+  const { userId } = await requireAdmin(req);
+  res.json(await testers.remove(userId, parse(RemoveV2DemoTesterParams, req.params).accountId));
 });
 
 export default router;

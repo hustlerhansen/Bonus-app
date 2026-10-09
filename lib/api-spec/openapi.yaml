@@ -13,6 +13,95 @@ tags:
   - name: bonusplay
     description: BONUSPLAY demo account, game and rewards operations
 paths:
+  /v2/demo-access:
+    get:
+      operationId: getV2DemoAccess
+      tags: [v2]
+      summary: Whether the signed-in account may open the private demo
+      responses:
+        "200":
+          description: Demo access for the caller
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/V2DemoAccess" }
+        default:
+          $ref: "#/components/responses/V2PointsError"
+  /v2/admin/testers:
+    get:
+      operationId: listV2DemoTesters
+      tags: [v2]
+      summary: Accounts allowed to use the private demo
+      responses:
+        "200":
+          description: Testers
+          content:
+            application/json:
+              schema: { type: object, required: [items], properties: { items: { type: array, items: { $ref: "#/components/schemas/V2DemoTester" } } } }
+        default:
+          $ref: "#/components/responses/V2PointsError"
+    post:
+      operationId: addV2DemoTester
+      tags: [v2]
+      summary: Allow an enrolled account (by e-mail) to use the private demo
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/V2DemoTesterInput" }
+      responses:
+        "200":
+          description: Tester
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/V2DemoTester" }
+        default:
+          $ref: "#/components/responses/V2PointsError"
+  /v2/admin/testers/{accountId}:
+    delete:
+      operationId: removeV2DemoTester
+      tags: [v2]
+      summary: Revoke demo access
+      parameters:
+        - $ref: "#/components/parameters/PointsAccountId"
+      responses:
+        "200":
+          description: Removed
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/OkResponse" }
+        default:
+          $ref: "#/components/responses/V2PointsError"
+  /v2/me/export:
+    get:
+      operationId: exportV2MyData
+      tags: [v2]
+      summary: Download all personal and financial data held about the caller (GDPR art. 15/20)
+      responses:
+        "200":
+          description: Data export
+          content:
+            application/json:
+              schema: { type: object, additionalProperties: true }
+        default:
+          $ref: "#/components/responses/V2PointsError"
+  /v2/me/deletion-request:
+    post:
+      operationId: requestV2AccountDeletion
+      tags: [v2]
+      summary: Ask for account deletion; access stops immediately, financial records are kept per retention policy
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/V2DeletionRequestInput" }
+      responses:
+        "200":
+          description: Recorded
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/OkResponse" }
+        default:
+          $ref: "#/components/responses/V2PointsError"
   /v2/orders/{orderId}/voucher:
     get:
       operationId: getV2OrderVoucher
@@ -1119,6 +1208,36 @@ components:
       in: query
       schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
   schemas:
+    V2DemoAccess:
+      type: object
+      required: [tester, canAdmin]
+      properties:
+        tester: { type: boolean }
+        canAdmin: { type: boolean }
+    V2DemoTester:
+      type: object
+      required: [accountId, email, name, canAdmin, note, createdAt]
+      properties:
+        accountId: { type: string }
+        email: { type: string }
+        name: { type: string }
+        canAdmin: { type: boolean }
+        note: { type: string }
+        createdAt: { type: string }
+    V2DemoTesterInput:
+      type: object
+      additionalProperties: false
+      required: [email, canAdmin, note]
+      properties:
+        email: { type: string, minLength: 3, maxLength: 320 }
+        canAdmin: { type: boolean }
+        note: { type: string, minLength: 3, maxLength: 200 }
+    V2DeletionRequestInput:
+      type: object
+      additionalProperties: false
+      required: [confirm]
+      properties:
+        confirm: { type: string, enum: [SLETT] }
     V2AdminRequestInput:
       type: object
       additionalProperties: false

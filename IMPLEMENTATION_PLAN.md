@@ -19,6 +19,10 @@ Målet er en komplett, sikker og lønnsom MVP som kan lanseres raskt. Eksisteren
 | Egen fordel | Administrator kan aldri behandle egen konto eller egne ordre | Poengmotoren, premie- og konverteringsflyt |
 | Demo | Privat, bare for testere | Krever innlogget testbruker |
 
+## Status 2026-10-09
+
+Fase A–D er implementert i utvikling og testet (134 automatiske tester, bygg og HTTP-røyktest). Se `CURRENT_STATE.md`. Gjenstående før lansering: punktene under «Stoppunkter» og lanseringssjekklisten.
+
 ## Fase A — Sikkerhetsgrunnmur
 
 | # | Oppgave | Akseptansekriterier |

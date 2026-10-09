@@ -3,7 +3,7 @@ import type { Request, Response, CookieOptions } from "express";
 
 const COOKIE = "bonusplay_demo";
 const MAX_AGE = 7 * 24 * 60 * 60 * 1000;
-export interface DemoIdentity { userId: string; role: "user" | "admin"; expiresAt: number }
+export interface DemoIdentity { userId: string; role: "user" | "admin"; expiresAt: number; testerId: string }
 function cookieOptions(req: Request): CookieOptions {
   const local = ["localhost", "127.0.0.1"].includes(req.hostname);
   // The Preview is embedded. Partitioning permits its HTTPS cookie without
@@ -28,15 +28,17 @@ export function readSession(req: Request): DemoIdentity | null {
   if (!timingSafeEqual(Buffer.from(signed), Buffer.from(expected))) return null;
   try {
     const parsed = JSON.parse(Buffer.from(payload, "base64url").toString()) as DemoIdentity;
-    if (!parsed.userId || !["user", "admin"].includes(parsed.role) || parsed.expiresAt < Date.now()) return null;
+    // Sessions issued before the demo became private carry no tester and are no longer valid.
+    if (!parsed.userId || !parsed.testerId || !["user", "admin"].includes(parsed.role) || parsed.expiresAt < Date.now()) return null;
     return parsed;
   } catch {
     return null;
   }
 }
-export function startSession(req: Request, res: Response, role: "user" | "admin"): DemoIdentity {
+export function startSession(req: Request, res: Response, role: "user" | "admin", testerId: string): DemoIdentity {
   const existing = readSession(req);
-  const identity: DemoIdentity = { userId: existing?.userId ?? `demo-${randomUUID()}`, role, expiresAt: Date.now() + MAX_AGE };
+  const userId = existing?.testerId === testerId ? existing.userId : `demo-${randomUUID()}`;
+  const identity: DemoIdentity = { userId, role, expiresAt: Date.now() + MAX_AGE, testerId };
   const payload = Buffer.from(JSON.stringify(identity)).toString("base64url");
   res.cookie(COOKIE, `${payload}.${signature(payload)}`, { ...cookieOptions(req), maxAge: MAX_AGE });
   return identity;

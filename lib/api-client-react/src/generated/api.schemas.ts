@@ -5,6 +5,45 @@
  * API for the BONUSPLAY demo rewards platform
  * OpenAPI spec version: 0.1.0
  */
+export interface V2DemoAccess {
+  tester: boolean;
+  canAdmin: boolean;
+}
+
+export interface V2DemoTester {
+  accountId: string;
+  email: string;
+  name: string;
+  canAdmin: boolean;
+  note: string;
+  createdAt: string;
+}
+
+export interface V2DemoTesterInput {
+  /**
+     * @minLength 3
+     * @maxLength 320
+     */
+  email: string;
+  canAdmin: boolean;
+  /**
+     * @minLength 3
+     * @maxLength 200
+     */
+  note: string;
+}
+
+export type V2DeletionRequestInputConfirm = typeof V2DeletionRequestInputConfirm[keyof typeof V2DeletionRequestInputConfirm];
+
+
+export const V2DeletionRequestInputConfirm = {
+  SLETT: 'SLETT',
+} as const;
+
+export interface V2DeletionRequestInput {
+  confirm: V2DeletionRequestInputConfirm;
+}
+
 export type V2AdminRequestInputAction = typeof V2AdminRequestInputAction[keyof typeof V2AdminRequestInputAction];
 
 
@@ -1506,6 +1545,12 @@ export type V2PointsErrorResponse = ErrorResponse;
 export type PointsCursorParameter = string;
 
 export type PointsLimitParameter = number;
+
+export type ListV2DemoTesters200 = {
+  items: V2DemoTester[];
+};
+
+export type ExportV2MyData200 = { [key: string]: unknown };
 
 export type ListV2AdminRequestsParams = {
 status?: ListV2AdminRequestsStatus;

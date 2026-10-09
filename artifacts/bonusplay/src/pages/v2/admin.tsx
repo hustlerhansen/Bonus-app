@@ -6,6 +6,7 @@ import { Clock, ShieldCheck } from 'lucide-react';
 import {
   ApiError, confirmV2AdminRequest, getGetV2AdminEconomyQueryKey, getListV2AdminAuditQueryKey, getListV2AdminRequestsQueryKey,
   useGetV2AdminEconomy, useListV2AdminAudit, useListV2AdminRequests, useRejectV2AdminRequest,
+  getListV2DemoTestersQueryKey, useAddV2DemoTester, useListV2DemoTesters, useRemoveV2DemoTester,
   type V2AdminRequest, type V2EconomyConfig,
 } from '@workspace/api-client-react';
 import { Btn, Card, Empty, ErrorState, PageHead, Skel } from '@/components/bp';
@@ -265,7 +266,43 @@ function Audit() {
   );
 }
 
-const TABS = [['requests', 'Godkjenninger'], ['economy', 'Økonomi'], ['audit', 'Revisjonslogg']] as const;
+function Testers() {
+  const qc = useQueryClient();
+  const q = useListV2DemoTesters({ query: { queryKey: getListV2DemoTestersQueryKey() } });
+  const add = useAddV2DemoTester();
+  const remove = useRemoveV2DemoTester();
+  const [email, setEmail] = useState(''), [note, setNote] = useState(''), [canAdmin, setCanAdmin] = useState(false);
+  const [msg, setMsg] = useState<string | null>(null);
+  const refresh = () => qc.invalidateQueries({ queryKey: getListV2DemoTestersQueryKey() });
+  return (
+    <div className="space-y-4">
+      <p className="text-xs text-muted-foreground">Testversjonen (/demo) er privat. Bare registrerte kontoer på denne listen kan åpne den. Testpoeng og testpremier har ingen verdi og er helt adskilt fra ekte BonusPoints.</p>
+      <Card>
+        <form className="space-y-3" onSubmit={(e: FormEvent) => {
+          e.preventDefault(); setMsg(null);
+          add.mutate({ data: { email: email.trim(), canAdmin, note: note.trim() } }, { onSuccess: () => { setEmail(''); setNote(''); setCanAdmin(false); void refresh(); setMsg('Testeren er lagt til.'); }, onError: x => setMsg(errMsg(x)) });
+        }}>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <label className="block text-sm font-bold">E-post (registrert konto)<input className={inputCls} type="email" value={email} onChange={e => setEmail(e.target.value)} data-testid="input-tester-email" /></label>
+            <label className="block text-sm font-bold">Notat<input className={inputCls} value={note} maxLength={200} onChange={e => setNote(e.target.value)} data-testid="input-tester-note" /></label>
+          </div>
+          <label className="flex items-center gap-2 text-sm"><input type="checkbox" className="h-4 w-4" checked={canAdmin} onChange={e => setCanAdmin(e.target.checked)} />Kan bruke demoadministrasjon</label>
+          <Btn type="submit" size="sm" disabled={!email.includes('@') || note.trim().length < 3} loading={add.isPending} data-testid="button-add-tester">Legg til tester</Btn>
+          {msg && <p role="status" className="text-sm">{msg}</p>}
+        </form>
+      </Card>
+      {q.isLoading ? <Skel className="h-24" /> : q.isError ? <ErrorState message={errMsg(q.error)} onRetry={() => q.refetch()} />
+        : q.data!.items.length === 0 ? <Empty title="Ingen testere" text="Legg til en registrert konto for å gi tilgang til testversjonen." /> : (
+          <ul className="space-y-2">{q.data!.items.map(t => (
+            <li key={t.accountId} className="flex items-center justify-between gap-3 rounded-2xl bg-white/5 p-3 text-sm">
+              <div className="min-w-0"><div className="truncate font-bold">{t.name} · {t.email}</div><div className="text-xs text-muted-foreground">{t.note}{t.canAdmin ? ' · demoadmin' : ''} · lagt til {fmtDateTime(t.createdAt)}</div></div>
+              <Btn size="sm" variant="danger" loading={remove.isPending && remove.variables?.accountId === t.accountId} onClick={() => remove.mutate({ accountId: t.accountId }, { onSuccess: () => { void refresh(); } })}>Fjern</Btn>
+            </li>))}</ul>)}
+    </div>
+  );
+}
+
+const TABS = [['requests', 'Godkjenninger'], ['economy', 'Økonomi'], ['testers', 'Testere'], ['audit', 'Revisjonslogg']] as const;
 
 function Hub() {
   const s = useV2State();
@@ -285,6 +322,7 @@ function Hub() {
       </div>
       {tab === 'requests' && <Requests />}
       {tab === 'economy' && <Economy />}
+      {tab === 'testers' && <Testers />}
       {tab === 'audit' && <Audit />}
     </>
   );

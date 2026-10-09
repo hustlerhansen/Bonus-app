@@ -9,6 +9,91 @@ import * as zod from 'zod';
 
 
 /**
+ * @summary Whether the signed-in account may open the private demo
+ */
+export const GetV2DemoAccessResponse = zod.object({
+  "tester": zod.boolean(),
+  "canAdmin": zod.boolean()
+})
+
+
+/**
+ * @summary Accounts allowed to use the private demo
+ */
+export const ListV2DemoTestersResponse = zod.object({
+  "items": zod.array(zod.object({
+  "accountId": zod.string(),
+  "email": zod.string(),
+  "name": zod.string(),
+  "canAdmin": zod.boolean(),
+  "note": zod.string(),
+  "createdAt": zod.string()
+}))
+})
+
+
+/**
+ * @summary Allow an enrolled account (by e-mail) to use the private demo
+ */
+export const addV2DemoTesterBodyEmailMin = 3;
+export const addV2DemoTesterBodyEmailMax = 320;
+
+export const addV2DemoTesterBodyNoteMin = 3;
+export const addV2DemoTesterBodyNoteMax = 200;
+
+
+
+export const AddV2DemoTesterBody = zod.object({
+  "email": zod.string().min(addV2DemoTesterBodyEmailMin).max(addV2DemoTesterBodyEmailMax),
+  "canAdmin": zod.boolean(),
+  "note": zod.string().min(addV2DemoTesterBodyNoteMin).max(addV2DemoTesterBodyNoteMax)
+})
+
+export const AddV2DemoTesterResponse = zod.object({
+  "accountId": zod.string(),
+  "email": zod.string(),
+  "name": zod.string(),
+  "canAdmin": zod.boolean(),
+  "note": zod.string(),
+  "createdAt": zod.string()
+})
+
+
+/**
+ * @summary Revoke demo access
+ */
+export const removeV2DemoTesterPathAccountIdMax = 128;
+
+
+
+export const RemoveV2DemoTesterParams = zod.object({
+  "accountId": zod.coerce.string().min(1).max(removeV2DemoTesterPathAccountIdMax)
+})
+
+export const RemoveV2DemoTesterResponse = zod.object({
+  "ok": zod.boolean()
+})
+
+
+/**
+ * @summary Download all personal and financial data held about the caller (GDPR art. 15/20)
+ */
+export const ExportV2MyDataResponse = zod.record(zod.string(), zod.unknown())
+
+
+/**
+ * @summary Ask for account deletion; access stops immediately, financial records are kept per retention policy
+ */
+export const RequestV2AccountDeletionBody = zod.object({
+  "confirm": zod.enum(['SLETT'])
+})
+
+export const RequestV2AccountDeletionResponse = zod.object({
+  "ok": zod.boolean()
+})
+
+
+/**
  * @summary Reveal the gift card code or link of the caller's own delivered order (logged)
  */
 export const GetV2OrderVoucherParams = zod.object({

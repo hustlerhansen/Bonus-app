@@ -1,12 +1,13 @@
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react';
 import { Link, Redirect, useLocation } from 'wouter';
-import { useUser, UserProfile } from '@clerk/react';
+import { useClerk, useUser, UserProfile } from '@clerk/react';
 import { dark } from '@clerk/themes';
 import { useQueryClient } from '@tanstack/react-query';
 import { CheckCircle2 } from 'lucide-react';
-import { getGetV2AccountQueryKey, useEnrollV2Account, useUpdateV2Account, type V2Account, type V2AccountState } from '@workspace/api-client-react';
+import { exportV2MyData, getGetV2AccountQueryKey, useEnrollV2Account, useRequestV2AccountDeletion, useUpdateV2Account, type V2Account, type V2AccountState } from '@workspace/api-client-react';
 import { Btn, Card, ErrorState, PageHead, PageSkeleton } from '@/components/bp';
 import { errMsg } from '@/hooks/use-bp';
+import { UserDashboard } from './dashboard';
 import { basePath, fmtDate, PhaseNotice, SignedInOnly, useIsAdmin, useV2State, V2Frame } from './shared';
 
 const inputCls = 'mt-1 h-11 w-full rounded-xl border border-white/15 bg-white/5 px-3 text-sm outline-none focus:border-primary';
@@ -88,13 +89,47 @@ function Row({ k, v }: { k: string; v: string }) {
   return <div className="flex justify-between gap-4 border-b border-white/5 py-2 text-sm last:border-0"><dt className="text-muted-foreground">{k}</dt><dd className="break-all text-right font-bold">{v}</dd></div>;
 }
 
-function Dashboard({ a }: { a: V2Account }) {
-  const isAdmin = useIsAdmin();
+function PrivacyTools() {
+  const qc = useQueryClient();
+  const clerk = useClerk();
+  const del = useRequestV2AccountDeletion();
+  const [confirm, setConfirm] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+  const download = async () => {
+    setBusy(true); setErr(null);
+    try {
+      const data = await exportV2MyData();
+      const url = URL.createObjectURL(new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' }));
+      const link = document.createElement('a');
+      link.href = url; link.download = `bonusplay-mine-data-${new Date().toISOString().slice(0, 10)}.json`; link.click();
+      URL.revokeObjectURL(url);
+    } catch (e) { setErr(errMsg(e)); } finally { setBusy(false); }
+  };
+  return (
+    <section className="mt-8 space-y-4" aria-labelledby="h-privacy">
+      <h2 id="h-privacy" className="font-display text-lg font-bold">Personvern</h2>
+      <Card className="space-y-2">
+        <b>Last ned dataene dine</b>
+        <p className="text-sm text-muted-foreground">Få en kopi av profil, samtykker, poenghistorikk, tilbud og bestillinger i maskinlesbart format (JSON).</p>
+        <Btn size="sm" variant="ghost" loading={busy} onClick={download} data-testid="button-export">Last ned mine data</Btn>
+        {err && <p role="alert" className="text-sm text-red-300">{err}</p>}
+      </Card>
+      <Card className="space-y-2">
+        <b>Be om sletting av kontoen</b>
+        <p className="text-sm text-muted-foreground">Tilgangen stenges med en gang, og personopplysningene slettes eller anonymiseres. Regnskapsopplysninger om poeng og gavekort oppbevares så lenge loven krever. Har du ubrukte poeng, bør du løse dem inn først.</p>
+        <label className="block text-sm font-bold">Skriv SLETT for å bekrefte<input className={inputCls} value={confirm} onChange={e => setConfirm(e.target.value)} data-testid="input-delete-confirm" /></label>
+        <Btn size="sm" variant="danger" disabled={confirm !== 'SLETT'} loading={del.isPending} data-testid="button-delete-account"
+          onClick={() => del.mutate({ data: { confirm: 'SLETT' } }, { onSuccess: () => { qc.clear(); void clerk.signOut({ redirectUrl: `${basePath}/` }); }, onError: x => setErr(errMsg(x)) })}>Be om sletting</Btn>
+      </Card>
+    </section>
+  );
+}
+
+function AccountDetails({ a }: { a: V2Account }) {
   return (
     <>
-      <PageHead eyebrow="Konto" title={`Hei, ${a.firstName}`} sub="Din verifiserte BONUSPLAY-konto er aktiv." />
       <div className="mb-4 flex items-center gap-2 text-sm text-emerald-300"><CheckCircle2 className="h-4 w-4" />Kontoen er registrert. Status: {a.status}</div>
-      <PhaseNotice className="mb-4" />
       <Card>
         <dl>
           <Row k="E-post" v={a.email} /><Row k="Navn" v={`${a.firstName} ${a.lastName}`} /><Row k="Land" v="Norge" />
@@ -105,13 +140,7 @@ function Dashboard({ a }: { a: V2Account }) {
           <Row k="Opprettet" v={fmtDate(a.createdAt)} /><Row k="Sist innlogget" v={fmtDate(a.lastLoginAt)} />
         </dl>
       </Card>
-      <div className="mt-4 flex flex-wrap gap-3">
-        <Link href="/account/points"><Btn variant="gold">Mine BonusPoints</Btn></Link>
-        <Link href="/account/offers"><Btn variant="ghost">Tilbud</Btn></Link>
-        {isAdmin && <Link href="/account/points/admin"><Btn variant="ghost">Poengadministrasjon</Btn></Link>}
-        <Link href="/account/profile"><Btn variant="ghost">Rediger profil</Btn></Link>
-        <Link href="/account/security"><Btn variant="ghost">Passord og økter</Btn></Link>
-      </div>
+      <div className="mt-4"><Link href="/account/security"><Btn variant="ghost">Passord, økter og tofaktor</Btn></Link></div>
     </>
   );
 }
@@ -120,7 +149,7 @@ export function AccountPage() {
   return (
     <SignedInOnly>
       <V2Frame nav title="Konto" desc="Din verifiserte BONUSPLAY-konto.">
-        <Gate>{(s) => (s.account ? <Dashboard a={s.account} /> : <Enroll state={s} />)}</Gate>
+        <Gate>{(s) => (s.account ? <UserDashboard a={s.account} /> : <Enroll state={s} />)}</Gate>
       </V2Frame>
     </SignedInOnly>
   );
@@ -166,7 +195,7 @@ export function AccountProfilePage() {
     <SignedInOnly>
       <V2Frame nav title="Profil" desc="Rediger din BONUSPLAY-profil.">
         <PageHead eyebrow="Konto" title="Profil" sub="E-post og rolle kan ikke endres her." />
-        <Gate>{(s) => (s.account ? <ProfileForm key={s.account.id} a={s.account} /> : <Redirect to="/account" />)}</Gate>
+        <Gate>{(s) => (s.account ? <><ProfileForm key={s.account.id} a={s.account} /><div className="mt-8"><AccountDetails a={s.account} /></div><PrivacyTools /></> : <Redirect to="/account" />)}</Gate>
       </V2Frame>
     </SignedInOnly>
   );
